@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Globe, 
   Send, 
@@ -12,8 +12,20 @@ import {
   Share2
 } from 'lucide-react';
 
+interface LinkItem {
+  id: number;
+  title: string;
+  url: string;
+  description?: string;
+  desc?: string;
+  is_active?: number | boolean;
+  active?: boolean;
+  is_highlighted?: number | boolean;
+  highlight?: boolean;
+  badge?: string;
+}
+
 export default function BioLinkPage() {
-  // Public profile details (US/Global market standard)
   const profile = {
     name: "Aries Creative Lab",
     tagline: "Digital Creator & Independent Developer",
@@ -21,47 +33,28 @@ export default function BioLinkPage() {
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces",
   };
 
-  // Curated links tailored for global audience & monetization
-  const links = [
-    {
-      id: 1,
-      title: "Stock Vector & Illustration Portfolio",
-      desc: "High-resolution commercial vectors & graphic assets",
-      url: "https://stock.adobe.com",
-      highlight: true,
-      badge: "Featured",
-    },
-    {
-      id: 2,
-      title: "Interactive Web Tools & Experiments",
-      desc: "Free client-side utilities and browser mini-apps",
-      url: "https://github.com",
-      highlight: false,
-    },
-    {
-      id: 3,
-      title: "Books & Published Works",
-      desc: "Fiction and creative guides on Amazon Kindle",
-      url: "https://amazon.com",
-      highlight: false,
-    },
-    {
-      id: 4,
-      title: "Support My Work (Buy Me a Coffee)",
-      desc: "Fuel open-source tools and ongoing creative projects",
-      url: "https://ko-fi.com",
-      highlight: false,
-      badge: "Support",
-    },
-  ];
+  // State Links (diambil dinamis dari Cloudflare D1)
+  const [links, setLinks] = useState<LinkItem[]>([]);
+  const [loadingLinks, setLoadingLinks] = useState(true);
 
-  // Messaging state (Interactive inbox for inbound inquiries)
+  useEffect(() => {
+    fetch('/api/links')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.links) {
+          setLinks(data.links);
+        }
+      })
+      .catch((err) => console.error('Gagal mengambil links:', err))
+      .finally(() => setLoadingLinks(false));
+  }, []);
+
+  // Messaging state
   const [senderName, setSenderName] = useState('');
   const [message, setMessage] = useState('');
   const [isSent, setIsSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Fungsi pengiriman pesan langsung ke Cloudflare D1
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
@@ -98,7 +91,6 @@ export default function BioLinkPage() {
 
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100 flex justify-center py-12 px-4 sm:px-6 relative overflow-hidden font-sans">
-      {/* Ambient background lighting */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -148,37 +140,52 @@ export default function BioLinkPage() {
           </p>
         </header>
 
-        {/* Links Section */}
+        {/* Dynamic Links Section from D1 */}
         <section className="w-full flex flex-col gap-3.5 mb-8">
-          {links.map((link) => (
-            <a
-              key={link.id}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`group w-full p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between shadow-sm hover:scale-[1.015] active:scale-[0.99] ${
-                link.highlight
-                  ? 'bg-gradient-to-r from-emerald-950/40 via-neutral-900 to-neutral-900 border-emerald-500/50 hover:border-emerald-400 shadow-emerald-950/20'
-                  : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/80'
-              }`}
-            >
-              <div className="flex flex-col text-left">
-                <span className="text-sm font-semibold text-neutral-100 group-hover:text-white flex items-center gap-1.5">
-                  {link.title}
-                  {link.badge && (
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-medium">
-                      {link.badge}
-                    </span>
-                  )}
-                </span>
-                <span className="text-xs text-neutral-400 mt-0.5">{link.desc}</span>
-              </div>
-              <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-neutral-200 transition-transform group-hover:translate-x-0.5 ml-3 shrink-0" />
-            </a>
-          ))}
+          {loadingLinks ? (
+            <div className="p-8 text-center text-xs text-neutral-500 animate-pulse">
+              Loading buttons...
+            </div>
+          ) : (
+            links
+              .filter((link) => link.is_active === 1 || link.is_active === undefined || link.active)
+              .map((link) => {
+                const isHighlight = Boolean(link.is_highlighted || link.highlight);
+                const descText = link.description || link.desc;
+
+                return (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`group w-full p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between shadow-sm hover:scale-[1.015] active:scale-[0.99] ${
+                      isHighlight
+                        ? 'bg-gradient-to-r from-emerald-950/40 via-neutral-900 to-neutral-900 border-emerald-500/50 hover:border-emerald-400 shadow-emerald-950/20'
+                        : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/80'
+                    }`}
+                  >
+                    <div className="flex flex-col text-left">
+                      <span className="text-sm font-semibold text-neutral-100 group-hover:text-white flex items-center gap-1.5">
+                        {link.title}
+                        {isHighlight && (
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-medium">
+                            Featured
+                          </span>
+                        )}
+                      </span>
+                      {descText && (
+                        <span className="text-xs text-neutral-400 mt-0.5">{descText}</span>
+                      )}
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-neutral-200 transition-transform group-hover:translate-x-0.5 ml-3 shrink-0" />
+                  </a>
+                );
+              })
+          )}
         </section>
 
-        {/* Direct Messaging Form (Inbox Feature) */}
+        {/* Direct Messaging Form */}
         <section className="w-full p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 backdrop-blur-sm mb-10">
           <div className="flex items-center gap-2 mb-2">
             <MessageSquare className="w-4 h-4 text-emerald-400" />
