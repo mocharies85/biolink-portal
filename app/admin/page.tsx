@@ -1,23 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Link2, 
   MessageSquare, 
   BarChart3, 
-  Settings, 
   Plus, 
   Trash2, 
   ExternalLink, 
-  Eye, 
   MousePointerClick, 
   Inbox, 
-  Smartphone, 
   Sparkles,
-  ArrowUpRight,
-  CheckCircle2,
   Clock,
-  ShieldCheck
+  RefreshCw
 } from 'lucide-react';
 
 interface LinkItem {
@@ -34,15 +29,17 @@ interface MessageItem {
   id: number;
   sender: string;
   content: string;
-  date: string;
-  isRead: boolean;
+  created_at?: string;
+  date?: string;
+  is_read?: number;
+  isRead?: boolean;
 }
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'links' | 'messaging' | 'analytics'>('messaging');
 
   // State Profile
-  const [profile, setProfile] = useState({
+  const [profile] = useState({
     name: "Aries Creative Lab",
     tagline: "Digital Creator & Independent Developer",
     bio: "Crafting vector illustrations, interactive web experiences, and digital publications.",
@@ -94,6 +91,30 @@ export default function AdminDashboard() {
   const [newUrl, setNewUrl] = useState('');
   const [newDesc, setNewDesc] = useState('');
 
+  // State Messages dari Cloudflare D1
+  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState<boolean>(true);
+
+  // Ambil pesan langsung dari endpoint API D1
+  const fetchMessages = async () => {
+    setLoadingMessages(true);
+    try {
+      const res = await fetch('/api/messages');
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data.messages || []);
+      }
+    } catch (err) {
+      console.error('Gagal mengambil pesan:', err);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
   const handleAddLink = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newUrl.trim()) return;
@@ -122,36 +143,11 @@ export default function AdminDashboard() {
     setLinks(links.map((l) => l.id === id ? { ...l, active: !l.active } : l));
   };
 
-  // State Messages (Inbox Feature matching Linktree Messaging)
-  const [messages, setMessages] = useState<MessageItem[]>([
-    {
-      id: 1,
-      sender: "Marcus Vance (Art Director, NY)",
-      content: "Hi Aries, loved your dark fantasy vector illustrations on Adobe Stock! Are you currently open for a commissioned album cover project?",
-      date: "10 mins ago",
-      isRead: false,
-    },
-    {
-      id: 2,
-      sender: "Elena Rostova (London, UK)",
-      content: "Hello! Just purchased your Kindle publication. Is there an upcoming volume or newsletter where I can follow your updates?",
-      date: "2 hours ago",
-      isRead: false,
-    },
-    {
-      id: 3,
-      sender: "Anonymous Supporter",
-      content: "Enjoying the free web tools on Cloudflare Pages. Dropped a tip on Ko-fi, keep up the fantastic work!",
-      date: "Yesterday",
-      isRead: true,
-    }
-  ]);
-
   const handleDeleteMessage = (id: number) => {
     setMessages(messages.filter((m) => m.id !== id));
   };
 
-  const unreadCount = messages.filter(m => !m.isRead).length;
+  const unreadCount = messages.filter(m => (m.is_read ?? 0) === 0).length;
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col lg:flex-row font-sans">
@@ -332,7 +328,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 2: MESSAGING / INBOX (Sesuai dengan screenshot Linktree Anda) */}
+        {/* TAB 2: MESSAGING / INBOX (Terhubung ke Cloudflare D1) */}
         {activeTab === 'messaging' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div className="flex items-center justify-between">
@@ -341,7 +337,7 @@ export default function AdminDashboard() {
                   Messaging Inbox
                   {unreadCount > 0 && (
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      {unreadCount} unread
+                      {unreadCount} new
                     </span>
                   )}
                 </h1>
@@ -349,10 +345,22 @@ export default function AdminDashboard() {
                   Direct inquiries received from your public bio-link.
                 </p>
               </div>
+
+              <button
+                onClick={fetchMessages}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 hover:text-white hover:border-neutral-700 transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingMessages ? 'animate-spin text-emerald-400' : ''}`} />
+                <span>Refresh</span>
+              </button>
             </div>
 
-            {/* List Pesan Masuk */}
-            {messages.length === 0 ? (
+            {/* List Pesan Masuk dari Database */}
+            {loadingMessages ? (
+              <div className="p-12 text-center rounded-2xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-400">
+                Memuat pesan dari database D1...
+              </div>
+            ) : messages.length === 0 ? (
               <div className="p-12 text-center rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col items-center">
                 <Inbox className="w-10 h-10 text-neutral-600 mb-3" />
                 <h3 className="text-sm font-semibold text-neutral-300">No messages found</h3>
@@ -363,22 +371,16 @@ export default function AdminDashboard() {
                 {messages.map((msg) => (
                   <div 
                     key={msg.id}
-                    className={`p-5 rounded-2xl border transition flex flex-col gap-2 relative ${
-                      !msg.isRead 
-                        ? 'bg-neutral-900 border-emerald-500/40 shadow-sm shadow-emerald-500/5' 
-                        : 'bg-neutral-900/60 border-neutral-800'
-                    }`}
+                    className="p-5 rounded-2xl border transition flex flex-col gap-2 relative bg-neutral-900 border-neutral-800"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        {!msg.isRead && (
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        )}
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
                         <h4 className="text-xs font-bold text-neutral-100">{msg.sender}</h4>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-[11px] text-neutral-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {msg.date}
+                          <Clock className="w-3 h-3" /> {msg.created_at || 'Just now'}
                         </span>
                         <button
                           onClick={() => handleDeleteMessage(msg.id)}
@@ -409,7 +411,6 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* Statistik Kartu */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col">
                 <span className="text-xs text-neutral-400">Total Page Views</span>
@@ -428,7 +429,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Distribusi Negara Target (US & Eropa) */}
             <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-300">
                 Top Audience Locations
@@ -453,16 +453,12 @@ export default function AdminDashboard() {
 
       </main>
 
-      {/* 3. Kolom Kanan: LIVE PHONE SIMULATOR (Preview Real-Time) */}
+      {/* 3. Kolom Kanan: LIVE PHONE SIMULATOR */}
       <aside className="hidden xl:flex w-96 bg-neutral-900/40 border-l border-neutral-800 p-8 items-center justify-center shrink-0">
         <div className="w-full max-w-[280px] h-[560px] bg-neutral-950 rounded-[40px] border-4 border-neutral-800 shadow-2xl p-4 flex flex-col items-center relative overflow-hidden ring-1 ring-neutral-700/50">
-          
-          {/* Dynamic Island / Notch Handphone */}
           <div className="w-20 h-4 bg-neutral-800 rounded-full mb-4 shrink-0" />
 
-          {/* Isi Konten Mini Phone */}
           <div className="w-full flex-1 overflow-y-auto no-scrollbar flex flex-col items-center text-center">
-            
             <img
               src={profile.avatar}
               alt={profile.name}
@@ -471,7 +467,6 @@ export default function AdminDashboard() {
             <h4 className="text-xs font-bold text-white">{profile.name}</h4>
             <p className="text-[10px] text-emerald-400 font-medium">{profile.tagline}</p>
             
-            {/* Mini Tautan */}
             <div className="w-full flex flex-col gap-2 mt-4">
               {links.filter(l => l.active).map((link) => (
                 <div
