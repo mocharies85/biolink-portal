@@ -61,19 +61,39 @@ export default function BioLinkPage() {
   const [isSent, setIsSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  // Fungsi pengiriman pesan langsung ke Cloudflare D1
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
 
     setLoading(true);
-    // Simulating message transmission (will connect to Cloudflare D1 next)
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: senderName.trim() || 'Anonymous',
+          content: message.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        setIsSent(true);
+        setSenderName('');
+        setMessage('');
+        setTimeout(() => setIsSent(false), 5000);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || 'Gagal mengirim pesan, silakan coba lagi.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Terjadi kendala koneksi saat mengirim pesan.');
+    } finally {
       setLoading(false);
-      setIsSent(true);
-      setSenderName('');
-      setMessage('');
-      setTimeout(() => setIsSent(false), 5000);
-    }, 700);
+    }
   };
 
   return (
