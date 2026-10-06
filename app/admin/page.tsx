@@ -10,9 +10,14 @@ import {
   ExternalLink, 
   MousePointerClick, 
   Inbox, 
-  Sparkles,
-  Clock,
-  RefreshCw
+  Sparkles, 
+  Clock, 
+  RefreshCw,
+  Lock,
+  KeyRound,
+  LogOut,
+  ShieldCheck,
+  ArrowRight
 } from 'lucide-react';
 
 interface LinkItem {
@@ -36,10 +41,48 @@ interface MessageItem {
   is_read?: number;
 }
 
+// ==========================================
+// PIN RAHASIA ADMIN (Silakan ganti sesuai keinginan)
+// ==========================================
+const ADMIN_SECRET_PIN = "240685"; 
+
 export default function AdminDashboard() {
+  // State Autentikasi / Kunci
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [pinInput, setPinInput] = useState<string>('');
+  const [pinError, setPinError] = useState<string>('');
+  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
+
+  // Cek apakah sudah pernah login di sesi ini
+  useEffect(() => {
+    const savedAuth = sessionStorage.getItem('biolink_admin_authenticated');
+    if (savedAuth === 'true') {
+      setIsAuthenticated(true);
+    }
+    setIsCheckingAuth(false);
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinInput === ADMIN_SECRET_PIN) {
+      sessionStorage.setItem('biolink_admin_authenticated', 'true');
+      setIsAuthenticated(true);
+      setPinError('');
+    } else {
+      setPinError('PIN salah! Akses ditolak.');
+      setPinInput('');
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('biolink_admin_authenticated');
+    setIsAuthenticated(false);
+    setPinInput('');
+  };
+
+  // State Halaman Admin
   const [activeTab, setActiveTab] = useState<'links' | 'messaging' | 'analytics'>('links');
 
-  // State Profile
   const profile = {
     name: "Aries Creative Lab",
     tagline: "Digital Creator & Independent Developer",
@@ -60,7 +103,6 @@ export default function AdminDashboard() {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
 
-  // 1. Ambil Links dari Cloudflare D1
   const fetchLinks = async () => {
     setLoadingLinks(true);
     try {
@@ -76,7 +118,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 2. Ambil Messages dari Cloudflare D1
   const fetchMessages = async () => {
     setLoadingMessages(true);
     try {
@@ -93,11 +134,12 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchLinks();
-    fetchMessages();
-  }, []);
+    if (isAuthenticated) {
+      fetchLinks();
+      fetchMessages();
+    }
+  }, [isAuthenticated]);
 
-  // 3. Tambah Link Baru ke Cloudflare D1
   const handleAddLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newUrl.trim()) return;
@@ -133,7 +175,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 4. Hapus Link dari Cloudflare D1
   const handleDeleteLink = async (id: number) => {
     if (!confirm('Yakin ingin menghapus link ini?')) return;
 
@@ -153,6 +194,74 @@ export default function AdminDashboard() {
 
   const unreadCount = messages.filter((m) => (m.is_read ?? 0) === 0).length;
 
+  if (isCheckingAuth) {
+    return <div className="min-h-screen bg-neutral-950" />;
+  }
+
+  // ==========================================
+  // TAMPILAN LOCK SCREEN (JIKA BELUM LOGIN)
+  // ==========================================
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4 font-sans relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="w-full max-w-sm p-8 rounded-3xl bg-neutral-900/90 border border-neutral-800 shadow-2xl relative z-10 flex flex-col items-center text-center">
+          <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-emerald-400 mb-4 shadow-lg">
+            <Lock className="w-7 h-7" />
+          </div>
+
+          <h1 className="text-xl font-bold text-white tracking-tight">Portal Admin Terkunci</h1>
+          <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">
+            Halaman ini diproteksi. Masukkan PIN keamanan untuk mengakses inbox & database.
+          </p>
+
+          <form onSubmit={handleLogin} className="w-full mt-6 flex flex-col gap-3">
+            <div className="relative">
+              <input
+                type="password"
+                placeholder="Masukkan PIN Admin..."
+                value={pinInput}
+                onChange={(e) => {
+                  setPinInput(e.target.value);
+                  setPinError('');
+                }}
+                autoFocus
+                required
+                className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 text-sm text-center tracking-widest text-neutral-100 placeholder:tracking-normal placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+              />
+              <KeyRound className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            </div>
+
+            {pinError && (
+              <p className="text-xs text-rose-400 font-medium animate-shake">
+                {pinError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-emerald-500/20"
+            >
+              <span>Buka Dashboard</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+
+          <a
+            href="/"
+            className="text-xs text-neutral-500 hover:text-neutral-300 mt-6 transition underline underline-offset-4"
+          >
+            ← Kembali ke Halaman Bio-Link
+          </a>
+        </div>
+      </main>
+    );
+  }
+
+  // ==========================================
+  // TAMPILAN UTAMA ADMIN (SETELAH BERHASIL LOGIN)
+  // ==========================================
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col lg:flex-row font-sans">
       
@@ -165,7 +274,10 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h2 className="text-sm font-bold text-white tracking-tight">BioPortal Studio</h2>
-              <p className="text-[11px] text-emerald-400 font-medium">Cloudflare Pro Engine</p>
+              <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+                <ShieldCheck className="w-3 h-3" />
+                <span>Protected Admin</span>
+              </div>
             </div>
           </div>
 
@@ -224,11 +336,19 @@ export default function AdminDashboard() {
           <a
             href="/"
             target="_blank"
-            className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-neutral-800 hover:bg-neutral-700 text-white transition border border-neutral-700"
+            className="w-full flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-neutral-800 hover:bg-neutral-700 text-white transition border border-neutral-700"
           >
             <span>Preview Live Bio-Link</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 transition border border-rose-900/30"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Kunci & Logout</span>
+          </button>
         </div>
       </aside>
 
@@ -254,7 +374,6 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            {/* Form Tambah Link Baru */}
             <form onSubmit={handleAddLink} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                 <Plus className="w-3.5 h-3.5" /> Add New Link
@@ -291,7 +410,6 @@ export default function AdminDashboard() {
               </button>
             </form>
 
-            {/* List Tautan dari D1 */}
             {loadingLinks ? (
               <div className="p-8 text-center text-xs text-neutral-500 animate-pulse">
                 Memuat tautan dari Cloudflare D1...
@@ -355,114 +473,4 @@ export default function AdminDashboard() {
                 onClick={fetchMessages}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 hover:text-white transition"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingMessages ? 'animate-spin text-emerald-400' : ''}`} />
-                <span>Refresh</span>
-              </button>
-            </div>
-
-            {loadingMessages ? (
-              <div className="p-12 text-center rounded-2xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-400">
-                Memuat pesan dari database D1...
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="p-12 text-center rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col items-center">
-                <Inbox className="w-10 h-10 text-neutral-600 mb-3" />
-                <h3 className="text-sm font-semibold text-neutral-300">No messages found</h3>
-                <p className="text-xs text-neutral-500 mt-1">Inquiries sent by your profile visitors will appear here.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {messages.map((msg) => (
-                  <div 
-                    key={msg.id}
-                    className="p-5 rounded-2xl border transition flex flex-col gap-2 relative bg-neutral-900 border-neutral-800"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <h4 className="text-xs font-bold text-neutral-100">{msg.sender}</h4>
-                      </div>
-                      <span className="text-[11px] text-neutral-500 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {msg.created_at || 'Just now'}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-neutral-300 leading-relaxed bg-neutral-950/60 p-3.5 rounded-xl border border-neutral-800/80">
-                      {msg.content}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: ANALYTICS & INSIGHTS */}
-        {activeTab === 'analytics' && (
-          <div className="max-w-2xl flex flex-col gap-6">
-            <div>
-              <h1 className="text-xl font-bold text-white">Global Insights & Traffic</h1>
-              <p className="text-xs text-neutral-400 mt-1">
-                Audience engagement metrics (US, Europe & Global distribution).
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col">
-                <span className="text-xs text-neutral-400">Total Page Views</span>
-                <span className="text-2xl font-bold text-white mt-2">12,840</span>
-                <span className="text-[10px] text-emerald-400 font-medium mt-1">↑ 24% vs last month</span>
-              </div>
-              <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col">
-                <span className="text-xs text-neutral-400">Total Link Clicks</span>
-                <span className="text-2xl font-bold text-white mt-2">3,052</span>
-                <span className="text-[10px] text-emerald-400 font-medium mt-1">↑ 18% vs last month</span>
-              </div>
-              <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col">
-                <span className="text-xs text-neutral-400">Click-Through Rate (CTR)</span>
-                <span className="text-2xl font-bold text-emerald-400 mt-2">23.7%</span>
-                <span className="text-[10px] text-neutral-400 font-medium mt-1">Industry avg: 12%</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-      </main>
-
-      {/* 3. Kolom Kanan: LIVE SIMULATOR */}
-      <aside className="hidden xl:flex w-96 bg-neutral-900/40 border-l border-neutral-800 p-8 items-center justify-center shrink-0">
-        <div className="w-full max-w-[280px] h-[560px] bg-neutral-950 rounded-[40px] border-4 border-neutral-800 shadow-2xl p-4 flex flex-col items-center relative overflow-hidden ring-1 ring-neutral-700/50">
-          <div className="w-20 h-4 bg-neutral-800 rounded-full mb-4 shrink-0" />
-
-          <div className="w-full flex-1 overflow-y-auto no-scrollbar flex flex-col items-center text-center">
-            <img
-              src={profile.avatar}
-              alt={profile.name}
-              className="w-14 h-14 rounded-full object-cover border-2 border-emerald-400 shadow-md mb-2"
-            />
-            <h4 className="text-xs font-bold text-white">{profile.name}</h4>
-            <p className="text-[10px] text-emerald-400 font-medium">{profile.tagline}</p>
-            
-            <div className="w-full flex flex-col gap-2 mt-4">
-              {links.map((link) => (
-                <div
-                  key={link.id}
-                  className="p-2.5 rounded-xl border text-left text-[11px] bg-neutral-900/70 border-neutral-800 text-neutral-300"
-                >
-                  <p className="font-semibold truncate">{link.title}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 p-2 rounded-xl bg-neutral-900/60 border border-neutral-800/80 w-full text-[10px] text-neutral-400">
-              💬 Direct Inquiries Box
-            </div>
-          </div>
-
-          <div className="text-[9px] text-neutral-600 mt-2">Live Preview Simulator</div>
-        </div>
-      </aside>
-
-    </div>
-  );
-}
+                <
