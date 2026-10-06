@@ -241,9 +241,6 @@ export default function BioLinkPage() {
           <p className="flex items-center gap-1">
             Independently built with <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500 inline" />
           </p>
-          <a href="/admin" className="text-[11px] text-neutral-400 hover:text-emerald-400 underline underline-offset-2 transition mt-1">
-            Open Admin Dashboard →
-          </a>
         </footer>
 
       </div>
