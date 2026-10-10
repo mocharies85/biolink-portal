@@ -39,9 +39,11 @@ export default function HomePage() {
           
           {/* Brand Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-neutral-950 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition">
-              <Sparkles className="w-5 h-5" />
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="Curiolot Link" 
+              className="w-9 h-9 object-contain group-hover:scale-105 transition" 
+            />
             <span className="font-bold text-base tracking-tight text-white">
               Curiolot<span className="text-emerald-400">.link</span>
             </span>
