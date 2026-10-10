@@ -2,16 +2,28 @@
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
-    const username = url.searchParams.get('username') || 'aries';
+    const username = (url.searchParams.get('username') || 'aries').trim().toLowerCase();
 
+    // Ambil semua tautan milik username tersebut
     const { results } = await env.DB.prepare(
-      'SELECT * FROM user_links WHERE username = ? ORDER BY id DESC'
+      'SELECT * FROM user_links WHERE LOWER(username) = ? ORDER BY id DESC'
     ).bind(username).all();
 
-    return new Response(JSON.stringify({ links: results }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // Ambil status is_pro pengguna
+    const user = await env.DB.prepare(
+      'SELECT is_pro FROM users WHERE LOWER(username) = ?'
+    ).bind(username).first();
+
+    return new Response(
+      JSON.stringify({ 
+        links: results || [], 
+        isPro: user ? user.is_pro === 1 : false 
+      }), 
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
@@ -20,7 +32,7 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-// Menambah link baru untuk user tertentu
+// Menambah link baru untuk user tertentu (Maksimal 3 link jika bukan Pro)
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
@@ -33,9 +45,39 @@ export async function onRequestPost({ request, env }) {
       });
     }
 
+    const cleanUsername = username.trim().toLowerCase();
+
+    // 1. Cek status is_pro pengguna di database
+    const user = await env.DB.prepare(
+      'SELECT is_pro FROM users WHERE LOWER(username) = ?'
+    ).bind(cleanUsername).first();
+
+    const isPro = user ? user.is_pro === 1 : false;
+
+    // 2. Jika bukan akun Pro, periksa batas maksimal 3 link
+    if (!isPro) {
+      const countResult = await env.DB.prepare(
+        'SELECT COUNT(*) as total FROM user_links WHERE LOWER(username) = ?'
+      ).bind(cleanUsername).first();
+
+      const totalLinks = countResult ? countResult.total : 0;
+
+      if (totalLinks >= 3) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Free tier limit reached (max 3 links). Upgrade to Pro for unlimited links!' 
+          }), 
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+    // 3. Masukkan link baru jika masih di bawah batas atau merupakan user Pro
     await env.DB.prepare(
       'INSERT INTO user_links (username, title, url, description) VALUES (?, ?, ?, ?)'
-    ).bind(username, title.trim(), linkUrl.trim(), description?.trim() || '').run();
+    ).bind(cleanUsername, title.trim(), linkUrl.trim(), description?.trim() || '').run();
 
     return new Response(JSON.stringify({ success: true }), {
       status: 201,

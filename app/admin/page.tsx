@@ -108,6 +108,7 @@ export default function AdminDashboard() {
   const [newUrl, setNewUrl] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [addingLink, setAddingLink] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
@@ -240,7 +241,7 @@ export default function AdminDashboard() {
 
     // Proteksi batas tautan di sisi client
     if (!isProUser && links.length >= 3) {
-      alert('Batas paket Free tercapai (maksimal 3 tautan). Silakan upgrade ke akun PRO untuk tautan tanpa batas.');
+      alert('Free tier limit reached (max 3 links). Please upgrade to PRO for unlimited links.');
       return;
     }
 
@@ -595,17 +596,17 @@ export default function AdminDashboard() {
                     <Lock className="w-4 h-4 text-amber-400 shrink-0" />
                     <div className="text-left">
                       <p className="text-xs text-amber-300 font-bold">
-                        Batas 3 Link untuk Akun Gratis Sudah Tercapai
+                        Free Tier Limit Reached (3/3 Links)
                       </p>
                       <p className="text-[11px] text-neutral-400 mt-0.5">
-                        Upgrade ke Pro untuk menambahkan tautan tanpa batas dan badge khusus.
+                        Upgrade to PRO to unlock unlimited links and exclusive creator badges.
                       </p>
                     </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => alert('Untuk aktivasi status PRO, silakan hubungi kontak admin/developer.')}
-                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs shrink-0 transition"
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs shrink-0 transition shadow-lg shadow-amber-500/20"
                   >
                     Upgrade to PRO ⭐
                   </button>
@@ -742,7 +743,61 @@ export default function AdminDashboard() {
           <div className="text-[9px] text-neutral-600 mt-2">Live Preview (@{activeUsername})</div>
         </div>
       </aside>
+{/* Pop-up Modal Upgrade Otomatis */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-neutral-950 font-bold text-xl mx-auto shadow-lg shadow-amber-500/20">
+                ⭐
+              </div>
+              <h3 className="text-lg font-bold text-white mt-4">Upgrade to Curiolot Link PRO</h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                Unlock full platform capabilities and grow your audience without limits.
+              </p>
+            </div>
 
+            <div className="my-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>Unlimited links</strong> (bypass 3-link free limit)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span>Exclusive verified <strong>PRO badge</strong> on your bio page</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span>Advanced visitor analytics &amp; instant inbox messaging</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-6">
+              💡 <strong>Instant Activation:</strong> When paying on Ko-fi, please keep your account email (<strong>{currentUser?.email}</strong>) or write <strong>@{activeUsername}</strong> in the message box. Your account unlocks automatically!
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-1/3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
+              >
+                Cancel
+              </button>
+              <a
+                href="https://ko-fi.com/cycrack"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
+              >
+                <span>Upgrade on Ko-fi</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
