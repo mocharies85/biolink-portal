@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User,
@@ -20,7 +20,9 @@ import {
   X,
   HelpCircle,
   MessageCircle,
-  LogOut
+  LogOut,
+  Camera,
+  Upload
 } from 'lucide-react';
 
 interface LinkItem {
@@ -57,12 +59,13 @@ interface CurrentUser {
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // User session
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   // Navigation tab
-  const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'inbox' | 'analytics'>('links');
+  const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'inbox' | 'analytics'>('profile');
 
   // Profile states
   const [profile, setProfile] = useState<ProfileData>({
@@ -180,6 +183,24 @@ export default function AdminDashboard() {
     }
   }, [currentUser]);
 
+  // Handle Photo Upload from local device (base64)
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size exceeds 2MB limit. Please choose a smaller image.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setProfile((prev) => ({ ...prev, avatar: reader.result as string }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Save profile handler
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,12 +230,11 @@ export default function AdminDashboard() {
     }
   };
 
-  // Add new link handler (dengan Deskripsi)
+  // Add new link handler
   const handleAddLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newUrl.trim()) return;
 
-    // Check free limit
     if (!isProUser && links.length >= 3) {
       setShowUpgradeModal(true);
       return;
@@ -427,7 +447,7 @@ export default function AdminDashboard() {
       {/* Main Content Area */}
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
         
-        {/* TAB 1: Profile & Bio */}
+        {/* TAB 1: Profile & Bio (Dengan Upload Foto Profil) */}
         {activeTab === 'profile' && (
           <div className="max-w-xl flex flex-col gap-6">
             <div>
@@ -438,16 +458,52 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
-              <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
+              <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-5">
+                
+                {/* Visual Avatar Upload Widget */}
                 <div>
-                  <label className="text-xs font-semibold text-neutral-300 block mb-1.5">Avatar URL</label>
-                  <input
-                    type="url"
-                    required
-                    value={profile.avatar}
-                    onChange={(e) => setProfile({ ...profile, avatar: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
-                  />
+                  <label className="text-xs font-semibold text-neutral-300 block mb-2">Profile Avatar</label>
+                  <div className="flex items-center gap-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
+                    <div className="relative group">
+                      <img
+                        src={profile.avatar}
+                        alt={profile.name}
+                        className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500/40 shadow-lg group-hover:opacity-80 transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition cursor-pointer"
+                        title="Upload new avatar"
+                      >
+                        <Camera className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 flex-1">
+                      <p className="text-xs font-bold text-white">Upload New Image</p>
+                      <p className="text-[11px] text-neutral-400 leading-relaxed">
+                        Square format recommended (JPG, PNG, or WebP up to 2MB).
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Choose File</span>
+                        </button>
+                      </div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -525,7 +581,7 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Form Add Link dengan Judul, URL, dan Deskripsi */}
+            {/* Form Add Link */}
             <form onSubmit={handleAddLink} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Add New Link</h3>
               
@@ -548,7 +604,6 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Input Deskripsi / Subtitle */}
               <div>
                 <input
                   type="text"
