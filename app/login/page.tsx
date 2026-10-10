@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Lock, User, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function LoginPage() {
@@ -78,6 +79,16 @@ export default function LoginPage() {
             <Lock className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
           </div>
 
+          {/* Tautan Forgot Password */}
+          <div className="flex justify-end -mt-1">
+            <Link
+              href="/forgot-password"
+              className="text-[11px] text-neutral-400 hover:text-emerald-400 transition"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
           {errorMsg && (
             <p className="text-xs text-rose-400 font-medium text-center">
               {errorMsg}
@@ -96,9 +107,9 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-xs text-neutral-500">
           Don&apos;t have an account yet?{' '}
-          <a href="/register" className="text-emerald-400 hover:underline">
+          <Link href="/register" className="text-emerald-400 hover:underline">
             Claim your link
-          </a>
+          </Link>
         </div>
       </div>
     </main>

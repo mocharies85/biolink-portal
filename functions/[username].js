@@ -1,8 +1,17 @@
 export async function onRequest({ request, env, params }) {
   const username = params.username ? params.username.toLowerCase() : '';
 
-  // Daftar rute sistem yang tidak boleh dialihkan ke profil
-  const reservedRoutes = ['register', 'login', 'admin', 'api', '_next', 'favicon.ico'];
+  // Daftar rute sistem yang tidak boleh dialihkan ke profil bio
+  const reservedRoutes = [
+    'register',
+    'login',
+    'admin',
+    'api',
+    '_next',
+    'favicon.ico',
+    'forgot-password',
+    'reset-password',
+  ];
 
   // Jika URL adalah rute sistem atau file statis, sajikan halaman aslinya
   if (!username || reservedRoutes.includes(username) || username.includes('.')) {
