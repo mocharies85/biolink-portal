@@ -20,7 +20,8 @@ import {
   Save,
   CheckCircle2,
   Camera,
-  Upload
+  Upload,
+  Lock
 } from 'lucide-react';
 
 interface LinkItem {
@@ -64,13 +65,16 @@ export default function AdminDashboard() {
 
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isProUser, setIsProUser] = useState(false);
 
   // Periksa status login pengguna
   useEffect(() => {
     const storedUser = sessionStorage.getItem('curiolot_auth_user');
     if (storedUser) {
       try {
-        setCurrentUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        setCurrentUser(parsed);
+        setIsProUser(parsed.is_pro === 1);
       } catch {
         sessionStorage.removeItem('curiolot_auth_user');
         router.push('/login');
@@ -129,6 +133,9 @@ export default function AdminDashboard() {
       if (res.ok) {
         const data = await res.json();
         setLinks(data.links || []);
+        if (typeof data.isPro === 'boolean') {
+          setIsProUser(data.isPro);
+        }
       }
     } catch (err) {
       console.error('Failed to load links:', err);
@@ -231,6 +238,12 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!newTitle.trim() || !newUrl.trim()) return;
 
+    // Proteksi batas tautan di sisi client
+    if (!isProUser && links.length >= 3) {
+      alert('Batas paket Free tercapai (maksimal 3 tautan). Silakan upgrade ke akun PRO untuk tautan tanpa batas.');
+      return;
+    }
+
     setAddingLink(true);
     const formattedUrl = newUrl.startsWith('http') ? newUrl.trim() : `https://${newUrl.trim()}`;
 
@@ -300,9 +313,11 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h2 className="text-sm font-bold text-white tracking-tight">@{activeUsername}</h2>
-              <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
-                <ShieldCheck className="w-3 h-3" />
-                <span>{currentUser.role === 'admin' ? 'Admin Portal' : 'Creator Portal'}</span>
+              <div className="flex items-center gap-1.5 text-[11px] font-medium mt-0.5">
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                <span className={isProUser ? 'text-amber-400 font-bold' : 'text-emerald-400'}>
+                  {isProUser ? 'PRO Member' : (currentUser.role === 'admin' ? 'Admin Portal' : 'Free Creator')}
+                </span>
               </div>
             </div>
           </div>
@@ -515,7 +530,22 @@ export default function AdminDashboard() {
           <div className="max-w-2xl flex flex-col gap-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-xl font-bold text-white">Links &amp; Monetization</h1>
+                <div className="flex items-center gap-2.5">
+                  <h1 className="text-xl font-bold text-white">Links &amp; Monetization</h1>
+                  {isProUser ? (
+                    <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                      ⭐ PRO (Unlimited)
+                    </span>
+                  ) : (
+                    <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full border ${
+                      links.length >= 3 
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' 
+                        : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                    }`}>
+                      Free Plan: {links.length} / 3 Links
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-neutral-400 mt-1">Manage links specifically for @{activeUsername}.</p>
               </div>
               <button
@@ -527,6 +557,7 @@ export default function AdminDashboard() {
               </button>
             </div>
 
+            {/* Form Tambah Link dengan Proteksi Batas Kuota */}
             <form onSubmit={handleAddLink} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                 <Plus className="w-3.5 h-3.5" /> Add New Link
@@ -536,31 +567,58 @@ export default function AdminDashboard() {
                 placeholder="Title (e.g. My Online Store)"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
+                disabled={!isProUser && links.length >= 3}
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <input
                 type="text"
                 placeholder="URL (e.g. https://...)"
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
+                disabled={!isProUser && links.length >= 3}
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <input
                 type="text"
                 placeholder="Short Description (optional)"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                disabled={!isProUser && links.length >= 3}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
               />
-              <button
-                type="submit"
-                disabled={addingLink}
-                className="self-end px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition disabled:opacity-50"
-              >
-                {addingLink ? 'Adding...' : 'Add Link Button'}
-              </button>
+
+              {!isProUser && links.length >= 3 ? (
+                <div className="mt-2 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div className="text-left">
+                      <p className="text-xs text-amber-300 font-bold">
+                        Batas 3 Link untuk Akun Gratis Sudah Tercapai
+                      </p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                        Upgrade ke Pro untuk menambahkan tautan tanpa batas dan badge khusus.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => alert('Untuk aktivasi status PRO, silakan hubungi kontak admin/developer.')}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs shrink-0 transition"
+                  >
+                    Upgrade to PRO ⭐
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={addingLink}
+                  className="self-end px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition disabled:opacity-50"
+                >
+                  {addingLink ? 'Adding...' : 'Add Link Button'}
+                </button>
+              )}
             </form>
 
             {loadingLinks ? (
@@ -649,7 +707,9 @@ export default function AdminDashboard() {
               </div>
               <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800">
                 <span className="text-xs text-neutral-400">Account Type</span>
-                <span className="text-xl font-bold text-emerald-400 block mt-2">{currentUser.is_pro ? 'PRO Plan' : 'Free Tier'}</span>
+                <span className={`text-xl font-bold block mt-2 ${isProUser ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {isProUser ? 'PRO Plan ⭐' : 'Free Tier'}
+                </span>
               </div>
             </div>
           </div>
