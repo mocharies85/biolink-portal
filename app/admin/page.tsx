@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User,
   Link2, 
@@ -20,7 +20,9 @@ import {
   ShieldCheck,
   ArrowRight,
   Save,
-  CheckCircle2
+  CheckCircle2,
+  Camera,
+  Upload
 } from 'lucide-react';
 
 interface LinkItem {
@@ -58,6 +60,9 @@ export default function AdminDashboard() {
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string>('');
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
+
+  // Ref untuk tombol file upload tersembunyi
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const savedAuth = sessionStorage.getItem('biolink_admin_authenticated');
@@ -158,6 +163,47 @@ export default function AdminDashboard() {
       fetchMessages();
     }
   }, [isAuthenticated]);
+
+  // Fungsi Upload & Kompres Gambar Otomatis (seperti medsos)
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Kompres gambar ke ukuran optimal avatar (400x400)
+        const canvas = document.createElement('canvas');
+        const MAX_DIMENSION = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_DIMENSION) {
+            height = Math.round((height * MAX_DIMENSION) / width);
+            width = MAX_DIMENSION;
+          }
+        } else {
+          if (height > MAX_DIMENSION) {
+            width = Math.round((width * MAX_DIMENSION) / height);
+            height = MAX_DIMENSION;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Ubah menjadi data URL ringan berkualitas tinggi
+        const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setProfile((prev) => ({ ...prev, avatar: optimizedDataUrl }));
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,7 +348,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col lg:flex-row font-sans">
       
-      {/* Sidebar Kiri */}
+      {/* 1. Sidebar Kiri */}
       <aside className="w-full lg:w-64 bg-neutral-900/70 border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0">
         <div>
           <div className="flex items-center gap-2.5 pb-6 border-b border-neutral-800">
@@ -319,7 +365,6 @@ export default function AdminDashboard() {
           </div>
 
           <nav className="mt-6 flex flex-col gap-1.5">
-            {/* Tab Profile & Bio */}
             <button
               onClick={() => setActiveTab('profile')}
               className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
@@ -332,7 +377,6 @@ export default function AdminDashboard() {
               <span>Profile &amp; Bio</span>
             </button>
 
-            {/* Tab Links */}
             <button
               onClick={() => setActiveTab('links')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
@@ -350,7 +394,6 @@ export default function AdminDashboard() {
               </span>
             </button>
 
-            {/* Tab Inbox */}
             <button
               onClick={() => setActiveTab('messaging')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
@@ -370,7 +413,6 @@ export default function AdminDashboard() {
               )}
             </button>
 
-            {/* Tab Analytics */}
             <button
               onClick={() => setActiveTab('analytics')}
               className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
@@ -405,40 +447,77 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      {/* Panel Utama */}
+      {/* 2. Panel Utama */}
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto max-h-screen">
         
-        {/* TAB 0: EDIT PROFILE */}
+        {/* TAB PROFILE */}
         {activeTab === 'profile' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
               <h1 className="text-xl font-bold text-white">Profile &amp; Branding</h1>
               <p className="text-xs text-neutral-400 mt-1">
-                Customize your display identity, bio description, and avatar seen by global visitors.
+                Customize your display identity, bio description, and profile picture.
               </p>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
+            <form onSubmit={handleSaveProfile} className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-5">
               
-              {/* Avatar Preview & URL */}
-              <div className="flex items-center gap-4 pb-4 border-b border-neutral-800">
-                <img
-                  src={profile.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces"}
-                  alt="Avatar Preview"
-                  className="w-16 h-16 rounded-full object-cover border-2 border-emerald-400 shadow-md"
-                />
-                <div className="flex-1">
-                  <label className="text-xs font-semibold text-neutral-300 block mb-1">
-                    Avatar Image URL
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.avatar}
-                    onChange={(e) => setProfile({ ...profile, avatar: e.target.value })}
-                    placeholder="https://example.com/avatar.jpg"
-                    className="w-full px-3.5 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+              {/* Bagian Upload Avatar Model Media Sosial */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-5 pb-5 border-b border-neutral-800">
+                {/* Lingkaran Avatar Interaktif dengan Ikon Kamera */}
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative group cursor-pointer w-20 h-20 rounded-full shrink-0 shadow-lg"
+                  title="Click to change profile picture"
+                >
+                  <img
+                    src={profile.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces"}
+                    alt="Avatar Preview"
+                    className="w-20 h-20 rounded-full object-cover border-2 border-emerald-400 group-hover:opacity-80 transition"
                   />
-                  <p className="text-[10px] text-neutral-500 mt-1">Paste any direct image link or use your online photo URL.</p>
+                  <div className="absolute inset-0 bg-neutral-950/60 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[1px]">
+                    <Camera className="w-5 h-5 text-emerald-400" />
+                    <span className="text-[9px] text-white font-semibold mt-0.5">Change</span>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col gap-2">
+                  <div className="flex items-center gap-2.5">
+                    {/* Tombol Upload File */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-white flex items-center gap-2 transition"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Upload New Photo</span>
+                    </button>
+
+                    {/* Tombol Reset ke Foto Default */}
+                    <button
+                      type="button"
+                      onClick={() => setProfile((prev) => ({
+                        ...prev,
+                        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces"
+                      }))}
+                      className="px-3 py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-xs text-neutral-400 hover:text-neutral-200 transition"
+                    >
+                      Reset
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-neutral-500 leading-relaxed">
+                    JPG, PNG, or WebP. Images are automatically optimized and cropped for bio-link profiles.
+                  </p>
+
+                  {/* Input File Tersembunyi (dibuka saat foto/tombol diklik) */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
                 </div>
               </div>
 
@@ -485,7 +564,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Save Button */}
+              {/* Tombol Simpan */}
               <div className="flex items-center justify-between pt-2">
                 {profileSavedSuccess ? (
                   <span className="text-xs text-emerald-400 flex items-center gap-1.5 font-medium">
@@ -507,7 +586,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 1: LINKS MANAGEMENT */}
+        {/* TAB LINKS */}
         {activeTab === 'links' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div className="flex items-center justify-between">
@@ -603,7 +682,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 2: MESSAGING */}
+        {/* TAB MESSAGING */}
         {activeTab === 'messaging' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div className="flex items-center justify-between">
@@ -667,7 +746,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 3: ANALYTICS */}
+        {/* TAB ANALYTICS */}
         {activeTab === 'analytics' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -699,7 +778,7 @@ export default function AdminDashboard() {
 
       </main>
 
-      {/* Simulator Real-Time di Kanan */}
+      {/* Simulator Real-Time */}
       <aside className="hidden xl:flex w-96 bg-neutral-900/40 border-l border-neutral-800 p-8 items-center justify-center shrink-0">
         <div className="w-full max-w-[280px] h-[560px] bg-neutral-950 rounded-[40px] border-4 border-neutral-800 shadow-2xl p-4 flex flex-col items-center relative overflow-hidden ring-1 ring-neutral-700/50">
           <div className="w-20 h-4 bg-neutral-800 rounded-full mb-4 shrink-0" />
