@@ -73,6 +73,7 @@ export async function onRequestPost({ request, env }) {
           }
         );
       }
+    }
 
     // 3. Masukkan link baru jika masih di bawah batas atau merupakan user Pro
     await env.DB.prepare(
