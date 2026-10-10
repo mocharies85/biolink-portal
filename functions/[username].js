@@ -6,6 +6,7 @@ export async function onRequest({ request, env, params }) {
     'register',
     'login',
     'admin',
+    'superadmin',
     'api',
     '_next',
     'favicon.ico',
