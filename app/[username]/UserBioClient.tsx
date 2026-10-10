@@ -104,22 +104,41 @@ export default function UserBioClient() {
 
       <div className="w-full max-w-md flex flex-col items-center relative z-10">
         
-        {/* Share Button */}
-        <div className="w-full flex justify-end mb-3">
-          <button 
-            onClick={() => {
-              if (navigator.share) {
-                navigator.share({ title: profile.name, url: window.location.href });
-              } else {
-                navigator.clipboard.writeText(window.location.href);
-                alert('Profile link copied to clipboard!');
-              }
-            }}
-            aria-label="Share profile"
-            className="p-2.5 rounded-full bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 transition text-neutral-400 hover:text-white"
+        {/* Top Navigation Bar: Register, Login & Share */}
+        <div className="w-full flex items-center justify-between mb-4 pb-2 border-b border-neutral-900">
+          {/* Tombol Buat Akun (Register untuk Publik) */}
+          <a
+            href="/register"
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5 rounded-full transition"
           >
-            <Share2 className="w-4 h-4" />
-          </button>
+            <Sparkles className="w-3 h-3" />
+            <span>Create your link</span>
+          </a>
+
+          {/* Tombol Login & Share */}
+          <div className="flex items-center gap-2">
+            <a
+              href="/admin"
+              className="text-[11px] font-medium text-neutral-400 hover:text-white px-2.5 py-1.5 rounded-full hover:bg-neutral-900 transition"
+            >
+              Log in
+            </a>
+
+            <button 
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({ title: profile.name, url: window.location.href });
+                } else {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Profile link copied to clipboard!');
+                }
+              }}
+              aria-label="Share profile"
+              className="p-2 rounded-full bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 transition text-neutral-400 hover:text-white"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Profile Header */}
