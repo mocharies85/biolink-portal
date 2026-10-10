@@ -1,12 +1,15 @@
 export async function onRequest({ request, env, params }) {
-  const username = params.username;
+  const username = params.username ? params.username.toLowerCase() : '';
 
-  // Abaikan request API atau file statis (gambar, icon, script)
-  if (!username || username.startsWith('api') || username.includes('.')) {
+  // Daftar rute sistem yang tidak boleh dialihkan ke profil
+  const reservedRoutes = ['register', 'login', 'admin', 'api', '_next', 'favicon.ico'];
+
+  // Jika URL adalah rute sistem atau file statis, sajikan halaman aslinya
+  if (!username || reservedRoutes.includes(username) || username.includes('.')) {
     return env.ASSETS.fetch(request);
   }
 
-  // Alihkan permintaan halaman ke template bio secara dinamis
+  // Jika URL adalah username dinamis (seperti /vant, /alex), gunakan template bio
   const url = new URL(request.url);
   url.pathname = '/aries';
   const template = await env.ASSETS.fetch(new Request(url.toString(), request));
