@@ -9,7 +9,8 @@ import {
   Heart, 
   Sparkles, 
   CheckCircle2,
-  Share2
+  Share2,
+  Check
 } from 'lucide-react';
 
 interface LinkItem {
@@ -26,8 +27,17 @@ interface LinkItem {
 
 export default function UserBioClient() {
   const params = useParams();
-  const rawUsername = params?.username as string;
-  const username = rawUsername || 'creator';
+
+  // 1. Ambil username secara andal (baik dari Next params maupun URL browser)
+  const [username, setUsername] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
+      if (pathPart && pathPart !== 'admin' && pathPart !== 'login' && pathPart !== 'register') {
+        return pathPart.toLowerCase();
+      }
+    }
+    return (params?.username as string) || 'creator';
+  });
 
   const [profile, setProfile] = useState({
     name: username.toUpperCase(),
@@ -38,10 +48,22 @@ export default function UserBioClient() {
 
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [loadingLinks, setLoadingLinks] = useState(true);
+  const [isCopied, setIsCopied] = useState(false);
 
-  // Ambil profil dan tautan spesifik sesuai username di URL
+  // Sinkronkan username dari URL saat pertama kali dimuat di browser
   useEffect(() => {
-    // 1. Ambil data profil
+    if (typeof window !== 'undefined') {
+      const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
+      if (pathPart && pathPart !== 'admin' && pathPart !== 'login' && pathPart !== 'register') {
+        setUsername(pathPart.toLowerCase());
+      }
+    }
+  }, []);
+
+  // 2. Ambil profil dan tautan dari D1 berdasarkan username aktif
+  useEffect(() => {
+    if (!username) return;
+
     fetch(`/api/profile?username=${username}`)
       .then((res) => res.json())
       .then((data) => {
@@ -49,7 +71,6 @@ export default function UserBioClient() {
       })
       .catch((err) => console.error('Failed to load profile:', err));
 
-    // 2. Ambil tautan milik user tersebut
     fetch(`/api/links?username=${username}`)
       .then((res) => res.json())
       .then((data) => {
@@ -58,6 +79,43 @@ export default function UserBioClient() {
       .catch((err) => console.error('Failed to load links:', err))
       .finally(() => setLoadingLinks(false));
   }, [username]);
+
+  // 3. Tombol Share responsif & andal
+  const handleShare = async () => {
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : `https://link.curiolot.com/${username}`;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(currentUrl);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = currentUrl;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+
+    if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({
+          title: profile.name,
+          text: profile.bio,
+          url: currentUrl,
+        });
+      } catch {
+        // user cancel share dialog
+      }
+    }
+  };
 
   const [senderName, setSenderName] = useState('');
   const [message, setMessage] = useState('');
@@ -98,45 +156,47 @@ export default function UserBioClient() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 flex justify-center py-12 px-4 sm:px-6 relative overflow-hidden font-sans">
+    <main className="min-h-screen bg-neutral-950 text-neutral-100 flex justify-center py-10 px-4 sm:px-6 relative overflow-hidden font-sans">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md flex flex-col items-center relative z-10">
         
         {/* Top Navigation Bar: Register, Login & Share */}
-        <div className="w-full flex items-center justify-between mb-4 pb-2 border-b border-neutral-900">
-          {/* Tombol Buat Akun (Register untuk Publik) */}
+        <div className="w-full flex items-center justify-between mb-6 pb-3 border-b border-neutral-900">
           <a
             href="/register"
-            className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5 rounded-full transition"
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5 rounded-full transition shadow-sm shadow-emerald-500/10"
           >
-            <Sparkles className="w-3 h-3" />
+            <Sparkles className="w-3.5 h-3.5" />
             <span>Create your link</span>
           </a>
 
-          {/* Tombol Login & Share */}
           <div className="flex items-center gap-2">
             <a
-              href="/admin"
-              className="text-[11px] font-medium text-neutral-400 hover:text-white px-2.5 py-1.5 rounded-full hover:bg-neutral-900 transition"
+              href="/login"
+              className="text-[11px] font-medium text-neutral-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-neutral-900 transition"
             >
               Log in
             </a>
 
             <button 
-              onClick={() => {
-                if (navigator.share) {
-                  navigator.share({ title: profile.name, url: window.location.href });
-                } else {
-                  navigator.clipboard.writeText(window.location.href);
-                  alert('Profile link copied to clipboard!');
-                }
-              }}
+              onClick={handleShare}
               aria-label="Share profile"
-              className="p-2 rounded-full bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 transition text-neutral-400 hover:text-white"
+              className={`p-2 rounded-full border transition-all duration-200 flex items-center gap-1.5 shadow-md ${
+                isCopied
+                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                  : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 text-neutral-400 hover:text-white'
+              }`}
             >
-              <Share2 className="w-3.5 h-3.5" />
+              {isCopied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[10px] font-semibold text-emerald-300 pr-1">Copied!</span>
+                </>
+              ) : (
+                <Share2 className="w-3.5 h-3.5" />
+              )}
             </button>
           </div>
         </div>

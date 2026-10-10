@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, CheckCircle2, User, Mail, Lock } from 'lucide-react';
+import { Sparkles, ArrowRight, MailCheck, User, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -9,7 +9,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [registeredUser, setRegisteredUser] = useState<string | null>(null);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +26,7 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (res.ok) {
-        setRegisteredUser(data.username);
+        setRegisteredEmail(email);
       } else {
         setErrorMsg(data.error || 'Failed to create account.');
       }
@@ -43,24 +43,32 @@ export default function RegisterPage() {
 
       <div className="w-full max-w-sm p-8 rounded-3xl bg-neutral-900/90 border border-neutral-800 shadow-2xl relative z-10 flex flex-col items-center">
         
-        {registeredUser ? (
-          <div className="text-center flex flex-col items-center py-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4">
-              <CheckCircle2 className="w-7 h-7" />
+        {registeredEmail ? (
+          <div className="text-center flex flex-col items-center py-2">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4 shadow-lg shadow-emerald-500/10">
+              <MailCheck className="w-8 h-8" />
             </div>
-            <h1 className="text-xl font-bold text-white">Account Created!</h1>
+
+            <h1 className="text-xl font-bold text-white">Check Your Email</h1>
             <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
-              Your bio-link is live at:
+              We have sent an activation link to:
             </p>
-            <p className="text-sm font-semibold text-emerald-400 mt-1 select-all bg-neutral-950 px-3 py-1.5 rounded-lg border border-neutral-800">
-              link.curiolot.com/{registeredUser}
+            <p className="text-xs font-semibold text-emerald-400 mt-1 bg-neutral-950 px-3 py-1.5 rounded-lg border border-neutral-800 break-all">
+              {registeredEmail}
             </p>
 
+            <div className="mt-4 p-3.5 rounded-xl bg-neutral-950/70 border border-neutral-800 text-[11px] text-neutral-400 text-left leading-relaxed">
+              <p className="font-semibold text-neutral-300 mb-1">Next steps:</p>
+              1. Open your email inbox (or spam folder).<br />
+              2. Click the verification link to activate your bio-link.<br />
+              3. Log in to personalize your page.
+            </div>
+
             <a
-              href={`/${registeredUser}`}
+              href="/login"
               className="w-full mt-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition"
             >
-              <span>View Your Bio Page</span>
+              <span>Go to Login</span>
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
@@ -76,7 +84,6 @@ export default function RegisterPage() {
             </p>
 
             <form onSubmit={handleRegister} className="w-full mt-6 flex flex-col gap-3">
-              {/* Input Username */}
               <div className="relative">
                 <input
                   type="text"
@@ -89,7 +96,6 @@ export default function RegisterPage() {
                 <User className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               </div>
 
-              {/* Input Email */}
               <div className="relative">
                 <input
                   type="email"
@@ -102,7 +108,6 @@ export default function RegisterPage() {
                 <Mail className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               </div>
 
-              {/* Input Password */}
               <div className="relative">
                 <input
                   type="password"
@@ -116,9 +121,10 @@ export default function RegisterPage() {
               </div>
 
               {errorMsg && (
-                <p className="text-xs text-rose-400 font-medium text-center">
-                  {errorMsg}
-                </p>
+                <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-900/50 text-xs text-rose-400 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{errorMsg}</span>
+                </div>
               )}
 
               <button
@@ -133,7 +139,7 @@ export default function RegisterPage() {
 
             <div className="mt-6 text-center text-xs text-neutral-500">
               Already have an account?{' '}
-              <a href="/admin" className="text-emerald-400 hover:underline">
+              <a href="/login" className="text-emerald-400 hover:underline">
                 Log in
               </a>
             </div>
