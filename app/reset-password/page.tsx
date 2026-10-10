@@ -3,6 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -11,13 +12,15 @@ function ResetPasswordForm() {
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      setError('Password konfirmasi tidak cocok.');
+      setError('Passwords do not match.');
       return;
     }
 
@@ -33,13 +36,13 @@ function ResetPasswordForm() {
 
       const data = await res.json();
       if (res.ok) {
-        alert('Password berhasil diperbarui! Silakan login.');
+        alert('Password successfully updated! Please log in with your new password.');
         router.push('/login');
       } else {
-        setError(data.error || 'Gagal mereset password.');
+        setError(data.error || 'Failed to update password.');
       }
     } catch {
-      setError('Gagal menghubungi server.');
+      setError('Network connection error. Try again.');
     } finally {
       setLoading(false);
     }
@@ -49,7 +52,7 @@ function ResetPasswordForm() {
     return (
       <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-4">
         <div className="text-center">
-          <p className="text-xs text-rose-400 mb-2">Invalid or missing token.</p>
+          <p className="text-xs text-rose-400 mb-2">Invalid or missing reset token.</p>
           <Link href="/login" className="text-xs text-emerald-400 underline">Back to Login</Link>
         </div>
       </main>
@@ -64,32 +67,57 @@ function ResetPasswordForm() {
 
         <form onSubmit={handleReset} className="flex flex-col gap-4">
           {error && <p className="text-xs text-rose-400">{error}</p>}
+          
           <div>
             <label className="text-xs text-neutral-300 block mb-1">New Password</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500"
-            />
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                required
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition"
+                tabIndex={-1}
+              >
+                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
+
           <div>
             <label className="text-xs text-neutral-300 block mb-1">Confirm Password</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repeat new password"
+                className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition"
+                tabIndex={-1}
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs rounded-xl transition disabled:opacity-50"
+            className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs rounded-xl transition disabled:opacity-50 mt-1"
           >
             {loading ? 'Updating...' : 'Update Password'}
           </button>

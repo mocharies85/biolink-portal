@@ -12,7 +12,7 @@ export async function onRequestPost({ request, env }) {
     const { token, newPassword } = await request.json();
 
     if (!token || !newPassword) {
-      return new Response(JSON.stringify({ error: 'Token dan password baru wajib diisi' }), {
+      return new Response(JSON.stringify({ error: 'Token and new password are required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -26,17 +26,18 @@ export async function onRequestPost({ request, env }) {
     ).bind(token, now).first();
 
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Tautan reset tidak valid atau sudah kedaluwarsa' }), {
+      return new Response(JSON.stringify({ error: 'Reset link is invalid or has expired' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // 2. Hash kata sandi baru dan bersihkan token
+    // 2. Hash kata sandi baru
     const hashedPassword = await hashPassword(newPassword);
 
+    // 3. Update password_hash dan bersihkan token
     await env.DB.prepare(
-      'UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?'
+      'UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?'
     ).bind(hashedPassword, user.id).run();
 
     return new Response(JSON.stringify({ success: true }), {
