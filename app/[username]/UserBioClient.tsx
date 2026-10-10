@@ -32,7 +32,7 @@ export default function UserBioClient() {
   const [profile] = useState({
     name: username.toUpperCase(),
     tagline: "Digital Creator & Independent Maker",
-    bio: `Selamat datang di ruang tautan resmi @${username}. Temukan portofolio, toko, dan kolaborasi di sini.`,
+    bio: `Welcome to the official hub of @${username}. Explore featured portfolios, stores, and collaborative projects below.`,
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces",
   });
 
@@ -45,7 +45,7 @@ export default function UserBioClient() {
       .then((data) => {
         if (data.links) setLinks(data.links);
       })
-      .catch((err) => console.error('Gagal mengambil links:', err))
+      .catch((err) => console.error('Failed to fetch links:', err))
       .finally(() => setLoadingLinks(false));
   }, [username]);
 
@@ -76,11 +76,11 @@ export default function UserBioClient() {
         setTimeout(() => setIsSent(false), 5000);
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.error || 'Gagal mengirim pesan.');
+        alert(errData.error || 'Failed to send message.');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kendala koneksi.');
+      alert('Network connection error.');
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,7 @@ export default function UserBioClient() {
                 navigator.share({ title: profile.name, url: window.location.href });
               } else {
                 navigator.clipboard.writeText(window.location.href);
-                alert('Tautan profil disalin!');
+                alert('Profile link copied to clipboard!');
               }
             }}
             aria-label="Share profile"
@@ -129,7 +129,7 @@ export default function UserBioClient() {
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-white">
             {profile.name}
           </h1>
-          <p className="text-xs font-semibold text-emerald-400 mt-1 tracking-wider">
+          <p className="text-xs font-semibold text-emerald-400 mt-1 tracking-wider uppercase">
             @{username} • {profile.tagline}
           </p>
           <p className="text-sm text-neutral-400 mt-2 max-w-xs leading-relaxed">
@@ -141,7 +141,7 @@ export default function UserBioClient() {
         <section className="w-full flex flex-col gap-3.5 mb-8">
           {loadingLinks ? (
             <div className="p-8 text-center text-xs text-neutral-500 animate-pulse">
-              Memuat tautan...
+              Loading links...
             </div>
           ) : (
             links
@@ -182,21 +182,21 @@ export default function UserBioClient() {
           )}
         </section>
 
-        {/* Messaging Box */}
+        {/* Direct Messaging Section */}
         <section className="w-full p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 backdrop-blur-sm mb-10">
           <div className="flex items-center gap-2 mb-2">
             <MessageSquare className="w-4 h-4 text-emerald-400" />
-            <h2 className="text-sm font-semibold text-neutral-200">Kirim Pesan ke @{username}</h2>
+            <h2 className="text-sm font-semibold text-neutral-200">Direct Inquiry to @{username}</h2>
           </div>
           <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
-            Punya tawaran kolaborasi atau pesan pribadi? Kirim langsung ke kotak masuk pengguna ini.
+            Have a project collaboration, freelance inquiry, or message? Send a note directly to this inbox.
           </p>
 
           {isSent ? (
             <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center flex flex-col items-center gap-1.5">
               <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-              <p className="text-xs font-semibold text-emerald-300">Pesan Terkirim!</p>
-              <p className="text-[11px] text-neutral-400">Pesan telah masuk ke inbox pemilik akun.</p>
+              <p className="text-xs font-semibold text-emerald-300">Message Delivered!</p>
+              <p className="text-[11px] text-neutral-400">Thank you for reaching out. The creator will receive your note shortly.</p>
             </div>
           ) : (
             <form onSubmit={handleSendMessage} className="flex flex-col gap-2.5">
@@ -204,7 +204,7 @@ export default function UserBioClient() {
                 type="text"
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
-                placeholder="Nama atau Email Anda (Opsional)"
+                placeholder="Your Name or Email (Optional)"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500 transition"
               />
               <textarea
@@ -212,7 +212,7 @@ export default function UserBioClient() {
                 onChange={(e) => setMessage(e.target.value)}
                 rows={3}
                 required
-                placeholder="Tulis pesan Anda di sini..."
+                placeholder="Write your message here..."
                 className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500 transition resize-none"
               />
               <button
@@ -221,11 +221,11 @@ export default function UserBioClient() {
                 className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-semibold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
               >
                 {loading ? (
-                  <span>Mengirim pesan...</span>
+                  <span>Sending message...</span>
                 ) : (
                   <>
                     <Send className="w-3.5 h-3.5" />
-                    <span>Kirim Pesan</span>
+                    <span>Send Message</span>
                   </>
                 )}
               </button>
@@ -236,7 +236,7 @@ export default function UserBioClient() {
         {/* Branding Footer */}
         <footer className="flex flex-col items-center gap-1 text-center text-xs text-neutral-500">
           <p className="flex items-center gap-1 text-[11px]">
-            Dibuat dengan <Heart className="w-3 h-3 text-rose-500 fill-rose-500 inline" /> via Curiolot Link
+            Powered by <Heart className="w-3 h-3 text-rose-500 fill-rose-500 inline" /> Curiolot Link
           </p>
         </footer>
 
