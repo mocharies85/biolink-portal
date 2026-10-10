@@ -29,7 +29,7 @@ export default function UserBioClient() {
   const rawUsername = params?.username as string;
   const username = rawUsername || 'creator';
 
-  const [profile] = useState({
+  const [profile, setProfile] = useState({
     name: username.toUpperCase(),
     tagline: "Digital Creator & Independent Maker",
     bio: `Welcome to the official hub of @${username}. Explore featured portfolios, stores, and collaborative projects below.`,
