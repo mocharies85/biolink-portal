@@ -1,5 +1,18 @@
-export async function onRequestGet({ env }) {
+// Master PIN rahasia Superadmin (bisa Anda ubah kapan saja di sini)
+const MASTER_PIN = '586042';
+
+export async function onRequestGet({ request, env }) {
   try {
+    // 1. Verifikasi PIN Keamanan
+    const clientPin = request.headers.get('x-admin-pin');
+    if (clientPin !== MASTER_PIN) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid Admin PIN' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 2. Hitung statistik pengguna
     const totalStats = await env.DB.prepare(`
       SELECT 
         COUNT(*) as total_users,
@@ -8,10 +21,12 @@ export async function onRequestGet({ env }) {
       FROM users
     `).first();
 
+    // 3. Ambil data 50 user terbaru
     const users = await env.DB.prepare(
       'SELECT id, username, email, role, is_pro, created_at FROM users ORDER BY id DESC LIMIT 50'
     ).all();
 
+    // 4. Ambil 50 pesan dukungan terbaru
     const messages = await env.DB.prepare(
       'SELECT * FROM support_messages ORDER BY id DESC LIMIT 50'
     ).all();
@@ -37,8 +52,18 @@ export async function onRequestGet({ env }) {
   }
 }
 
+// Endpoint untuk mengubah status PRO secara manual oleh admin
 export async function onRequestPatch({ request, env }) {
   try {
+    // 1. Verifikasi PIN Keamanan
+    const clientPin = request.headers.get('x-admin-pin');
+    if (clientPin !== MASTER_PIN) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid Admin PIN' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { userId, is_pro } = await request.json();
 
     await env.DB.prepare(
