@@ -8,7 +8,8 @@ import {
   Heart, 
   Sparkles, 
   CheckCircle2,
-  Share2
+  Share2,
+  Check
 } from 'lucide-react';
 
 interface LinkItem {
@@ -41,6 +42,9 @@ export default function BioLinkPage() {
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [loadingLinks, setLoadingLinks] = useState(true);
 
+  // State Feedback Notifikasi Tombol Share
+  const [isCopied, setIsCopied] = useState(false);
+
   // Ambil profil dan link secara dinamis dari D1
   useEffect(() => {
     fetch('/api/profile')
@@ -58,6 +62,45 @@ export default function BioLinkPage() {
       .catch((err) => console.error('Failed to load links:', err))
       .finally(() => setLoadingLinks(false));
   }, []);
+
+  // Fungsi Share yang Andal untuk PC & HP
+  const handleShare = async () => {
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://link.curiolot.com';
+
+    // Salin link langsung ke clipboard
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(currentUrl);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = currentUrl;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+    } catch (err) {
+      console.error('Gagal menyalin tautan:', err);
+    }
+
+    // Jika dibuka di perangkat ponsel, tampilkan dialog share native
+    if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({
+          title: profile.name,
+          text: profile.bio,
+          url: currentUrl,
+        });
+      } catch {
+        // Abaikan jika dibatalkan oleh pengguna
+      }
+    }
+  };
 
   const [senderName, setSenderName] = useState('');
   const [message, setMessage] = useState('');
@@ -103,21 +146,25 @@ export default function BioLinkPage() {
 
       <div className="w-full max-w-md flex flex-col items-center relative z-10">
         
-        {/* Share Button */}
-        <div className="w-full flex justify-end mb-3">
+        {/* Tombol Share dengan Umpan Balik Visual */}
+        <div className="w-full flex justify-end mb-3 relative">
           <button 
-            onClick={() => {
-              if (navigator.share) {
-                navigator.share({ title: profile.name, url: window.location.href });
-              } else {
-                navigator.clipboard.writeText(window.location.href);
-                alert('Profile link copied to clipboard!');
-              }
-            }}
+            onClick={handleShare}
             aria-label="Share profile"
-            className="p-2.5 rounded-full bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 transition text-neutral-400 hover:text-white"
+            className={`p-2.5 rounded-full border transition-all duration-200 flex items-center gap-1.5 shadow-md ${
+              isCopied
+                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 text-neutral-400 hover:text-white'
+            }`}
           >
-            <Share2 className="w-4 h-4" />
+            {isCopied ? (
+              <>
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span className="text-[11px] font-semibold text-emerald-300 pr-1">Link Copied!</span>
+              </>
+            ) : (
+              <Share2 className="w-4 h-4" />
+            )}
           </button>
         </div>
 
