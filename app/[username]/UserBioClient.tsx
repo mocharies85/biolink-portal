@@ -39,13 +39,23 @@ export default function UserBioClient() {
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [loadingLinks, setLoadingLinks] = useState(true);
 
+  // Ambil profil dan tautan spesifik sesuai username di URL
   useEffect(() => {
-    fetch('/api/links')
+    // 1. Ambil data profil
+    fetch(`/api/profile?username=${username}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.profile) setProfile(data.profile);
+      })
+      .catch((err) => console.error('Failed to load profile:', err));
+
+    // 2. Ambil tautan milik user tersebut
+    fetch(`/api/links?username=${username}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.links) setLinks(data.links);
       })
-      .catch((err) => console.error('Failed to fetch links:', err))
+      .catch((err) => console.error('Failed to load links:', err))
       .finally(() => setLoadingLinks(false));
   }, [username]);
 
@@ -64,8 +74,9 @@ export default function UserBioClient() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username: username,
           sender: senderName.trim() || 'Anonymous',
-          content: `[@${username}] ${message.trim()}`,
+          content: message.trim(),
         }),
       });
 

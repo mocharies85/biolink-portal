@@ -1,9 +1,23 @@
-// Endpoint untuk membaca dan mengupdate data profil
-export async function onRequestGet({ env }) {
+// Membaca profil berdasarkan parameter ?username=... (default: 'aries')
+export async function onRequestGet({ request, env }) {
   try {
-    const profile = await env.DB.prepare(
-      'SELECT * FROM profile WHERE id = 1'
-    ).first();
+    const url = new URL(request.url);
+    const username = url.searchParams.get('username') || 'aries';
+
+    let profile = await env.DB.prepare(
+      'SELECT * FROM user_profiles WHERE username = ?'
+    ).bind(username).first();
+
+    // Jika profil belum ada, buat profil dasar otomatis
+    if (!profile) {
+      profile = {
+        username,
+        name: username.toUpperCase(),
+        tagline: 'Digital Creator',
+        bio: `Welcome to the official hub of @${username}.`,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces'
+      };
+    }
 
     return new Response(JSON.stringify({ profile }), {
       status: 200,
@@ -17,21 +31,24 @@ export async function onRequestGet({ env }) {
   }
 }
 
+// Menyimpan profil user
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
-    const { name, tagline, bio, avatar } = data;
+    const { username = 'aries', name, tagline, bio, avatar } = data;
 
     await env.DB.prepare(`
-      INSERT INTO profile (id, name, tagline, bio, avatar)
-      VALUES (1, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
+      INSERT INTO user_profiles (username, name, tagline, bio, avatar, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(username) DO UPDATE SET
         name = excluded.name,
         tagline = excluded.tagline,
         bio = excluded.bio,
-        avatar = excluded.avatar
+        avatar = excluded.avatar,
+        updated_at = CURRENT_TIMESTAMP
     `).bind(
-      name?.trim() || 'New Creator',
+      username,
+      name?.trim() || username,
       tagline?.trim() || '',
       bio?.trim() || '',
       avatar?.trim() || ''

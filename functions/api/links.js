@@ -1,9 +1,12 @@
-// Endpoint serverless untuk mengelola link (GET, POST, DELETE)
-export async function onRequestGet({ env }) {
+// Mengambil link milik username tertentu (?username=aries)
+export async function onRequestGet({ request, env }) {
   try {
+    const url = new URL(request.url);
+    const username = url.searchParams.get('username') || 'aries';
+
     const { results } = await env.DB.prepare(
-      'SELECT * FROM links ORDER BY id ASC'
-    ).all();
+      'SELECT * FROM user_links WHERE username = ? ORDER BY id DESC'
+    ).bind(username).all();
 
     return new Response(JSON.stringify({ links: results }), {
       status: 200,
@@ -17,26 +20,25 @@ export async function onRequestGet({ env }) {
   }
 }
 
+// Menambah link baru untuk user tertentu
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
-    const title = data.title?.trim();
-    const url = data.url?.trim();
-    const description = data.description?.trim() || '';
+    const { username = 'aries', title, url: linkUrl, description } = data;
 
-    if (!title || !url) {
-      return new Response(JSON.stringify({ error: 'Title dan URL wajib diisi' }), {
+    if (!title || !linkUrl) {
+      return new Response(JSON.stringify({ error: 'Title and URL are required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const info = await env.DB.prepare(
-      'INSERT INTO links (title, url, description, is_active, clicks) VALUES (?, ?, ?, 1, 0)'
-    ).bind(title, url, description).run();
+    await env.DB.prepare(
+      'INSERT INTO user_links (username, title, url, description) VALUES (?, ?, ?, ?)'
+    ).bind(username, title.trim(), linkUrl.trim(), description?.trim() || '').run();
 
-    return new Response(JSON.stringify({ success: true, id: info.meta.last_row_id }), {
-      status: 200,
+    return new Response(JSON.stringify({ success: true }), {
+      status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
@@ -47,19 +49,20 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
+// Menghapus link berdasarkan ID
 export async function onRequestDelete({ request, env }) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
 
     if (!id) {
-      return new Response(JSON.stringify({ error: 'ID link wajib disertakan' }), {
+      return new Response(JSON.stringify({ error: 'Missing link id' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    await env.DB.prepare('DELETE FROM links WHERE id = ?').bind(id).run();
+    await env.DB.prepare('DELETE FROM user_links WHERE id = ?').bind(id).run();
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

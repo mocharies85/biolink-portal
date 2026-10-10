@@ -1,49 +1,50 @@
-// Endpoint serverless untuk menangani pesan masuk (GET & POST)
-export async function onRequestPost({ request, env }) {
+// Mengambil pesan inbox milik username tertentu (?username=aries)
+export async function onRequestGet({ request, env }) {
   try {
-    const data = await request.json();
-    const sender = data.sender?.trim() || 'Anonymous';
-    const content = data.content?.trim();
+    const url = new URL(request.url);
+    const username = url.searchParams.get('username') || 'aries';
 
-    if (!content) {
-      return new Response(JSON.stringify({ error: 'Message content is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { results } = await env.DB.prepare(
+      'SELECT * FROM user_messages WHERE username = ? ORDER BY id DESC'
+    ).bind(username).all();
 
-    // Simpan pesan ke Cloudflare D1
-    await env.DB.prepare(
-      'INSERT INTO messages (sender, content) VALUES (?, ?)'
-    ).bind(sender, content).run();
-
-    return new Response(JSON.stringify({ success: true, message: 'Message saved successfully' }), {
+    return new Response(JSON.stringify({ messages: results }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }
 
-export async function onRequestGet({ env }) {
+// Mengirim pesan ke inbox pemilik akun
+export async function onRequestPost({ request, env }) {
   try {
-    // Ambil daftar pesan terbaru dari D1
-    const { results } = await env.DB.prepare(
-      'SELECT * FROM messages ORDER BY created_at DESC'
-    ).all();
+    const data = await request.json();
+    const { username = 'aries', sender, content } = data;
 
-    return new Response(JSON.stringify({ messages: results }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
+    if (!content) {
+      return new Response(JSON.stringify({ error: 'Content is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    await env.DB.prepare(
+      'INSERT INTO user_messages (username, sender, content) VALUES (?, ?, ?)'
+    ).bind(username, sender?.trim() || 'Anonymous', content.trim()).run();
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }
