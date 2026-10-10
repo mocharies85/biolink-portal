@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Globe, 
   Send, 
   MessageSquare, 
   ExternalLink, 
@@ -22,34 +21,44 @@ interface LinkItem {
   active?: boolean;
   is_highlighted?: number | boolean;
   highlight?: boolean;
-  badge?: string;
+}
+
+interface ProfileData {
+  name: string;
+  tagline: string;
+  bio: string;
+  avatar: string;
 }
 
 export default function BioLinkPage() {
-  const profile = {
+  const [profile, setProfile] = useState<ProfileData>({
     name: "Aries Creative Lab",
     tagline: "Digital Creator & Independent Developer",
     bio: "Crafting vector illustrations, interactive web experiences, and digital publications.",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces",
-  };
+  });
 
-  // State Links (diambil dinamis dari Cloudflare D1)
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [loadingLinks, setLoadingLinks] = useState(true);
 
+  // Ambil profil dan link secara dinamis dari D1
   useEffect(() => {
+    fetch('/api/profile')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.profile) setProfile(data.profile);
+      })
+      .catch((err) => console.error('Failed to load profile:', err));
+
     fetch('/api/links')
       .then((res) => res.json())
       .then((data) => {
-        if (data.links) {
-          setLinks(data.links);
-        }
+        if (data.links) setLinks(data.links);
       })
-      .catch((err) => console.error('Gagal mengambil links:', err))
+      .catch((err) => console.error('Failed to load links:', err))
       .finally(() => setLoadingLinks(false));
   }, []);
 
-  // Messaging state
   const [senderName, setSenderName] = useState('');
   const [message, setMessage] = useState('');
   const [isSent, setIsSent] = useState(false);
@@ -63,9 +72,7 @@ export default function BioLinkPage() {
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender: senderName.trim() || 'Anonymous',
           content: message.trim(),
@@ -79,11 +86,11 @@ export default function BioLinkPage() {
         setTimeout(() => setIsSent(false), 5000);
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.error || 'Gagal mengirim pesan, silakan coba lagi.');
+        alert(errData.error || 'Failed to send message.');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kendala koneksi saat mengirim pesan.');
+      alert('Network error.');
     } finally {
       setLoading(false);
     }
@@ -96,7 +103,7 @@ export default function BioLinkPage() {
 
       <div className="w-full max-w-md flex flex-col items-center relative z-10">
         
-        {/* Top bar: Share Button */}
+        {/* Share Button */}
         <div className="w-full flex justify-end mb-3">
           <button 
             onClick={() => {
@@ -132,7 +139,7 @@ export default function BioLinkPage() {
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-white">
             {profile.name}
           </h1>
-          <p className="text-xs font-semibold text-emerald-400 mt-1 uppercase tracking-wider">
+          <p className="text-xs font-semibold text-emerald-400 mt-1 tracking-wider uppercase">
             {profile.tagline}
           </p>
           <p className="text-sm text-neutral-400 mt-2 max-w-xs leading-relaxed">
@@ -140,11 +147,11 @@ export default function BioLinkPage() {
           </p>
         </header>
 
-        {/* Dynamic Links Section from D1 */}
+        {/* Links List */}
         <section className="w-full flex flex-col gap-3.5 mb-8">
           {loadingLinks ? (
             <div className="p-8 text-center text-xs text-neutral-500 animate-pulse">
-              Loading buttons...
+              Loading links...
             </div>
           ) : (
             links
@@ -185,11 +192,11 @@ export default function BioLinkPage() {
           )}
         </section>
 
-        {/* Direct Messaging Form */}
+        {/* Direct Inquiries Section */}
         <section className="w-full p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 backdrop-blur-sm mb-10">
           <div className="flex items-center gap-2 mb-2">
             <MessageSquare className="w-4 h-4 text-emerald-400" />
-            <h2 className="text-sm font-semibold text-neutral-200">Direct Inquiry & Inquiries</h2>
+            <h2 className="text-sm font-semibold text-neutral-200">Direct Inquiry &amp; Inquiries</h2>
           </div>
           <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
             Have a collaboration idea, freelance inquiry, or just want to connect? Send a note directly to my dashboard inbox.
@@ -199,7 +206,7 @@ export default function BioLinkPage() {
             <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center flex flex-col items-center gap-1.5">
               <CheckCircle2 className="w-6 h-6 text-emerald-400" />
               <p className="text-xs font-semibold text-emerald-300">Message Delivered!</p>
-              <p className="text-[11px] text-neutral-400">Thank you for reaching out. I’ll get back to you shortly.</p>
+              <p className="text-[11px] text-neutral-400">Thank you for reaching out. I will respond to your note shortly.</p>
             </div>
           ) : (
             <form onSubmit={handleSendMessage} className="flex flex-col gap-2.5">
@@ -238,7 +245,7 @@ export default function BioLinkPage() {
 
         {/* Footer */}
         <footer className="flex flex-col items-center gap-1 text-center text-xs text-neutral-500">
-          <p className="flex items-center gap-1">
+          <p className="flex items-center gap-1 text-[11px]">
             Independently built with <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500 inline" />
           </p>
         </footer>
