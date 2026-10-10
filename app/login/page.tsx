@@ -3,12 +3,13 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { Lock, User, ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [identity, setIdentity] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -31,7 +32,7 @@ export default function LoginPage() {
         sessionStorage.setItem('curiolot_auth_user', JSON.stringify(data.user));
         router.push('/admin');
       } else {
-        setErrorMsg(data.error || 'Failed to login. Please check your credentials.');
+        setErrorMsg(data.error || 'Invalid username/email or password.');
       }
     } catch {
       setErrorMsg('Network connection error. Try again.');
@@ -69,14 +70,22 @@ export default function LoginPage() {
 
           <div className="relative">
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               required
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
             />
             <Lock className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
 
           {/* Tautan Forgot Password */}
