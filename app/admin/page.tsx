@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User,
@@ -10,30 +10,24 @@ import {
   Plus,
   Trash2,
   ExternalLink,
-  MousePointerClick,
-  Inbox,
   Sparkles,
-  Clock,
-  RefreshCw,
-  LogOut,
-  ShieldCheck,
   Save,
   CheckCircle2,
-  Camera,
-  Upload,
   Lock,
   TrendingUp,
   Smartphone,
   Globe,
   X,
   HelpCircle,
-  MessageCircle
+  MessageCircle,
+  LogOut
 } from 'lucide-react';
 
 interface LinkItem {
   id: number;
   title: string;
   url: string;
+  description?: string;
   clicks?: number;
   is_active?: number;
 }
@@ -68,7 +62,7 @@ export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   // Navigation tab
-  const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'inbox' | 'analytics'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'inbox' | 'analytics'>('links');
 
   // Profile states
   const [profile, setProfile] = useState<ProfileData>({
@@ -85,6 +79,7 @@ export default function AdminDashboard() {
   const [loadingLinks, setLoadingLinks] = useState(true);
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
+  const [newDesc, setNewDesc] = useState('');
   const [addingLink, setAddingLink] = useState(false);
 
   // Modals states
@@ -214,7 +209,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Add new link handler
+  // Add new link handler (dengan Deskripsi)
   const handleAddLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newUrl.trim()) return;
@@ -234,12 +229,14 @@ export default function AdminDashboard() {
           username: activeUsername,
           title: newTitle.trim(),
           url: newUrl.trim(),
+          description: newDesc.trim(),
         }),
       });
 
       if (res.ok) {
         setNewTitle('');
         setNewUrl('');
+        setNewDesc('');
         fetchLinks();
       } else {
         const errorData = await res.json();
@@ -398,7 +395,6 @@ export default function AdminDashboard() {
 
         {/* Sidebar Footer Buttons */}
         <div className="flex flex-col gap-2 pt-6 border-t border-neutral-800 mt-6">
-          {/* Contact Admin Support Button */}
           <button
             type="button"
             onClick={() => setShowSupportModal(true)}
@@ -529,9 +525,10 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Form Add Link */}
+            {/* Form Add Link dengan Judul, URL, dan Deskripsi */}
             <form onSubmit={handleAddLink} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Add New Link</h3>
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   type="text"
@@ -539,7 +536,7 @@ export default function AdminDashboard() {
                   placeholder="Link Title (e.g. My Portfolio)"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 />
                 <input
                   type="url"
@@ -547,13 +544,25 @@ export default function AdminDashboard() {
                   placeholder="https://yourlink.com"
                   value={newUrl}
                   onChange={(e) => setNewUrl(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 />
               </div>
+
+              {/* Input Deskripsi / Subtitle */}
+              <div>
+                <input
+                  type="text"
+                  placeholder="Description or subtitle (optional, e.g. Free tools for digital creators)"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                />
+              </div>
+
               <button
                 type="submit"
                 disabled={addingLink}
-                className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 mt-1"
+                className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 mt-1 shadow-md shadow-emerald-500/20"
               >
                 <Plus className="w-4 h-4" />
                 <span>{addingLink ? 'Adding...' : 'Add Link to Bio'}</span>
@@ -577,7 +586,10 @@ export default function AdminDashboard() {
                   >
                     <div className="truncate flex-1">
                       <p className="text-xs font-bold text-white truncate">{link.title}</p>
-                      <p className="text-[11px] text-neutral-500 truncate mt-0.5">{link.url}</p>
+                      {link.description && (
+                        <p className="text-[11px] text-neutral-400 truncate mt-0.5">{link.description}</p>
+                      )}
+                      <p className="text-[10px] text-neutral-500 truncate mt-0.5">{link.url}</p>
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <div className="text-right">
@@ -613,7 +625,7 @@ export default function AdminDashboard() {
                 <p className="text-xs text-neutral-500 py-6 text-center">Loading messages...</p>
               ) : messages.length === 0 ? (
                 <div className="p-8 rounded-2xl bg-neutral-900 border border-neutral-800 text-center">
-                  <Inbox className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
+                  <MessageSquare className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
                   <p className="text-xs text-neutral-400">Your inbox is empty. No messages received yet.</p>
                 </div>
               ) : (
@@ -751,9 +763,12 @@ export default function AdminDashboard() {
               {links.map((l) => (
                 <div
                   key={l.id}
-                  className="w-full py-2 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-[10px] font-semibold text-neutral-200 text-center truncate shadow-sm"
+                  className="w-full py-2.5 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-[10px] text-neutral-200 text-center truncate shadow-sm"
                 >
-                  {l.title}
+                  <span className="font-semibold block truncate">{l.title}</span>
+                  {l.description && (
+                    <span className="text-[8px] text-neutral-400 block truncate mt-0.5">{l.description}</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -883,7 +898,10 @@ export default function AdminDashboard() {
                         <div key={link.id} className="grid grid-cols-12 px-4 py-3 text-xs items-center hover:bg-neutral-900/30 transition">
                           <div className="col-span-7 truncate pr-2">
                             <p className="font-medium text-white truncate">{link.title}</p>
-                            <p className="text-[11px] text-neutral-500 truncate">{link.url}</p>
+                            {link.description && (
+                              <p className="text-[11px] text-neutral-400 truncate">{link.description}</p>
+                            )}
+                            <p className="text-[10px] text-neutral-500 truncate">{link.url}</p>
                           </div>
                           <div className="col-span-3 text-right font-bold text-neutral-200">
                             {linkClicks} clicks
