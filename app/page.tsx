@@ -41,20 +41,18 @@ export default function BioLinkPage() {
 
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [loadingLinks, setLoadingLinks] = useState(true);
-
-  // State Feedback Notifikasi Tombol Share
   const [isCopied, setIsCopied] = useState(false);
 
-  // Ambil profil dan link secara dinamis dari D1
+  // Ambil profil dan tautan dari database
   useEffect(() => {
-    fetch('/api/profile')
+    fetch('/api/profile?username=aries')
       .then((res) => res.json())
       .then((data) => {
         if (data.profile) setProfile(data.profile);
       })
       .catch((err) => console.error('Failed to load profile:', err));
 
-    fetch('/api/links')
+    fetch('/api/links?username=aries')
       .then((res) => res.json())
       .then((data) => {
         if (data.links) setLinks(data.links);
@@ -63,11 +61,8 @@ export default function BioLinkPage() {
       .finally(() => setLoadingLinks(false));
   }, []);
 
-  // Fungsi Share yang Andal untuk PC & HP
   const handleShare = async () => {
     const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://link.curiolot.com';
-
-    // Salin link langsung ke clipboard
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(currentUrl);
@@ -85,10 +80,9 @@ export default function BioLinkPage() {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2500);
     } catch (err) {
-      console.error('Gagal menyalin tautan:', err);
+      console.error('Failed to copy:', err);
     }
 
-    // Jika dibuka di perangkat ponsel, tampilkan dialog share native
     if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
       try {
         await navigator.share({
@@ -97,7 +91,7 @@ export default function BioLinkPage() {
           url: currentUrl,
         });
       } catch {
-        // Abaikan jika dibatalkan oleh pengguna
+        // user dismiss
       }
     }
   };
@@ -117,6 +111,7 @@ export default function BioLinkPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username: 'aries',
           sender: senderName.trim() || 'Anonymous',
           content: message.trim(),
         }),
@@ -140,32 +135,49 @@ export default function BioLinkPage() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 flex justify-center py-12 px-4 sm:px-6 relative overflow-hidden font-sans">
+    <main className="min-h-screen bg-neutral-950 text-neutral-100 flex justify-center py-10 px-4 sm:px-6 relative overflow-hidden font-sans">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md flex flex-col items-center relative z-10">
         
-        {/* Tombol Share dengan Umpan Balik Visual */}
-        <div className="w-full flex justify-end mb-3 relative">
-          <button 
-            onClick={handleShare}
-            aria-label="Share profile"
-            className={`p-2.5 rounded-full border transition-all duration-200 flex items-center gap-1.5 shadow-md ${
-              isCopied
-                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
-                : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 text-neutral-400 hover:text-white'
-            }`}
+        {/* BILAH ATAS: REGISTER, LOGIN & SHARE */}
+        <div className="w-full flex items-center justify-between mb-6 pb-3 border-b border-neutral-900">
+          <a
+            href="/register"
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5 rounded-full transition shadow-sm shadow-emerald-500/10"
           >
-            {isCopied ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span className="text-[11px] font-semibold text-emerald-300 pr-1">Link Copied!</span>
-              </>
-            ) : (
-              <Share2 className="w-4 h-4" />
-            )}
-          </button>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Create your link</span>
+          </a>
+
+          <div className="flex items-center gap-2">
+            <a
+              href="/login"
+              className="text-[11px] font-medium text-neutral-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-neutral-900 transition"
+            >
+              Log in
+            </a>
+
+            <button 
+              onClick={handleShare}
+              aria-label="Share profile"
+              className={`p-2 rounded-full border transition-all duration-200 flex items-center gap-1.5 shadow-md ${
+                isCopied
+                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                  : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 text-neutral-400 hover:text-white'
+              }`}
+            >
+              {isCopied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[10px] font-semibold text-emerald-300 pr-1">Copied!</span>
+                </>
+              ) : (
+                <Share2 className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Profile Header */}
