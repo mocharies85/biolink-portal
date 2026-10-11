@@ -332,22 +332,24 @@ export default function AdminDashboard() {
       
       {/* Sidebar Navigation */}
       <aside className="w-full md:w-64 bg-neutral-900 border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0">
-        <div>
-          {/* User Account Info */}
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-neutral-950 font-bold text-sm shrink-0 shadow-md shadow-emerald-500/20">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div className="truncate">
-              <p className="font-bold text-sm text-white truncate">@{activeUsername}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`w-2 h-2 rounded-full ${isProUser ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-                <span className="text-[11px] text-neutral-400 font-medium">
-                  {isProUser ? 'PRO Creator' : 'Free Creator'}
-                </span>
-              </div>
-            </div>
-          </div>
+  <div>
+    {/* User Account Info */}
+    <div className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800 mb-6">
+      <img 
+        src="/logo.png" 
+        alt="Logo" 
+        className="w-10 h-10 object-contain shrink-0" 
+      />
+      <div className="truncate">
+        <p className="font-bold text-sm text-white truncate">@{activeUsername}</p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className={`w-2 h-2 rounded-full ${isProUser ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+          <span className="text-[11px] text-neutral-400 font-medium">
+            {isProUser ? 'PRO Creator' : 'Free Creator'}
+          </span>
+        </div>
+      </div>
+    </div>
 
           {/* Navigation Links */}
           <nav className="flex flex-col gap-1.5">
