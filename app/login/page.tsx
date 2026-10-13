@@ -94,14 +94,13 @@ export default function LoginPage() {
 
           <div className="relative">
             <input
-              type="password"
-              type={showPassword ? 'text' : 'password'}
-              required
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
-            />
+  type={showPassword ? 'text' : 'password'}
+  required
+  placeholder="Password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+/>
             <Lock className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <button
               type="button"
@@ -123,7 +122,7 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          {/* Pesan Error (Misal: Password salah atau Email belum diverifikasi) */}
+          {/* Pesan Error */}
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-900/50 text-xs text-rose-400 flex items-start gap-2 text-left">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
