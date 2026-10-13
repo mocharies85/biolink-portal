@@ -11,16 +11,26 @@ export async function onRequestPost({ request, env }) {
 
     const cleanIdentity = identity.trim().toLowerCase();
 
-    // Cari user berdasarkan username atau email
+    // 1. Tambahkan kolom is_verified pada query SELECT
     const user = await env.DB.prepare(
-      'SELECT username, email, password_hash, role, is_pro FROM users WHERE username = ? OR email = ?'
+      'SELECT username, email, password_hash, role, is_pro, is_verified FROM users WHERE username = ? OR email = ?'
     ).bind(cleanIdentity, cleanIdentity).first();
 
-    // Verifikasi keberadaan akun dan kecocokan password
+    // 2. Verifikasi keberadaan akun dan kecocokan password
     if (!user || user.password_hash !== password) {
       return new Response(
         JSON.stringify({ error: 'Invalid username/email or password.' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 3. Cegah login jika email belum diverifikasi
+    if (!user.is_verified || Number(user.is_verified) === 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Please verify your email address before signing in. Check your inbox or spam folder.' 
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 

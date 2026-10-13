@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, MailCheck, User, Mail, Lock, AlertCircle } from 'lucide-react';
+import { ArrowRight, MailCheck, User, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -74,9 +74,12 @@ export default function RegisterPage() {
           </div>
         ) : (
           <>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-neutral-950 mb-4 shadow-lg shadow-emerald-500/20">
-              <Sparkles className="w-6 h-6" />
-            </div>
+            {/* Logo Resmi Curiolot Link */}
+            <img 
+              src="/logo.png" 
+              alt="Curiolot Link Logo" 
+              className="w-12 h-12 object-contain mb-4" 
+            />
 
             <h1 className="text-xl font-bold text-white tracking-tight">Claim Your Bio-Link</h1>
             <p className="text-xs text-neutral-400 mt-1.5 text-center leading-relaxed">

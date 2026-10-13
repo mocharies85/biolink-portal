@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Lock, User, ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +12,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isVerifiedNotice, setIsVerifiedNotice] = useState(false);
+
+  // Deteksi jika user datang dari link verifikasi email (?verified=true)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('verified') === 'true') {
+        setIsVerifiedNotice(true);
+      }
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +43,7 @@ export default function LoginPage() {
         sessionStorage.setItem('curiolot_auth_user', JSON.stringify(data.user));
         router.push('/admin');
       } else {
+        // Menampilkan pesan error (termasuk jika email belum diverifikasi)
         setErrorMsg(data.error || 'Invalid username/email or password.');
       }
     } catch {
@@ -46,16 +58,28 @@ export default function LoginPage() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-sm p-8 rounded-3xl bg-neutral-900/90 border border-neutral-800 shadow-2xl relative z-10 flex flex-col items-center">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-neutral-950 mb-4 shadow-lg shadow-emerald-500/20">
-          <Sparkles className="w-6 h-6" />
-        </div>
+        
+        {/* Logo Resmi Curiolot Link */}
+        <img 
+          src="/logo.png" 
+          alt="Curiolot Link Logo" 
+          className="w-12 h-12 object-contain mb-4" 
+        />
 
         <h1 className="text-xl font-bold text-white tracking-tight">Log in to Curiolot</h1>
         <p className="text-xs text-neutral-400 mt-1.5 text-center leading-relaxed">
           Manage your links, portfolio settings, and audience inbox.
         </p>
 
-        <form onSubmit={handleLogin} className="w-full mt-6 flex flex-col gap-3">
+        {/* Notifikasi jika akun baru saja sukses diverifikasi */}
+        {isVerifiedNotice && (
+          <div className="w-full mt-4 p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-400 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span>Email verified successfully! Please log in.</span>
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="w-full mt-5 flex flex-col gap-3">
           <div className="relative">
             <input
               type="text"
@@ -70,6 +94,7 @@ export default function LoginPage() {
 
           <div className="relative">
             <input
+              type="password"
               type={showPassword ? 'text' : 'password'}
               required
               placeholder="Password"
@@ -98,10 +123,12 @@ export default function LoginPage() {
             </Link>
           </div>
 
+          {/* Pesan Error (Misal: Password salah atau Email belum diverifikasi) */}
           {errorMsg && (
-            <p className="text-xs text-rose-400 font-medium text-center">
-              {errorMsg}
-            </p>
+            <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-900/50 text-xs text-rose-400 flex items-start gap-2 text-left">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
           )}
 
           <button
