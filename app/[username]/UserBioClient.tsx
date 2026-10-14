@@ -12,6 +12,7 @@ import {
   Share2,
   Check
 } from 'lucide-react';
+import StoryModal from '@/components/StoryModal';
 
 interface LinkItem {
   id: number;
@@ -25,10 +26,16 @@ interface LinkItem {
   highlight?: boolean;
 }
 
+interface StoryItem {
+  id: string;
+  media_url: string;
+  caption?: string;
+}
+
 export default function UserBioClient() {
   const params = useParams();
 
-  // 1. Ambil username secara andal (baik dari Next params maupun URL browser)
+  // 1. Ambil username secara andal
   const [username, setUsername] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
@@ -50,6 +57,10 @@ export default function UserBioClient() {
   const [loadingLinks, setLoadingLinks] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
 
+  // State untuk fitur Story
+  const [stories, setStories] = useState<StoryItem[]>([]);
+  const [isStoryOpen, setIsStoryOpen] = useState(false);
+
   // Sinkronkan username dari URL saat pertama kali dimuat di browser
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -60,7 +71,7 @@ export default function UserBioClient() {
     }
   }, []);
 
-  // 2. Ambil profil dan tautan dari D1 berdasarkan username aktif
+  // 2. Ambil profil, tautan, dan story dari API berdasarkan username
   useEffect(() => {
     if (!username) return;
 
@@ -78,6 +89,16 @@ export default function UserBioClient() {
       })
       .catch((err) => console.error('Failed to load links:', err))
       .finally(() => setLoadingLinks(false));
+
+    // Mengambil data story aktif
+    fetch(`/api/stories?username=${username}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.stories && Array.isArray(data.stories)) {
+          setStories(data.stories);
+        }
+      })
+      .catch((err) => console.error('Failed to load stories:', err));
   }, [username]);
 
   // 3. Tombol Share responsif & andal
@@ -204,16 +225,37 @@ export default function UserBioClient() {
         {/* Profile Header */}
         <header className="flex flex-col items-center text-center mb-8">
           <div className="relative group">
-            <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-emerald-400 via-teal-500 to-indigo-500 shadow-xl shadow-emerald-500/10">
+            {/* Lingkaran Avatar dengan Story Ring interaktif */}
+            <div 
+              onClick={() => {
+                if (stories.length > 0) setIsStoryOpen(true);
+              }}
+              className={`w-24 h-24 rounded-full p-1 transition-all duration-300 ${
+                stories.length > 0 
+                  ? 'bg-gradient-to-tr from-emerald-400 via-teal-300 to-emerald-500 ring-4 ring-emerald-500/30 cursor-pointer hover:scale-105 animate-pulse' 
+                  : 'bg-gradient-to-tr from-emerald-400 via-teal-500 to-indigo-500'
+              } shadow-xl shadow-emerald-500/10`}
+            >
               <img
                 src={profile.avatar}
                 alt={profile.name}
                 className="w-full h-full rounded-full object-cover border-2 border-neutral-950"
               />
             </div>
-            <span className="absolute bottom-1 right-1 bg-emerald-500 text-neutral-950 p-1 rounded-full text-xs shadow-md">
-              <Sparkles className="w-3.5 h-3.5" />
-            </span>
+
+            {/* Badge Story jika ada story aktif */}
+            {stories.length > 0 ? (
+              <span 
+                onClick={() => setIsStoryOpen(true)}
+                className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-emerald-500 text-neutral-950 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-md cursor-pointer pointer-events-auto"
+              >
+                Story
+              </span>
+            ) : (
+              <span className="absolute bottom-1 right-1 bg-emerald-500 text-neutral-950 p-1 rounded-full text-xs shadow-md">
+                <Sparkles className="w-3.5 h-3.5" />
+              </span>
+            )}
           </div>
 
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-white">
@@ -331,6 +373,14 @@ export default function UserBioClient() {
         </footer>
 
       </div>
+
+      {/* Story Modal Viewer */}
+      <StoryModal
+        stories={stories}
+        isOpen={isStoryOpen}
+        onClose={() => setIsStoryOpen(false)}
+        username={username}
+      />
     </main>
   );
 }
