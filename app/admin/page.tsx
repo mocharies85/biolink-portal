@@ -83,6 +83,21 @@ interface MusicTrack {
   url: string;
 }
 
+interface DetailedAnalyticsData {
+  totalVisits: number;
+  devices: {
+    mobilePct: number;
+    desktopPct: number;
+    mobileCount: number;
+    desktopCount: number;
+  };
+  referrers: {
+    source: string;
+    percentage: number;
+    count: number;
+  }[];
+}
+
 // Preset library of royalty-free background soundtracks
 const FREE_MUSIC_LIBRARY: MusicTrack[] = [
   {
@@ -291,6 +306,31 @@ export default function AdminDashboard() {
   // Modals states
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showDetailedInsights, setShowDetailedInsights] = useState(false);
+  const [detailedData, setDetailedData] = useState<DetailedAnalyticsData | null>(null);
+  const [loadingDetailed, setLoadingDetailed] = useState(false);
+
+  // Derived variables
+  const activeUsername = currentUser?.username || 'creator';
+  const isProUser = currentUser?.is_pro === 1;
+  const viewsCount = profile.views || 0;
+  const clicksCount = links.reduce((acc, l) => acc + (l.clicks || 0), 0);
+
+  // Ambil data rujukan & perangkat riil dari API
+  const fetchDetailedAnalytics = async () => {
+    if (!activeUsername) return;
+    setLoadingDetailed(true);
+    try {
+      const res = await fetch(`/api/views?username=${activeUsername}&analytics=true`);
+      if (res.ok) {
+        const json = await res.json();
+        setDetailedData(json);
+      }
+    } catch (err) {
+      console.error('Failed to load detailed analytics:', err);
+    } finally {
+      setLoadingDetailed(false);
+    }
+  };
 
   // Inbox states
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -301,12 +341,6 @@ export default function AdminDashboard() {
   const [supportMessage, setSupportMessage] = useState('');
   const [sendingSupport, setSendingSupport] = useState(false);
   const [supportSentSuccess, setSupportSentSuccess] = useState(false);
-
-  // Derived variables
-  const activeUsername = currentUser?.username || 'creator';
-  const isProUser = currentUser?.is_pro === 1;
-  const viewsCount = profile.views || 0;
-  const clicksCount = links.reduce((acc, l) => acc + (l.clicks || 0), 0);
 
   // Check auth session
   useEffect(() => {
@@ -558,7 +592,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Create new story handler (sends duration based on user tier)
+  // Create new story handler
   const handleCreateStory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storyMediaUrl.trim()) {
@@ -1452,6 +1486,7 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={() => {
                   if (isProUser) {
+                    fetchDetailedAnalytics();
                     setShowDetailedInsights(true);
                   } else {
                     setShowUpgradeModal(true);
@@ -1590,7 +1625,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal: PRO Detailed Analytics Dashboard */}
+      {/* Modal: PRO Detailed Analytics Dashboard (100% Data Riil) */}
       {showDetailedInsights && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -1673,51 +1708,92 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Devices Breakdown & Top Referrers Riil */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              {/* Devices Breakdown */}
               <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
-                <h5 className="font-bold text-neutral-300 mb-3 flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 text-neutral-400" /> Devices Breakdown
+                <h5 className="font-bold text-neutral-300 mb-3 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-neutral-400" /> Devices Breakdown
+                  </span>
+                  {detailedData && (
+                    <span className="text-[10px] text-neutral-500 font-normal">
+                      {detailedData.totalVisits} visits logged
+                    </span>
+                  )}
                 </h5>
-                <div className="flex flex-col gap-2.5 text-[11px]">
-                  <div className="flex justify-between items-center text-neutral-300">
-                    <span>Mobile (iOS &amp; Android)</span>
-                    <span className="font-bold text-white">84%</span>
+
+                {loadingDetailed ? (
+                  <p className="text-[11px] text-neutral-500 py-5 text-center">Loading device stats...</p>
+                ) : !detailedData || detailedData.totalVisits === 0 ? (
+                  <div className="py-5 text-center text-[11px] text-neutral-500 leading-relaxed">
+                    Belum ada kunjungan tercatat.<br />Buka halaman bio Anda untuk kalibrasi pertama!
                   </div>
-                  <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: '84%' }} />
+                ) : (
+                  <div className="flex flex-col gap-2.5 text-[11px]">
+                    <div className="flex justify-between items-center text-neutral-300">
+                      <span>Mobile (iOS &amp; Android)</span>
+                      <span className="font-bold text-white">{detailedData.devices.mobilePct}%</span>
+                    </div>
+                    <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${detailedData.devices.mobilePct}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-neutral-300 mt-1">
+                      <span>Desktop &amp; Tablets</span>
+                      <span className="font-bold text-white">{detailedData.devices.desktopPct}%</span>
+                    </div>
+                    <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-teal-500 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${detailedData.devices.desktopPct}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-neutral-300 mt-1">
-                    <span>Desktop &amp; Tablets</span>
-                    <span className="font-bold text-white">16%</span>
-                  </div>
-                  <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-teal-500 h-full rounded-full" style={{ width: '16%' }} />
-                  </div>
-                </div>
+                )}
               </div>
 
+              {/* Top Referrers */}
               <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
-                <h5 className="font-bold text-neutral-300 mb-3 flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-neutral-400" /> Top Referrers
+                <h5 className="font-bold text-neutral-300 mb-3 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-neutral-400" /> Top Referrers
+                  </span>
+                  {detailedData && (
+                    <span className="text-[10px] text-neutral-500 font-normal">
+                      Live Traffic Sources
+                    </span>
+                  )}
                 </h5>
-                <div className="flex flex-col gap-2 text-[11px] text-neutral-400">
-                  <div className="flex justify-between">
-                    <span className="text-neutral-300">Instagram Bio</span>
-                    <span className="font-semibold text-white">45%</span>
+
+                {loadingDetailed ? (
+                  <p className="text-[11px] text-neutral-500 py-5 text-center">Loading traffic sources...</p>
+                ) : !detailedData || detailedData.referrers.length === 0 ? (
+                  <div className="py-5 text-center text-[11px] text-neutral-500 leading-relaxed">
+                    Belum ada data sumber trafik.<br />Bagikan link bio ke media sosial Anda!
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-neutral-300">TikTok Profile</span>
-                    <span className="font-semibold text-white">32%</span>
+                ) : (
+                  <div className="flex flex-col gap-2.5 text-[11px]">
+                    {detailedData.referrers.map((ref, idx) => (
+                      <div key={idx} className="flex flex-col gap-1">
+                        <div className="flex justify-between items-center text-neutral-300">
+                          <span className="font-medium text-neutral-200">{ref.source}</span>
+                          <span className="font-bold text-white">
+                            {ref.percentage}% <span className="text-[10px] text-neutral-500 font-normal">({ref.count})</span>
+                          </span>
+                        </div>
+                        <div className="w-full bg-neutral-800 h-1 rounded-full overflow-hidden">
+                          <div
+                            className="bg-emerald-400 h-full rounded-full transition-all duration-500"
+                            style={{ width: `${ref.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-neutral-300">Twitter / X</span>
-                    <span className="font-semibold text-white">14%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-neutral-300">Direct / Other</span>
-                    <span className="font-semibold text-white">9%</span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
