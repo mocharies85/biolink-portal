@@ -14,7 +14,14 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  TrendingUp,
+  MousePointerClick,
+  Link2,
+  Radio,
+  Search,
+  Award
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -24,7 +31,11 @@ interface UserRecord {
   email: string;
   role?: string;
   is_pro?: number;
-  created_at?: number;
+  created_at?: number | string;
+  total_views?: number;
+  total_links?: number;
+  total_clicks?: number;
+  active_stories?: number;
 }
 
 interface MessageRecord {
@@ -32,7 +43,7 @@ interface MessageRecord {
   username: string;
   email: string;
   message: string;
-  status: string;
+  status?: string;
   created_at: number;
 }
 
@@ -62,6 +73,11 @@ export default function SuperAdminPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'members' | 'messages'>('members');
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+
+  // Search & Delete modal states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
 
   // Check saved session on mount
   useEffect(() => {
@@ -114,7 +130,8 @@ export default function SuperAdminPage() {
     setData(null);
   };
 
-  const toggleProStatus = async (userId: number, currentStatus: number | undefined) => {
+  // Toggle PRO status
+  const toggleProStatus = async (userId: number, username: string, currentStatus: number | undefined) => {
     const savedPin = sessionStorage.getItem('curiolot_superadmin_pin') || pinInput;
     setActionLoadingId(userId);
 
@@ -125,7 +142,7 @@ export default function SuperAdminPage() {
           'Content-Type': 'application/json',
           'x-admin-pin': savedPin,
         },
-        body: JSON.stringify({ userId, is_pro: currentStatus === 1 ? 0 : 1 }),
+        body: JSON.stringify({ userId, username, is_pro: currentStatus === 1 ? 0 : 1 }),
       });
 
       if (res.ok) {
@@ -139,6 +156,45 @@ export default function SuperAdminPage() {
       setActionLoadingId(null);
     }
   };
+
+  // Handle Account Deletion
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    const savedPin = sessionStorage.getItem('curiolot_superadmin_pin') || pinInput;
+    setDeletingUser(deleteTarget.username);
+
+    try {
+      const res = await fetch(`/api/admin/users?username=${encodeURIComponent(deleteTarget.username)}`, {
+        method: 'DELETE',
+        headers: {
+          'x-admin-pin': savedPin,
+        },
+      });
+
+      if (res.ok) {
+        setDeleteTarget(null);
+        await validateAndFetchData(savedPin);
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to delete user.');
+      }
+    } catch {
+      alert('Network error while deleting user account.');
+    } finally {
+      setDeletingUser(null);
+    }
+  };
+
+  // Filtered users for search
+  const filteredUsers = (data?.users || []).filter((u) =>
+    u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Identify Top Creator
+  const topCreator = [...(data?.users || [])].sort(
+    (a, b) => ((b.total_views || 0) + (b.total_clicks || 0) * 2) - ((a.total_views || 0) + (a.total_clicks || 0) * 2)
+  )[0];
 
   // 1. TAMPILAN TERKUNCI (PIN LOCK SCREEN)
   if (!isUnlocked) {
@@ -209,7 +265,7 @@ export default function SuperAdminPage() {
 
   // 2. TAMPILAN TERBUKA (SUPERADMIN CONTROL HUB)
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 p-6 font-sans">
+    <main className="min-h-screen bg-neutral-950 text-neutral-100 p-6 md:p-8 font-sans">
       <div className="max-w-6xl mx-auto flex flex-col gap-6">
 
         {/* Top Header */}
@@ -257,7 +313,7 @@ export default function SuperAdminPage() {
         </div>
 
         {/* Metric Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
             <div className="flex items-center justify-between text-neutral-400 text-xs">
               <span>Total Registered</span>
@@ -291,87 +347,203 @@ export default function SuperAdminPage() {
           </div>
         </div>
 
-        {/* Sub-navigation Tabs */}
-        <div className="flex gap-2 border-b border-neutral-800 pb-3">
-          <button
-            onClick={() => setActiveTab('members')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
-              activeTab === 'members' ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            Registered Users ({data?.users.length ?? 0})
-          </button>
-          <button
-            onClick={() => setActiveTab('messages')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-              activeTab === 'messages' ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            <Mail className="w-3.5 h-3.5" />
-            <span>Support Tickets ({data?.messages.length ?? 0})</span>
-          </button>
+        {/* Top Active Creator Spotlight Banner */}
+        {topCreator && ((topCreator.total_views || 0) > 0 || (topCreator.total_clicks || 0) > 0) && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-neutral-900 to-neutral-900 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                  ⭐ Top Active Creator Spotlight
+                </span>
+                <p className="text-sm font-bold text-white mt-0.5">
+                  @{topCreator.username} <span className="text-neutral-400 font-normal">({topCreator.email})</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs">
+              <div className="px-3 py-1.5 rounded-xl bg-neutral-950 border border-neutral-800">
+                <span className="text-neutral-400 text-[10px] block">Views</span>
+                <span className="font-bold text-white">{topCreator.total_views || 0}</span>
+              </div>
+              <div className="px-3 py-1.5 rounded-xl bg-neutral-950 border border-neutral-800">
+                <span className="text-neutral-400 text-[10px] block">Clicks</span>
+                <span className="font-bold text-emerald-400">{topCreator.total_clicks || 0}</span>
+              </div>
+              {topCreator.is_pro === 0 && (
+                <button
+                  type="button"
+                  onClick={() => toggleProStatus(topCreator.id, topCreator.username, 0)}
+                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs transition shadow-md shadow-amber-500/20"
+                >
+                  Reward Free PRO ⭐
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Sub-navigation Tabs & Search Filter */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-3">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('members')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'members' ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              Registered Users ({data?.users.length ?? 0})
+            </button>
+            <button
+              onClick={() => setActiveTab('messages')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+                activeTab === 'messages' ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>Support Tickets ({data?.messages.length ?? 0})</span>
+            </button>
+          </div>
+
+          {activeTab === 'members' && (
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search username or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+              />
+            </div>
+          )}
         </div>
 
-        {/* TAB 1: User Management Table */}
+        {/* TAB 1: User Management & Analytics Table */}
         {activeTab === 'members' && (
-          <div className="border border-neutral-800 rounded-2xl overflow-hidden bg-neutral-900/60">
+          <div className="border border-neutral-800 rounded-2xl overflow-hidden bg-neutral-900/60 shadow-xl">
             <div className="grid grid-cols-12 px-4 py-3 bg-neutral-900 border-b border-neutral-800 text-xs font-bold text-neutral-400">
               <div className="col-span-4">User / Email</div>
-              <div className="col-span-3">Plan Status</div>
-              <div className="col-span-3">Public Bio Link</div>
-              <div className="col-span-2 text-right">Admin Action</div>
+              <div className="col-span-2">Plan Status</div>
+              <div className="col-span-3">Activity Analytics</div>
+              <div className="col-span-2">Public Bio Link</div>
+              <div className="col-span-1 text-right">Actions</div>
             </div>
+
             <div className="divide-y divide-neutral-800 text-xs">
-              {data?.users.length === 0 ? (
-                <div className="p-6 text-center text-neutral-500 text-xs">No registered users found.</div>
+              {filteredUsers.length === 0 ? (
+                <div className="p-8 text-center text-neutral-500 text-xs">
+                  {searchQuery ? `No registered users found matching "${searchQuery}".` : 'No registered users found.'}
+                </div>
               ) : (
-                data?.users.map((u) => (
-                  <div key={u.id} className="grid grid-cols-12 px-4 py-3.5 items-center hover:bg-neutral-900 transition">
-                    <div className="col-span-4 truncate">
-                      <p className="font-semibold text-white">@{u.username}</p>
-                      <p className="text-[11px] text-neutral-500 truncate">{u.email}</p>
+                filteredUsers.map((u) => {
+                  const isOwner = u.username.toLowerCase() === 'aries';
+                  const activityScore = (u.total_views || 0) + (u.total_clicks || 0) * 2;
+
+                  return (
+                    <div key={u.id} className="grid grid-cols-12 px-4 py-3.5 items-center hover:bg-neutral-850/50 transition">
+                      {/* User Info */}
+                      <div className="col-span-4 truncate pr-2">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-white truncate">@{u.username}</p>
+                          {isOwner && (
+                            <span className="text-[9px] px-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold shrink-0">
+                              Owner
+                            </span>
+                          )}
+                          {activityScore >= 10 && (
+                            <span className="text-[9px] px-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold flex items-center gap-0.5 shrink-0">
+                              <TrendingUp className="w-2.5 h-2.5" /> Active
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-neutral-500 truncate mt-0.5">{u.email}</p>
+                      </div>
+
+                      {/* Plan Status */}
+                      <div className="col-span-2">
+                        {u.is_pro === 1 ? (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold inline-flex items-center gap-1">
+                            ★ PRO Member
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-400 text-[10px] border border-neutral-700">
+                            Free Tier
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Activity Analytics */}
+                      <div className="col-span-3">
+                        <div className="flex items-center gap-3 text-[11px]">
+                          <span className="flex items-center gap-1 text-neutral-300" title="Profile Page Views">
+                            <Eye className="w-3 h-3 text-neutral-500" />
+                            <strong>{u.total_views || 0}</strong>
+                          </span>
+                          <span className="flex items-center gap-1 text-emerald-400" title="Total Link Clicks">
+                            <MousePointerClick className="w-3 h-3 text-emerald-500" />
+                            <strong>{u.total_clicks || 0}</strong>
+                          </span>
+                          <span className="flex items-center gap-1 text-neutral-400" title="Active Links">
+                            <Link2 className="w-3 h-3 text-neutral-500" />
+                            <span>{u.total_links || 0}</span>
+                          </span>
+                          {(u.active_stories || 0) > 0 && (
+                            <span className="flex items-center gap-1 text-emerald-400" title="Active Stories">
+                              <Radio className="w-3 h-3 text-emerald-400" />
+                              <span>{u.active_stories}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Public Bio Link */}
+                      <div className="col-span-2 text-neutral-400 truncate">
+                        <a
+                          href={`/${u.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-emerald-400 underline flex items-center gap-1 w-fit truncate"
+                        >
+                          <span className="truncate">/{u.username}</span>
+                          <ExternalLink className="w-3 h-3 text-neutral-600 shrink-0" />
+                        </a>
+                      </div>
+
+                      {/* Admin Actions */}
+                      <div className="col-span-1 text-right flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleProStatus(u.id, u.username, u.is_pro)}
+                          disabled={actionLoadingId === u.id}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition disabled:opacity-50 ${
+                            u.is_pro === 1
+                              ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10'
+                              : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                          }`}
+                          title={u.is_pro === 1 ? 'Revoke PRO' : 'Grant PRO'}
+                        >
+                          {actionLoadingId === u.id ? '...' : u.is_pro === 1 ? 'Revoke' : 'PRO'}
+                        </button>
+
+                        {/* Delete Account (Hidden for Owner) */}
+                        {!isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(u)}
+                            className="p-1 rounded-lg bg-neutral-800 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition"
+                            title={`Delete account @${u.username}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="col-span-3">
-                      {u.is_pro === 1 ? (
-                        <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold">
-                          ★ PRO Member
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-400 text-[10px]">
-                          Free Tier
-                        </span>
-                      )}
-                    </div>
-                    <div className="col-span-3 text-neutral-400">
-                      <a
-                        href={`/${u.username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-emerald-400 underline flex items-center gap-1 w-fit"
-                      >
-                        <span>/{u.username}</span>
-                        <ExternalLink className="w-3 h-3 text-neutral-600" />
-                      </a>
-                    </div>
-                    <div className="col-span-2 text-right">
-                      <button
-                        onClick={() => toggleProStatus(u.id, u.is_pro)}
-                        disabled={actionLoadingId === u.id}
-                        className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold border transition disabled:opacity-50 ${
-                          u.is_pro === 1
-                            ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10'
-                            : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
-                        }`}
-                      >
-                        {actionLoadingId === u.id
-                          ? 'Updating...'
-                          : u.is_pro === 1
-                          ? 'Revoke PRO'
-                          : 'Grant PRO'}
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -415,6 +587,44 @@ export default function SuperAdminPage() {
         )}
 
       </div>
+
+      {/* Delete Confirmation Safety Dialog */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-sans">
+          <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative text-center">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-base font-bold text-white">Delete User Account?</h3>
+            <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+              Are you sure you want to delete <strong className="text-white">@{deleteTarget.username}</strong>?
+            </p>
+            <p className="text-[11px] text-rose-400/90 mt-1">
+              All bio links, profile settings, stories, and messages belonging to this user will be erased from Cloudflare D1.
+            </p>
+
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="w-1/2 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingUser === deleteTarget.username}
+                onClick={handleDeleteUser}
+                className="w-1/2 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-neutral-950 font-bold text-xs transition disabled:opacity-50 shadow-lg shadow-rose-500/20"
+              >
+                {deletingUser === deleteTarget.username ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
