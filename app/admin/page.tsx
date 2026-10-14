@@ -637,7 +637,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Toggle Spotlight Status khusus Akun PRO
+  // Toggle Spotlight Status for PRO accounts
   const handleToggleSpotlight = async (link: LinkItem) => {
     if (!isProUser) {
       setShowUpgradeModal(true);
@@ -1028,7 +1028,7 @@ export default function AdminDashboard() {
                     <span>Social Media Icons Bar</span>
                   </label>
                   <p className="text-[11px] text-neutral-400 mb-3">
-                    Tambahkan username atau link medsos Anda. Ikon akan otomatis tampil rapi tepat di bawah bio halaman profil publik.
+                    Add your social links or usernames. Icons will automatically display directly below your bio on your live profile.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -1036,7 +1036,7 @@ export default function AdminDashboard() {
                       <label className="text-[11px] text-neutral-400 block mb-1">Instagram (@username)</label>
                       <input
                         type="text"
-                        placeholder="contoh: aries"
+                        placeholder="e.g. aries"
                         value={profile.socials?.instagram || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1047,10 +1047,10 @@ export default function AdminDashboard() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-neutral-400 block mb-1">WhatsApp (628...)</label>
+                      <label className="text-[11px] text-neutral-400 block mb-1">WhatsApp (e.g. 628...)</label>
                       <input
                         type="text"
-                        placeholder="contoh: 628123456789"
+                        placeholder="e.g. 628123456789"
                         value={profile.socials?.whatsapp || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1064,7 +1064,7 @@ export default function AdminDashboard() {
                       <label className="text-[11px] text-neutral-400 block mb-1">TikTok (@username)</label>
                       <input
                         type="text"
-                        placeholder="contoh: aries"
+                        placeholder="e.g. aries"
                         value={profile.socials?.tiktok || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1075,7 +1075,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-neutral-400 block mb-1">YouTube URL</label>
+                      <label className="text-[11px] text-neutral-400 block mb-1">YouTube Channel URL</label>
                       <input
                         type="url"
                         placeholder="https://youtube.com/@channel"
@@ -1092,7 +1092,7 @@ export default function AdminDashboard() {
                       <label className="text-[11px] text-neutral-400 block mb-1">X / Twitter (@username)</label>
                       <input
                         type="text"
-                        placeholder="contoh: aries"
+                        placeholder="e.g. aries"
                         value={profile.socials?.x || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1106,7 +1106,7 @@ export default function AdminDashboard() {
                       <label className="text-[11px] text-neutral-400 block mb-1">GitHub (username)</label>
                       <input
                         type="text"
-                        placeholder="contoh: mocharies85"
+                        placeholder="e.g. mocharies85"
                         value={profile.socials?.github || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1193,7 +1193,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Spotlight Toggle pada Add Link Form */}
+              {/* Spotlight Toggle */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-850">
                 <div className="flex items-center gap-2">
                   <Flame className={`w-4 h-4 ${newIsSpotlight ? 'text-amber-400' : 'text-neutral-500'}`} />
@@ -1207,7 +1207,7 @@ export default function AdminDashboard() {
                       )}
                     </span>
                     <span className="text-[10px] text-neutral-400 block">
-                      Animasi link menyala neon emas dengan badge HOT untuk meningkatkan CTR klik.
+                      Highlight this link with an animated gold neon glow and HOT badge to boost clicks.
                     </span>
                   </div>
                 </div>
@@ -1276,11 +1276,11 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
-                        {/* Tombol Toggle Spotlight Api */}
+                        {/* Spotlight Flame Button */}
                         <button
                           type="button"
                           onClick={() => handleToggleSpotlight(link)}
-                          title={isSpotlight ? 'Matikan efek Spotlight' : 'Nyalakan efek Spotlight Glow (PRO)'}
+                          title={isSpotlight ? 'Disable Spotlight effect' : 'Enable Spotlight Glow effect (PRO)'}
                           className={`p-2 rounded-xl transition ${
                             isSpotlight
                               ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
@@ -1785,7 +1785,7 @@ export default function AdminDashboard() {
         )}
       </main>
 
-      {/* Right Side Mockup Phone Preview (Real-time updates) */}
+      {/* Right Side Mockup Phone Preview */}
       <aside className="hidden xl:flex w-96 bg-neutral-900/40 border-l border-neutral-800 p-8 items-center justify-center shrink-0">
         <div className="w-full max-w-[280px] h-[560px] bg-neutral-950 border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden">
           <div className="w-20 h-4 bg-neutral-800 rounded-full mb-5 shrink-0" />
@@ -1975,7 +1975,7 @@ export default function AdminDashboard() {
               <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800">
                 <span className="text-[11px] text-neutral-400">Average CTR</span>
                 <p className="text-lg font-extrabold text-emerald-400 mt-1">
-                  {viewsCount > 0 ? ((clicksCount / viewsCount) * 100).toFixed(1) : 0}%
+                  {viewsCount > 0 ? Math.min(100, (clicksCount / viewsCount) * 100).toFixed(1) : '0.0'}%
                 </p>
               </div>
               <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800">
@@ -2002,7 +2002,9 @@ export default function AdminDashboard() {
                   ) : (
                     links.map((link) => {
                       const linkClicks = link.clicks || 0;
-                      const linkCtr = viewsCount > 0 ? ((linkClicks / viewsCount) * 100).toFixed(1) : '0.0';
+                      const rawCtr = viewsCount > 0 ? (linkClicks / viewsCount) * 100 : 0;
+                      const linkCtr = Math.min(100, rawCtr).toFixed(1);
+
                       return (
                         <div key={link.id} className="grid grid-cols-12 px-4 py-3 text-xs items-center hover:bg-neutral-900/30 transition">
                           <div className="col-span-7 truncate pr-2">
