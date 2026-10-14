@@ -486,10 +486,12 @@ export default function AdminDashboard() {
     }
   };
 
+  // Upload Story Media (Image auto-compress or Video to Cloudflare R2)
   const handleStoryMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // 1. Jalur Video (Tersimpan ke Cloudflare R2)
     if (file.type.startsWith('video/')) {
       if (!isProUser) {
         setShowUpgradeModal(true);
@@ -497,19 +499,41 @@ export default function AdminDashboard() {
         return;
       }
 
-      setStoryMediaType('video');
-      if (file.size > 750 * 1024) {
-        alert(
-          'Video file from device exceeds database limit (max ~750KB for direct upload).\n\n' +
-          'For longer / HD videos, please host your video and paste the direct .mp4 link in the URL box below!'
-        );
+      // Batas ukuran video wajar untuk streaming HP (maks 35 MB)
+      if (file.size > 35 * 1024 * 1024) {
+        alert('Video file is too large. Please choose a video under 35MB for optimal mobile streaming.');
         e.target.value = '';
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => setStoryMediaUrl(reader.result as string);
-      reader.readAsDataURL(file);
+
+      setStoryMediaType('video');
+      setCompressingStory(true);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('username', activeUsername);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setStoryMediaUrl(data.url);
+        } else {
+          const err = await res.json().catch(() => null);
+          alert(err?.error || 'Failed to upload video to Cloudflare R2.');
+        }
+      } catch (err) {
+        console.error('Error uploading video:', err);
+        alert('Network error while uploading video.');
+      } finally {
+        setCompressingStory(false);
+      }
     } else {
+      // 2. Jalur Gambar (Kompresi WebP Otomatis)
       setStoryMediaType('image');
       setCompressingStory(true);
       try {
