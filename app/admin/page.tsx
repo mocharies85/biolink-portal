@@ -30,7 +30,8 @@ import {
   Link as LinkIcon,
   Play,
   Pause,
-  Sparkles
+  Sparkles,
+  Flame
 } from 'lucide-react';
 
 interface LinkItem {
@@ -40,6 +41,16 @@ interface LinkItem {
   description?: string;
   clicks?: number;
   is_active?: number;
+  is_spotlight?: number;
+}
+
+interface SocialLinks {
+  instagram?: string;
+  tiktok?: string;
+  youtube?: string;
+  x?: string;
+  github?: string;
+  whatsapp?: string;
 }
 
 interface MessageItem {
@@ -67,6 +78,7 @@ interface ProfileData {
   bio: string;
   avatar: string;
   views?: number;
+  socials?: SocialLinks;
 }
 
 interface CurrentUser {
@@ -267,6 +279,7 @@ export default function AdminDashboard() {
     bio: '',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
     views: 0,
+    socials: {}
   });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSavedSuccess, setProfileSavedSuccess] = useState(false);
@@ -276,6 +289,7 @@ export default function AdminDashboard() {
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [newIsSpotlight, setNewIsSpotlight] = useState(false);
   const [addingLink, setAddingLink] = useState(false);
 
   const [stories, setStories] = useState<StoryItem[]>([]);
@@ -337,12 +351,20 @@ export default function AdminDashboard() {
       if (res.ok) {
         const data = await res.json();
         if (data.profile) {
+          let parsedSocials = {};
+          if (typeof data.profile.socials === 'string') {
+            try { parsedSocials = JSON.parse(data.profile.socials); } catch {}
+          } else if (typeof data.profile.socials === 'object' && data.profile.socials !== null) {
+            parsedSocials = data.profile.socials;
+          }
+
           setProfile({
             name: data.profile.name || activeUsername,
             tagline: data.profile.tagline || 'Digital Creator',
             bio: data.profile.bio || '',
             avatar: data.profile.avatar || profile.avatar,
             views: data.profile.views || 0,
+            socials: parsedSocials
           });
         }
       }
@@ -491,7 +513,6 @@ export default function AdminDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 1. Jalur Video (Tersimpan ke Cloudflare R2)
     if (file.type.startsWith('video/')) {
       if (!isProUser) {
         setShowUpgradeModal(true);
@@ -499,7 +520,6 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Batas ukuran video wajar untuk streaming HP (maks 35 MB)
       if (file.size > 35 * 1024 * 1024) {
         alert('Video file is too large. Please choose a video under 35MB for optimal mobile streaming.');
         e.target.value = '';
@@ -533,7 +553,6 @@ export default function AdminDashboard() {
         setCompressingStory(false);
       }
     } else {
-      // 2. Jalur Gambar (Kompresi WebP Otomatis)
       setStoryMediaType('image');
       setCompressingStory(true);
       try {
@@ -561,6 +580,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           username: activeUsername,
           ...profile,
+          socials: profile.socials || {}
         }),
       });
 
@@ -596,6 +616,7 @@ export default function AdminDashboard() {
           title: newTitle.trim(),
           url: newUrl.trim(),
           description: newDesc.trim(),
+          is_spotlight: isProUser && newIsSpotlight ? 1 : 0
         }),
       });
 
@@ -603,6 +624,7 @@ export default function AdminDashboard() {
         setNewTitle('');
         setNewUrl('');
         setNewDesc('');
+        setNewIsSpotlight(false);
         fetchLinks();
       } else {
         const errorData = await res.json();
@@ -612,6 +634,39 @@ export default function AdminDashboard() {
       alert('Network error while adding link.');
     } finally {
       setAddingLink(false);
+    }
+  };
+
+  // Toggle Spotlight Status khusus Akun PRO
+  const handleToggleSpotlight = async (link: LinkItem) => {
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    const nextSpotlight = link.is_spotlight === 1 ? 0 : 1;
+    try {
+      const res = await fetch('/api/links', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: link.id,
+          username: activeUsername,
+          is_spotlight: nextSpotlight
+        })
+      });
+
+      if (res.ok) {
+        setLinks((prev) =>
+          prev.map((l) => (l.id === link.id ? { ...l, is_spotlight: nextSpotlight } : l))
+        );
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Failed to toggle spotlight status.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while updating spotlight.');
     }
   };
 
@@ -743,6 +798,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row font-sans">
       <audio ref={previewAudioRef} onEnded={() => setPreviewingTrackId(null)} />
 
+      {/* Sidebar Navigation */}
       <aside className="w-full md:w-64 bg-neutral-900 border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0">
         <div>
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800 mb-6">
@@ -874,7 +930,9 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
+      {/* Main Content Area */}
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+        {/* TAB 1: Profile & Socials */}
         {activeTab === 'profile' && (
           <div className="max-w-xl flex flex-col gap-6">
             <div>
@@ -962,12 +1020,109 @@ export default function AdminDashboard() {
                     placeholder="Tell your audience about yourself or your creations..."
                   />
                 </div>
+
+                {/* Social Media Icons Input */}
+                <div className="pt-4 border-t border-neutral-800">
+                  <label className="text-xs font-bold text-white block mb-1 flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Social Media Icons Bar</span>
+                  </label>
+                  <p className="text-[11px] text-neutral-400 mb-3">
+                    Tambahkan username atau link medsos Anda. Ikon akan otomatis tampil rapi tepat di bawah bio halaman profil publik.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">Instagram (@username)</label>
+                      <input
+                        type="text"
+                        placeholder="contoh: aries"
+                        value={profile.socials?.instagram || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, instagram: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">WhatsApp (628...)</label>
+                      <input
+                        type="text"
+                        placeholder="contoh: 628123456789"
+                        value={profile.socials?.whatsapp || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, whatsapp: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">TikTok (@username)</label>
+                      <input
+                        type="text"
+                        placeholder="contoh: aries"
+                        value={profile.socials?.tiktok || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, tiktok: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">YouTube URL</label>
+                      <input
+                        type="url"
+                        placeholder="https://youtube.com/@channel"
+                        value={profile.socials?.youtube || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, youtube: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">X / Twitter (@username)</label>
+                      <input
+                        type="text"
+                        placeholder="contoh: aries"
+                        value={profile.socials?.x || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, x: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">GitHub (username)</label>
+                      <input
+                        type="text"
+                        placeholder="contoh: mocharies85"
+                        value={profile.socials?.github || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, github: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
                 {profileSavedSuccess && (
                   <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4" /> Profile saved successfully!
+                    <CheckCircle2 className="w-4 h-4" /> Profile &amp; Socials saved successfully!
                   </p>
                 )}
                 <button
@@ -983,13 +1138,14 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* TAB 2: Links & Content */}
         {activeTab === 'links' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h1 className="text-xl font-bold text-white">Links &amp; Content</h1>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Manage your external links, portfolios, and stores.
+                  Manage your external links, portfolios, and highlight priority content with Spotlight.
                 </p>
               </div>
               {!isProUser && (
@@ -1037,6 +1193,42 @@ export default function AdminDashboard() {
                 />
               </div>
 
+              {/* Spotlight Toggle pada Add Link Form */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-850">
+                <div className="flex items-center gap-2">
+                  <Flame className={`w-4 h-4 ${newIsSpotlight ? 'text-amber-400' : 'text-neutral-500'}`} />
+                  <div>
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      Spotlight Glow Animation
+                      {!isProUser && (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                          PRO
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-neutral-400 block">
+                      Animasi link menyala neon emas dengan badge HOT untuk meningkatkan CTR klik.
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isProUser) {
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+                    setNewIsSpotlight(!newIsSpotlight);
+                  }}
+                  className={`w-11 h-6 rounded-full transition-colors p-1 relative flex items-center ${
+                    newIsSpotlight ? 'bg-amber-500' : 'bg-neutral-800'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${newIsSpotlight ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
               <button
                 type="submit"
                 disabled={addingLink}
@@ -1056,37 +1248,69 @@ export default function AdminDashboard() {
                   <p className="text-xs text-neutral-400">No links added yet. Create your first link above.</p>
                 </div>
               ) : (
-                links.map((link) => (
-                  <div
-                    key={link.id}
-                    className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-between gap-4 hover:border-neutral-700 transition"
-                  >
-                    <div className="truncate flex-1">
-                      <p className="text-xs font-bold text-white truncate">{link.title}</p>
-                      {link.description && (
-                        <p className="text-[11px] text-neutral-400 truncate mt-0.5">{link.description}</p>
-                      )}
-                      <p className="text-[10px] text-neutral-500 truncate mt-0.5">{link.url}</p>
-                    </div>
-                    <div className="flex items-center gap-4 shrink-0">
-                      <div className="text-right">
-                        <span className="text-xs font-bold text-emerald-400 block">{link.clicks || 0}</span>
-                        <span className="text-[10px] text-neutral-500">clicks</span>
+                links.map((link) => {
+                  const isSpotlight = link.is_spotlight === 1;
+
+                  return (
+                    <div
+                      key={link.id}
+                      className={`p-4 rounded-2xl bg-neutral-900 border flex items-center justify-between gap-4 transition ${
+                        isSpotlight
+                          ? 'border-amber-500/60 shadow-lg shadow-amber-500/10'
+                          : 'border-neutral-800 hover:border-neutral-700'
+                      }`}
+                    >
+                      <div className="truncate flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold text-white truncate">{link.title}</p>
+                          {isSpotlight && (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold flex items-center gap-1">
+                              <Flame className="w-2.5 h-2.5" /> SPOTLIGHT
+                            </span>
+                          )}
+                        </div>
+                        {link.description && (
+                          <p className="text-[11px] text-neutral-400 truncate mt-0.5">{link.description}</p>
+                        )}
+                        <p className="text-[10px] text-neutral-500 truncate mt-0.5">{link.url}</p>
                       </div>
-                      <button
-                        onClick={() => handleDeleteLink(link.id)}
-                        className="p-2 rounded-xl bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-400 transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        {/* Tombol Toggle Spotlight Api */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSpotlight(link)}
+                          title={isSpotlight ? 'Matikan efek Spotlight' : 'Nyalakan efek Spotlight Glow (PRO)'}
+                          className={`p-2 rounded-xl transition ${
+                            isSpotlight
+                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
+                              : 'bg-neutral-800 text-neutral-500 hover:text-amber-400'
+                          }`}
+                        >
+                          <Flame className="w-4 h-4" />
+                        </button>
+
+                        <div className="text-right">
+                          <span className="text-xs font-bold text-emerald-400 block">{link.clicks || 0}</span>
+                          <span className="text-[10px] text-neutral-500">clicks</span>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteLink(link.id)}
+                          className="p-2 rounded-xl bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-400 transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
         )}
 
+        {/* TAB 3: Stories */}
         {activeTab === 'stories' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -1431,6 +1655,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* TAB 4: Messages */}
         {activeTab === 'inbox' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -1472,6 +1697,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* TAB 5: Analytics */}
         {activeTab === 'analytics' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -1559,16 +1785,17 @@ export default function AdminDashboard() {
         )}
       </main>
 
+      {/* Right Side Mockup Phone Preview (Real-time updates) */}
       <aside className="hidden xl:flex w-96 bg-neutral-900/40 border-l border-neutral-800 p-8 items-center justify-center shrink-0">
         <div className="w-full max-w-[280px] h-[560px] bg-neutral-950 border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden">
-          <div className="w-20 h-4 bg-neutral-800 rounded-full mb-6 shrink-0" />
+          <div className="w-20 h-4 bg-neutral-800 rounded-full mb-5 shrink-0" />
           
           <div className="w-full flex-1 overflow-y-auto flex flex-col items-center">
             <div className="relative">
               <img
                 src={profile.avatar}
                 alt={profile.name}
-                className={`w-16 h-16 rounded-full object-cover mb-3 shrink-0 shadow-lg transition ${
+                className={`w-16 h-16 rounded-full object-cover mb-2 shrink-0 shadow-lg transition ${
                   stories.length > 0 
                     ? 'border-2 border-emerald-400 ring-2 ring-emerald-400/50' 
                     : 'border-2 border-emerald-500/40'
@@ -1581,24 +1808,70 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            <h4 className="text-xs font-bold text-white text-center">{profile.name}</h4>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              <h4 className="text-xs font-bold text-white text-center truncate max-w-[180px]">{profile.name}</h4>
+              {isProUser && (
+                <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[8px] font-bold border border-amber-500/30">
+                  PRO
+                </span>
+              )}
+            </div>
+
             <p className="text-[10px] text-emerald-400 font-medium text-center">{profile.tagline}</p>
             {profile.bio && (
-              <p className="text-[10px] text-neutral-400 text-center mt-1 px-2 line-clamp-2">{profile.bio}</p>
+              <p className="text-[9px] text-neutral-400 text-center mt-1 px-2 line-clamp-2 leading-relaxed">{profile.bio}</p>
             )}
 
-            <div className="w-full flex flex-col gap-2 mt-4">
-              {links.map((l) => (
-                <div
-                  key={l.id}
-                  className="w-full py-2.5 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-[10px] text-neutral-200 text-center truncate shadow-sm"
-                >
-                  <span className="font-semibold block truncate">{l.title}</span>
-                  {l.description && (
-                    <span className="text-[8px] text-neutral-400 block truncate mt-0.5">{l.description}</span>
-                  )}
-                </div>
-              ))}
+            {/* Social Icons Bar in Mockup */}
+            {profile.socials && Object.values(profile.socials).some((val) => Boolean(val)) && (
+              <div className="flex items-center justify-center gap-1.5 my-2.5 flex-wrap">
+                {profile.socials.instagram && (
+                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">ig</span>
+                )}
+                {profile.socials.tiktok && (
+                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">tt</span>
+                )}
+                {profile.socials.youtube && (
+                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">yt</span>
+                )}
+                {profile.socials.whatsapp && (
+                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">wa</span>
+                )}
+                {profile.socials.x && (
+                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">x</span>
+                )}
+                {profile.socials.github && (
+                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">gh</span>
+                )}
+              </div>
+            )}
+
+            {/* Links in Mockup with Spotlight Glow */}
+            <div className="w-full flex flex-col gap-2 mt-2">
+              {links.map((l) => {
+                const isSpotlight = l.is_spotlight === 1;
+
+                return (
+                  <div
+                    key={l.id}
+                    className={`relative w-full py-2.5 px-3 rounded-xl border text-[10px] text-center truncate shadow-sm transition ${
+                      isSpotlight
+                        ? 'bg-gradient-to-r from-amber-500/20 via-neutral-900 to-amber-500/20 border-amber-400 text-amber-300 font-bold shadow-amber-500/10'
+                        : 'bg-neutral-900 border-neutral-800 text-neutral-200'
+                    }`}
+                  >
+                    {isSpotlight && (
+                      <span className="absolute -top-1.5 right-2 px-1 py-0.2 rounded-full bg-amber-500 text-neutral-950 font-black text-[7px] uppercase tracking-wider flex items-center gap-0.5">
+                        <Flame className="w-2 h-2 fill-current" /> HOT
+                      </span>
+                    )}
+                    <span className="block truncate">{l.title}</span>
+                    {l.description && (
+                      <span className="text-[8px] text-neutral-400 block truncate mt-0.5 font-normal">{l.description}</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -1606,6 +1879,7 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
+      {/* Upgrade Modal */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative">
@@ -1620,6 +1894,10 @@ export default function AdminDashboard() {
             </div>
 
             <div className="my-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>Spotlight Glow Links</strong> with exclusive HOT badge</span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
                 <span><strong>60s Video &amp; 25s Photo Stories</strong> (Free tier: 10s Photo only)</span>
@@ -1665,6 +1943,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Detailed Insights Modal */}
       {showDetailedInsights && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -1846,6 +2125,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Support Modal */}
       {showSupportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative">
