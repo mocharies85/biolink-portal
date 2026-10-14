@@ -9,7 +9,7 @@ interface Story {
   caption?: string;
   audio_url?: string;
   link_url?: string;
-  duration?: number; // 10s (Free), 25s (PRO Foto), atau 60s (PRO Video)
+  duration?: number;
 }
 
 interface StoryModalProps {
@@ -20,7 +20,7 @@ interface StoryModalProps {
   isPro?: boolean;
 }
 
-// Helper: Deteksi apakah URL media merupakan file video
+// Helper: Deteksi apakah format media adalah video
 const isVideoUrl = (url?: string): boolean => {
   if (!url) return false;
   return url.startsWith('data:video') || /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
@@ -30,29 +30,33 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [videoDuration, setVideoDuration] = useState<number>(0);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const current = stories[currentIndex];
-
-  // Hitung durasi dinamis: 25s (PRO Foto), 60s (PRO Video), 10s (Free/Default)
-  const currentDurationSec = current?.duration || (isPro ? 25 : 10);
-  const currentDurationMs = currentDurationSec * 1000;
   const isVideo = isVideoUrl(current?.media_url);
 
-  // Reset indeks saat modal dibuka
+  // Reset state tiap kali modal dibuka
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(0);
       setProgress(0);
+      setVideoDuration(0);
     }
   }, [isOpen]);
 
-  // Kelola pemutaran audio soundtrack & reset video tiap ganti slide
+  // Reset progress & durasi video saat berpindah slide
+  useEffect(() => {
+    setProgress(0);
+    setVideoDuration(0);
+  }, [currentIndex]);
+
+  // Kelola audio soundtrack dan pemutaran video
   useEffect(() => {
     if (!isOpen || !current) return;
 
-    // Putar soundtrack terpisah jika ada
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -64,7 +68,6 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
       }
     }
 
-    // Putar video dari awal jika media bertipe video
     if (videoRef.current && isVideo) {
       videoRef.current.currentTime = 0;
       videoRef.current.muted = Boolean(current.audio_url) || isMuted;
@@ -72,41 +75,33 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
     }
   }, [isOpen, currentIndex, current?.audio_url, current?.media_url, isVideo]);
 
-  // Sinkronisasi status Mute / Unmute
+  // Sinkronisasi status audio Mute / Unmute
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.muted = isMuted;
     }
     if (videoRef.current) {
-      // Jika ada audio soundtrack terpisah, video selalu di-mute agar tidak bentrok
       videoRef.current.muted = Boolean(current?.audio_url) || isMuted;
     }
   }, [isMuted, current?.audio_url]);
 
-  // Timer transisi progresif bar atas sesuai durasi slide
-  useEffect(() => {
-    if (!isOpen || stories.length === 0) return;
+  // Navigasi ke slide selanjutnya
+  const handleNext = () => {
+    if (currentIndex < stories.length - 1) {
+      setCurrentIndex((idx) => idx + 1);
+      setProgress(0);
+    } else {
+      handleClose();
+    }
+  };
 
-    const interval = 50; // Update progres tiap 50ms
-    const step = 100 / (currentDurationMs / interval);
-
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          if (currentIndex < stories.length - 1) {
-            setCurrentIndex((idx) => idx + 1);
-            return 0;
-          } else {
-            handleClose();
-            return 100;
-          }
-        }
-        return prev + step;
-      });
-    }, interval);
-
-    return () => clearInterval(timer);
-  }, [isOpen, currentIndex, stories.length, currentDurationMs]);
+  // Navigasi ke slide sebelumnya
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex((idx) => idx - 1);
+      setProgress(0);
+    }
+  };
 
   const handleClose = () => {
     if (audioRef.current) {
@@ -118,30 +113,63 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
     onClose();
   };
 
-  if (!isOpen || stories.length === 0 || !current) return null;
+  // Baca metadata durasi video otomatis (maksimal cap 60 detik)
+  const handleVideoLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const vid = e.currentTarget;
+    const naturalDur = vid.duration || 10;
+    // Maksimal durasi tayang video adalah 60 detik
+    const effectiveDur = Math.min(naturalDur, 60);
+    setVideoDuration(effectiveDur);
+  };
 
-  const handleNext = () => {
-    if (currentIndex < stories.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setProgress(0);
+  // Timer progres dinamis: Mengikuti durasi video asli ATAU timer gambar (25s PRO / 10s Free)
+  useEffect(() => {
+    if (!isOpen || !current) return;
+
+    if (isVideo) {
+      // Progres berbasis posisi putar video asli
+      const interval = setInterval(() => {
+        if (videoRef.current && videoDuration > 0) {
+          const curTime = videoRef.current.currentTime;
+          if (curTime >= videoDuration) {
+            clearInterval(interval);
+            handleNext();
+          } else {
+            setProgress((curTime / videoDuration) * 100);
+          }
+        }
+      }, 40);
+
+      return () => clearInterval(interval);
     } else {
-      handleClose();
-    }
-  };
+      // Progres berbasis timer gambar (25 detik PRO, 10 detik Free)
+      const durationSec = current.duration || (isPro ? 25 : 10);
+      const durationMs = durationSec * 1000;
+      const intervalTime = 50;
+      const step = 100 / (durationMs / intervalTime);
 
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setProgress(0);
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(timer);
+            handleNext();
+            return 100;
+          }
+          return prev + step;
+        });
+      }, intervalTime);
+
+      return () => clearInterval(timer);
     }
-  };
+  }, [isOpen, currentIndex, isVideo, videoDuration, current?.duration, isPro, stories.length]);
+
+  if (!isOpen || stories.length === 0 || !current) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 font-sans select-none">
-      {/* Audio element untuk pemutaran musik latar */}
       <audio ref={audioRef} loop />
 
-      <div className="relative w-full max-w-sm h-[600px] bg-neutral-950 rounded-3xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col justify-between">
+      <div className="relative w-full max-w-sm h-[600px] bg-black rounded-3xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col justify-between">
         
         {/* Progress Bar Atas */}
         <div className="absolute top-3 left-3 right-3 z-30 flex gap-1.5">
@@ -157,23 +185,27 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           ))}
         </div>
 
-        {/* Header: Username, Durasi Badge & Tombol Kontrol */}
+        {/* Header: Username, Badge Durasi Dinamis & Tombol Tutup */}
         <div className="absolute top-7 left-4 right-4 z-30 flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-xs text-neutral-200">@{username}</span>
 
             {/* Badge Durasi Dinamis */}
-            {currentDurationSec > 10 ? (
+            {isVideo ? (
               <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold flex items-center gap-1 border border-amber-500/30">
-                <Sparkles className="w-2.5 h-2.5" /> PRO {currentDurationSec}s
+                <Sparkles className="w-2.5 h-2.5" />
+                <span>Video {videoDuration > 0 ? `${Math.round(videoDuration)}s` : ''}</span>
               </span>
             ) : (
-              <span className="px-1.5 py-0.5 rounded bg-neutral-800/80 text-neutral-400 text-[9px] font-medium border border-neutral-700">
-                10s
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium border ${
+                isPro 
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 font-bold' 
+                  : 'bg-neutral-800/80 text-neutral-400 border-neutral-700'
+              }`}>
+                {isPro ? 'PRO 25s' : '10s'}
               </span>
             )}
 
-            {/* Indikator Soundtrack */}
             {current.audio_url && (
               <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold border border-emerald-500/30">
                 ♫
@@ -187,7 +219,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
                 type="button"
                 onClick={() => setIsMuted(!isMuted)} 
                 className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition text-white"
-                title={isMuted ? 'Suarakan' : 'Bisukan'}
+                title={isMuted ? 'Unmute' : 'Mute'}
               >
                 {isMuted ? (
                   <VolumeX className="w-3.5 h-3.5 text-neutral-400" />
@@ -201,33 +233,34 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
               type="button"
               onClick={handleClose} 
               className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition"
-              title="Tutup"
+              title="Close"
             >
               <X className="w-3.5 h-3.5 text-white" />
             </button>
           </div>
         </div>
 
-        {/* Media Story (Otomatis Render Video atau Gambar) */}
-        <div className="relative w-full h-full flex items-center justify-center bg-neutral-900">
+        {/* Media Container: object-contain menjaga orientasi landscape maupun portrait tetap utuh */}
+        <div className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden">
           {isVideo ? (
             <video 
               ref={videoRef}
               src={current.media_url} 
               autoPlay 
               playsInline 
-              loop
-              className="w-full h-full object-cover"
+              onLoadedMetadata={handleVideoLoadedMetadata}
+              onEnded={handleNext}
+              className="w-full h-full object-contain"
             />
           ) : (
             <img 
               src={current.media_url} 
               alt="Story content" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
             />
           )}
 
-          {/* Stiker Tautan Interaktif */}
+          {/* Stiker Link Tautan */}
           {current.link_url && (
             <div className="absolute bottom-20 z-30 flex justify-center w-full px-6">
               <a
@@ -246,18 +279,18 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
             </div>
           )}
           
-          {/* Navigasi Sentuh Kiri / Kanan */}
+          {/* Area Sentuh Kiri / Kanan untuk Navigasi Slide */}
           <button 
             type="button" 
             onClick={handlePrev} 
             className="absolute left-0 top-0 bottom-0 w-1/3 z-10" 
-            aria-label="Story Sebelumnya"
+            aria-label="Previous story"
           />
           <button 
             type="button" 
             onClick={handleNext} 
             className="absolute right-0 top-0 bottom-0 w-1/3 z-10" 
-            aria-label="Story Selanjutnya"
+            aria-label="Next story"
           />
         </div>
 
