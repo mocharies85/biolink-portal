@@ -74,12 +74,12 @@ export default function SuperAdminPage() {
   const [activeTab, setActiveTab] = useState<'members' | 'messages'>('members');
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
-  // Search & Delete modal states
+  // Search & Delete states
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
 
-  // Check saved session on mount
+  // Periksa sesi PIN yang tersimpan
   useEffect(() => {
     const savedPin = sessionStorage.getItem('curiolot_superadmin_pin');
     if (savedPin) {
@@ -89,10 +89,12 @@ export default function SuperAdminPage() {
 
   const validateAndFetchData = async (pin: string) => {
     setLoading(true);
+    setPinError('');
     try {
+      const cleanPin = pin.trim();
       const res = await fetch('/api/admin/users', {
         headers: {
-          'x-admin-pin': pin,
+          'x-admin-pin': cleanPin,
         },
       });
 
@@ -100,12 +102,17 @@ export default function SuperAdminPage() {
         const result = await res.json();
         setData(result);
         setIsUnlocked(true);
-        sessionStorage.setItem('curiolot_superadmin_pin', pin);
-        setPinError('');
+        sessionStorage.setItem('curiolot_superadmin_pin', cleanPin);
       } else {
+        const errData = await res.json().catch(() => null);
         sessionStorage.removeItem('curiolot_superadmin_pin');
         setIsUnlocked(false);
-        setPinError('Invalid security PIN. Access denied.');
+
+        if (res.status === 401) {
+          setPinError('Invalid security PIN. Access denied.');
+        } else {
+          setPinError(errData?.error || `Server responded with status ${res.status}.`);
+        }
       }
     } catch {
       setPinError('Network connection error. Try again.');
@@ -130,9 +137,9 @@ export default function SuperAdminPage() {
     setData(null);
   };
 
-  // Toggle PRO status
+  // Toggle status PRO
   const toggleProStatus = async (userId: number, username: string, currentStatus: number | undefined) => {
-    const savedPin = sessionStorage.getItem('curiolot_superadmin_pin') || pinInput;
+    const savedPin = sessionStorage.getItem('curiolot_superadmin_pin') || pinInput.trim();
     setActionLoadingId(userId);
 
     try {
@@ -148,7 +155,7 @@ export default function SuperAdminPage() {
       if (res.ok) {
         await validateAndFetchData(savedPin);
       } else {
-        alert('Unauthorized or failed to update PRO status.');
+        alert('Failed to update PRO status.');
       }
     } catch {
       alert('Network error while toggling PRO status.');
@@ -157,10 +164,10 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Handle Account Deletion
+  // Hapus akun pengguna
   const handleDeleteUser = async () => {
     if (!deleteTarget) return;
-    const savedPin = sessionStorage.getItem('curiolot_superadmin_pin') || pinInput;
+    const savedPin = sessionStorage.getItem('curiolot_superadmin_pin') || pinInput.trim();
     setDeletingUser(deleteTarget.username);
 
     try {
@@ -185,13 +192,13 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Filtered users for search
+  // Filter pencarian
   const filteredUsers = (data?.users || []).filter((u) =>
     u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Identify Top Creator
+  // Temukan kreator paling aktif
   const topCreator = [...(data?.users || [])].sort(
     (a, b) => ((b.total_views || 0) + (b.total_clicks || 0) * 2) - ((a.total_views || 0) + (a.total_clicks || 0) * 2)
   )[0];
@@ -294,7 +301,7 @@ export default function SuperAdminPage() {
 
           <div className="flex items-center gap-2.5">
             <button
-              onClick={() => validateAndFetchData(sessionStorage.getItem('curiolot_superadmin_pin') || pinInput)}
+              onClick={() => validateAndFetchData(sessionStorage.getItem('curiolot_superadmin_pin') || pinInput.trim())}
               disabled={loading}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 hover:text-white hover:border-neutral-700 transition"
             >
@@ -422,7 +429,7 @@ export default function SuperAdminPage() {
           )}
         </div>
 
-        {/* TAB 1: User Management & Analytics Table */}
+        {/* TAB 1: User Management Table */}
         {activeTab === 'members' && (
           <div className="border border-neutral-800 rounded-2xl overflow-hidden bg-neutral-900/60 shadow-xl">
             <div className="grid grid-cols-12 px-4 py-3 bg-neutral-900 border-b border-neutral-800 text-xs font-bold text-neutral-400">
