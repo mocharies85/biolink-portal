@@ -1,5 +1,6 @@
 // functions/api/stories.js
 
+// 1. GET: Ambil story aktif dalam 24 jam terakhir
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
@@ -12,9 +13,9 @@ export async function onRequestGet({ request, env }) {
     const { results } = await env.DB.prepare(
       `SELECT id, media_url, caption, audio_url, link_url, duration, created_at 
        FROM stories 
-       WHERE username = ? AND expires_at > datetime('now') 
+       WHERE LOWER(username) = LOWER(?) AND expires_at > datetime('now') 
        ORDER BY created_at ASC`
-    ).bind(username.toLowerCase()).all();
+    ).bind(username).all();
 
     return new Response(JSON.stringify({ stories: results || [] }), {
       status: 200,
@@ -25,6 +26,7 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
+// 2. POST: Publikasikan story baru
 export async function onRequestPost({ request, env }) {
   try {
     const { username, media_url, caption, audio_url, link_url, duration } = await request.json();
@@ -34,7 +36,7 @@ export async function onRequestPost({ request, env }) {
     }
 
     const id = crypto.randomUUID();
-    const storyDuration = duration === 60 ? 60 : 10; // 60 detik untuk PRO, 10 detik untuk Free
+    const storyDuration = duration === 60 ? 60 : 10;
 
     await env.DB.prepare(
       `INSERT INTO stories (id, username, media_url, caption, audio_url, link_url, duration, expires_at)
@@ -51,6 +53,30 @@ export async function onRequestPost({ request, env }) {
 
     return new Response(JSON.stringify({ success: true, id }), {
       status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+}
+
+// 3. DELETE: Hapus story tertentu milik kreator
+export async function onRequestDelete({ request, env }) {
+  try {
+    const url = new URL(request.url);
+    const storyId = url.searchParams.get('id');
+    const username = url.searchParams.get('username');
+
+    if (!storyId || !username) {
+      return new Response(JSON.stringify({ error: 'Story ID and username are required' }), { status: 400 });
+    }
+
+    await env.DB.prepare(
+      `DELETE FROM stories WHERE id = ? AND LOWER(username) = LOWER(?)`
+    ).bind(storyId, username).run();
+
+    return new Response(JSON.stringify({ success: true, message: 'Story deleted successfully' }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (err) {

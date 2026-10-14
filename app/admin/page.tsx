@@ -177,7 +177,7 @@ const trimAndCompressAudio = async (file: File, maxDurationSeconds: number): Pro
   const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
   const duration = Math.min(decodedBuffer.duration, maxDurationSeconds);
-  const sampleRate = 22050; // Downsample to 22.05kHz mono for light data footprint
+  const sampleRate = 22050;
   const numChannels = 1;
   const numFrames = Math.floor(duration * sampleRate);
 
@@ -281,6 +281,7 @@ export default function AdminDashboard() {
   const [postingStory, setPostingStory] = useState(false);
   const [storySuccess, setStorySuccess] = useState(false);
   const [compressingStory, setCompressingStory] = useState(false);
+  const [deletingStoryId, setDeletingStoryId] = useState<string | null>(null);
 
   // Music library states
   const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
@@ -597,6 +598,29 @@ export default function AdminDashboard() {
       alert('Network error while publishing story.');
     } finally {
       setPostingStory(false);
+    }
+  };
+
+  // Delete story handler
+  const handleDeleteStory = async (storyId: string) => {
+    if (!confirm('Are you sure you want to remove this story?')) return;
+    setDeletingStoryId(storyId);
+
+    try {
+      const res = await fetch(`/api/stories?id=${encodeURIComponent(storyId)}&username=${encodeURIComponent(activeUsername)}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setStories((prev) => prev.filter((s) => s.id !== storyId));
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Failed to delete story.');
+      }
+    } catch {
+      alert('Network error while deleting story.');
+    } finally {
+      setDeletingStoryId(null);
     }
   };
 
@@ -1254,7 +1278,7 @@ export default function AdminDashboard() {
               </button>
             </form>
 
-            {/* List Active Stories */}
+            {/* List Active Stories with Delete Action */}
             <div>
               <h3 className="text-xs font-bold text-neutral-300 uppercase tracking-wider mb-3">
                 Active Stories ({stories.length})
@@ -1274,38 +1298,51 @@ export default function AdminDashboard() {
                   {stories.map((st) => (
                     <div
                       key={st.id}
-                      className="p-3 rounded-2xl bg-neutral-900 border border-neutral-800 flex gap-3 items-center"
+                      className="p-3 rounded-2xl bg-neutral-900 border border-neutral-800 flex gap-3 items-center justify-between hover:border-neutral-700 transition"
                     >
-                      <img
-                        src={st.media_url}
-                        alt="Story thumb"
-                        className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-700"
-                      />
-                      <div className="truncate flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Active Now
-                          </span>
-                          <span className="text-[9px] px-1 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
-                            {st.duration === 60 ? '60s' : '10s'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-neutral-200 truncate mt-0.5">
-                          {st.caption || 'No caption'}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {st.link_url && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 truncate max-w-[100px]">
-                              <LinkIcon className="w-2.5 h-2.5 shrink-0" /> Link
+                      <div className="flex items-center gap-3 truncate flex-1">
+                        <img
+                          src={st.media_url}
+                          alt="Story thumb"
+                          className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-700"
+                        />
+                        <div className="truncate flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Active Now
                             </span>
-                          )}
-                          {st.audio_url && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                              <Music className="w-2.5 h-2.5 shrink-0" /> Music
+                            <span className="text-[9px] px-1 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
+                              {st.duration === 60 ? '60s' : '10s'}
                             </span>
-                          )}
+                          </div>
+                          <p className="text-xs text-neutral-200 truncate mt-0.5">
+                            {st.caption || 'No caption'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {st.link_url && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 truncate max-w-[100px]">
+                                <LinkIcon className="w-2.5 h-2.5 shrink-0" /> Link
+                              </span>
+                            )}
+                            {st.audio_url && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                <Music className="w-2.5 h-2.5 shrink-0" /> Music
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      {/* Tombol Hapus Story */}
+                      <button
+                        type="button"
+                        disabled={deletingStoryId === st.id}
+                        onClick={() => handleDeleteStory(st.id)}
+                        className="p-2 rounded-xl bg-neutral-800 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition shrink-0 disabled:opacity-50"
+                        title="Delete story"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   ))}
                 </div>
