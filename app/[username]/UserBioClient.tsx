@@ -75,6 +75,7 @@ export default function UserBioClient() {
   useEffect(() => {
     if (!username) return;
 
+    // 1. Ambil data profil
     fetch(`/api/profile?username=${username}`)
       .then((res) => res.json())
       .then((data) => {
@@ -82,6 +83,7 @@ export default function UserBioClient() {
       })
       .catch((err) => console.error('Failed to load profile:', err));
 
+    // 2. Ambil data link
     fetch(`/api/links?username=${username}`)
       .then((res) => res.json())
       .then((data) => {
@@ -90,7 +92,7 @@ export default function UserBioClient() {
       .catch((err) => console.error('Failed to load links:', err))
       .finally(() => setLoadingLinks(false));
 
-    // Mengambil data story aktif
+    // 3. Ambil data story aktif
     fetch(`/api/stories?username=${username}`)
       .then((res) => res.json())
       .then((data) => {
@@ -99,6 +101,14 @@ export default function UserBioClient() {
         }
       })
       .catch((err) => console.error('Failed to load stories:', err));
+
+    // 4. Catat view baru (otomatis +1 per sesi kunjungan)
+    const sessionKey = `curiolot_viewed_${username}`;
+    if (typeof window !== 'undefined' && !sessionStorage.getItem(sessionKey)) {
+      fetch(`/api/views?username=${username}`, { method: 'POST' })
+        .then(() => sessionStorage.setItem(sessionKey, '1'))
+        .catch((err) => console.error('Failed to log view:', err));
+    }
   }, [username]);
 
   // 3. Tombol Share responsif & andal

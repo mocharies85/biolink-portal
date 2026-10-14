@@ -63,6 +63,7 @@ interface ProfileData {
   tagline: string;
   bio: string;
   avatar: string;
+  views?: number;
 }
 
 interface CurrentUser {
@@ -255,11 +256,12 @@ export default function AdminDashboard() {
         const data = await res.json();
         if (data.profile) {
           setProfile({
-            name: data.profile.name || activeUsername,
-            tagline: data.profile.tagline || 'Digital Creator',
-            bio: data.profile.bio || '',
-            avatar: data.profile.avatar || profile.avatar,
-          });
+  name: data.profile.name || activeUsername,
+  tagline: data.profile.tagline || 'Digital Creator',
+  bio: data.profile.bio || '',
+  avatar: data.profile.avatar || profile.avatar,
+  views: data.profile.views || 0,
+});
         }
       }
     } catch (err) {
