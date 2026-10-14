@@ -28,7 +28,8 @@ import {
   Music,
   Link as LinkIcon,
   Play,
-  Pause
+  Pause,
+  Sparkles
 } from 'lucide-react';
 
 interface LinkItem {
@@ -55,6 +56,7 @@ interface StoryItem {
   caption?: string;
   audio_url?: string;
   link_url?: string;
+  duration?: number;
   created_at: string;
 }
 
@@ -84,39 +86,39 @@ interface MusicTrack {
 // Preset library of royalty-free background soundtracks
 const FREE_MUSIC_LIBRARY: MusicTrack[] = [
   {
-    id: 'lofi-sunset',
-    title: 'Chill Lo-Fi Sunset',
+    id: 'chill-melody',
+    title: 'Chill Lo-Fi Melody',
     category: 'Relax / Aesthetic',
-    duration: '0:30',
-    url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3'
+    duration: '1:12',
+    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
   },
   {
-    id: 'upbeat-funk',
-    title: 'Modern Upbeat Funk',
+    id: 'upbeat-groove',
+    title: 'Upbeat Modern Groove',
     category: 'Energetic / Promo',
-    duration: '0:25',
-    url: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=funky-upbeat-10499.mp3'
+    duration: '1:10',
+    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3'
   },
   {
-    id: 'acoustic-breeze',
-    title: 'Acoustic Morning Breeze',
+    id: 'acoustic-vibe',
+    title: 'Warm Acoustic Vibe',
     category: 'Acoustic / Warm',
-    duration: '0:28',
-    url: 'https://cdn.pixabay.com/download/audio/2022/10/14/audio_9939f77cb7.mp3?filename=acoustic-guitars-ambient-124430.mp3'
+    duration: '0:54',
+    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3'
   },
   {
-    id: 'ambient-calm',
-    title: 'Minimal Ambient Calm',
+    id: 'ambient-piano',
+    title: 'Ambient Piano & Calm',
     category: 'Atmospheric / Elegant',
-    duration: '0:35',
-    url: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=ambient-piano-amp-strings-10711.mp3'
+    duration: '1:02',
+    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3'
   },
   {
-    id: 'synthwave-pulse',
-    title: 'Neon Cyber Synthwave',
+    id: 'synth-beats',
+    title: 'Synthwave Pulse Beat',
     category: 'Tech / Futuristic',
-    duration: '0:29',
-    url: 'https://cdn.pixabay.com/download/audio/2022/11/06/audio_c5df0d18dc.mp3?filename=synthwave-80s-126294.mp3'
+    duration: '1:15',
+    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3'
   }
 ];
 
@@ -167,11 +169,82 @@ const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 
   });
 };
 
+// Helper: Automatic Audio Trimming and Compression using Web Audio API
+const trimAndCompressAudio = async (file: File, maxDurationSeconds: number): Promise<string> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const audioCtx = new AudioContextClass();
+  const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+  const duration = Math.min(decodedBuffer.duration, maxDurationSeconds);
+  const sampleRate = 22050; // Downsample to 22.05kHz mono for light data footprint
+  const numChannels = 1;
+  const numFrames = Math.floor(duration * sampleRate);
+
+  const offlineCtx = new OfflineAudioContext(numChannels, numFrames, sampleRate);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = decodedBuffer;
+  source.connect(offlineCtx.destination);
+  source.start(0);
+
+  const renderedBuffer = await offlineCtx.startRendering();
+
+  // Convert rendered AudioBuffer to WAV format
+  const numOfChan = renderedBuffer.numberOfChannels;
+  const length = renderedBuffer.length * numOfChan * 2 + 44;
+  const buffer = new ArrayBuffer(length);
+  const view = new DataView(buffer);
+  const channels: Float32Array[] = [];
+  let offset = 0;
+  let pos = 0;
+
+  const setUint16 = (data: number) => { view.setUint16(pos, data, true); pos += 2; };
+  const setUint32 = (data: number) => { view.setUint32(pos, data, true); pos += 4; };
+
+  setUint32(0x46464952); // "RIFF"
+  setUint32(length - 8);
+  setUint32(0x45564157); // "WAVE"
+  setUint32(0x20746d66); // "fmt "
+  setUint32(16);
+  setUint16(1); // PCM
+  setUint16(numOfChan);
+  setUint32(sampleRate);
+  setUint32(sampleRate * 2 * numOfChan);
+  setUint16(numOfChan * 2);
+  setUint16(16);
+  setUint32(0x61746164); // "data"
+  setUint32(length - pos - 4);
+
+  for (let i = 0; i < numOfChan; i++) {
+    channels.push(renderedBuffer.getChannelData(i));
+  }
+
+  while (pos < length) {
+    for (let i = 0; i < numOfChan; i++) {
+      let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+      view.setInt16(pos, sample, true);
+      pos += 2;
+    }
+    offset++;
+  }
+
+  const blob = new Blob([view.buffer], { type: 'audio/wav' });
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const customAudioInputRef = useRef<HTMLInputElement>(null);
 
   // User session
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -185,6 +258,7 @@ export default function AdminDashboard() {
     tagline: 'Digital Creator',
     bio: '',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    views: 0,
   });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSavedSuccess, setProfileSavedSuccess] = useState(false);
@@ -211,6 +285,7 @@ export default function AdminDashboard() {
   // Music library states
   const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
   const [selectedTrackTitle, setSelectedTrackTitle] = useState<string>('');
+  const [processingAudio, setProcessingAudio] = useState(false);
 
   // Modals states
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -256,12 +331,12 @@ export default function AdminDashboard() {
         const data = await res.json();
         if (data.profile) {
           setProfile({
-  name: data.profile.name || activeUsername,
-  tagline: data.profile.tagline || 'Digital Creator',
-  bio: data.profile.bio || '',
-  avatar: data.profile.avatar || profile.avatar,
-  views: data.profile.views || 0,
-});
+            name: data.profile.name || activeUsername,
+            tagline: data.profile.tagline || 'Digital Creator',
+            bio: data.profile.bio || '',
+            avatar: data.profile.avatar || profile.avatar,
+            views: data.profile.views || 0,
+          });
         }
       }
     } catch (err) {
@@ -329,7 +404,7 @@ export default function AdminDashboard() {
     }
   }, [currentUser]);
 
-  // Toggle Audio Preview in Admin
+  // Toggle Audio Preview
   const handleTogglePreview = (track: MusicTrack) => {
     if (!previewAudioRef.current) return;
 
@@ -343,13 +418,11 @@ export default function AdminDashboard() {
     }
   };
 
-  // Select Soundtrack
+  // Select Preset Soundtrack
   const handleSelectTrack = (track: MusicTrack) => {
     setStoryAudioUrl(track.url);
     setSelectedTrackTitle(track.title);
-    if (previewAudioRef.current) {
-      previewAudioRef.current.pause();
-    }
+    if (previewAudioRef.current) previewAudioRef.current.pause();
     setPreviewingTrackId(null);
   };
 
@@ -357,10 +430,31 @@ export default function AdminDashboard() {
   const handleRemoveTrack = () => {
     setStoryAudioUrl('');
     setSelectedTrackTitle('');
-    if (previewAudioRef.current) {
-      previewAudioRef.current.pause();
-    }
+    if (previewAudioRef.current) previewAudioRef.current.pause();
     setPreviewingTrackId(null);
+  };
+
+  // Upload Custom Audio with Auto-trim (10s for Free, 60s for PRO)
+  const handleCustomAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxAllowedDuration = isProUser ? 60 : 10;
+    setProcessingAudio(true);
+
+    try {
+      const trimmedBase64 = await trimAndCompressAudio(file, maxAllowedDuration);
+      setStoryAudioUrl(trimmedBase64);
+      setSelectedTrackTitle(`${file.name.replace(/\.[^/.]+$/, '')} (${maxAllowedDuration}s auto-trimmed)`);
+      if (previewAudioRef.current) previewAudioRef.current.pause();
+      setPreviewingTrackId(null);
+    } catch (err) {
+      console.error('Failed to process custom audio:', err);
+      alert('Failed to process audio file. Please choose a standard MP3 or WAV.');
+    } finally {
+      setProcessingAudio(false);
+      e.target.value = '';
+    }
   };
 
   // Upload Profile Avatar with auto-compression (400x400)
@@ -463,7 +557,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Create new story handler
+  // Create new story handler (sends duration based on user tier)
   const handleCreateStory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storyMediaUrl.trim()) {
@@ -482,6 +576,7 @@ export default function AdminDashboard() {
           caption: storyCaption.trim(),
           audio_url: storyAudioUrl.trim() || null,
           link_url: storyLinkUrl.trim() || null,
+          duration: isProUser ? 60 : 10,
         }),
       });
 
@@ -927,12 +1022,30 @@ export default function AdminDashboard() {
         {activeTab === 'stories' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                <span>24h Profile Stories</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Live Status
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span>24h Profile Stories</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    Live Status
+                  </span>
+                </h1>
+                
+                {/* Duration Badge based on Tier */}
+                <span className={`text-[11px] px-2.5 py-1 rounded-xl font-semibold border flex items-center gap-1.5 w-fit ${
+                  isProUser 
+                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
+                    : 'bg-neutral-900 text-neutral-400 border-neutral-800'
+                }`}>
+                  {isProUser ? (
+                    <>
+                      <Sparkles className="w-3 h-3 text-amber-400" />
+                      <span>PRO Tier: 60s Extended Stories</span>
+                    </>
+                  ) : (
+                    <span>Free Tier: 10s Story Limit</span>
+                  )}
                 </span>
-              </h1>
+              </div>
               <p className="text-xs text-neutral-400 mt-1">
                 Post visual updates with background soundtracks and clickable link stickers that automatically expire after 24 hours.
               </p>
@@ -1023,7 +1136,7 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              {/* Royalty-Free Soundtrack Selector (IG-Style) */}
+              {/* Royalty-Free Soundtrack Selector with 6th Custom Audio Slot */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] text-neutral-300 font-semibold flex items-center gap-1.5">
@@ -1051,6 +1164,7 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1.5 border border-neutral-800 rounded-xl bg-neutral-950">
+                    {/* 5 Preset Royalty-Free Tracks */}
                     {FREE_MUSIC_LIBRARY.map((track) => (
                       <div
                         key={track.id}
@@ -1085,11 +1199,41 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
+
+                    {/* 6th Slot: Custom Audio Upload with Auto-Trim */}
+                    <div className="p-2.5 rounded-lg bg-neutral-900/50 border border-dashed border-neutral-700 hover:border-emerald-500/50 flex items-center justify-between gap-2 transition">
+                      <div className="truncate flex-1">
+                        <p className="text-xs font-medium text-neutral-200 flex items-center gap-1.5 truncate">
+                          <Upload className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>Custom Audio</span>
+                        </p>
+                        <span className="text-[9px] text-neutral-400 block mt-0.5">
+                          {isProUser ? 'Auto-trimmed to 60s (PRO)' : 'Auto-trimmed to 10s (Free)'}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={processingAudio}
+                        onClick={() => customAudioInputRef.current?.click()}
+                        className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-emerald-400 hover:text-emerald-300 font-bold text-[10px] transition disabled:opacity-50 shrink-0"
+                      >
+                        {processingAudio ? 'Trimming...' : 'Upload MP3'}
+                      </button>
+
+                      <input
+                        type="file"
+                        ref={customAudioInputRef}
+                        accept="audio/*"
+                        onChange={handleCustomAudioUpload}
+                        className="hidden"
+                      />
+                    </div>
                   </div>
                 )}
 
                 <p className="text-[10px] text-neutral-500">
-                  Select any royalty-free track to play automatically when visitors view your story.
+                  Select any royalty-free track or upload a custom audio file to play automatically when visitors view your story.
                 </p>
               </div>
 
@@ -1138,9 +1282,14 @@ export default function AdminDashboard() {
                         className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-700"
                       />
                       <div className="truncate flex-1">
-                        <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Active Now
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Active Now
+                          </span>
+                          <span className="text-[9px] px-1 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
+                            {st.duration === 60 ? '60s' : '10s'}
+                          </span>
+                        </div>
                         <p className="text-xs text-neutral-200 truncate mt-0.5">
                           {st.caption || 'No caption'}
                         </p>
@@ -1359,6 +1508,10 @@ export default function AdminDashboard() {
             </div>
 
             <div className="my-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>60-second Story duration</strong> (vs 10s limit on Free)</span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
                 <span><strong>Unlimited links</strong> (bypass 3-link free limit)</span>
