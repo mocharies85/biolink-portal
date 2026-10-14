@@ -229,7 +229,7 @@ export default function AdminDashboard() {
   // Derived variables
   const activeUsername = currentUser?.username || 'creator';
   const isProUser = currentUser?.is_pro === 1;
-  const viewsCount = 1240;
+  const viewsCount = profile.views || 0;
   const clicksCount = links.reduce((acc, l) => acc + (l.clicks || 0), 0);
 
   // Check auth session

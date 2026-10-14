@@ -15,7 +15,8 @@ export async function onRequestGet({ request, env }) {
         name: username.toUpperCase(),
         tagline: 'Digital Creator',
         bio: `Welcome to the official hub of @${username}.`,
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces'
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+        views: 0,
       };
     }
 
