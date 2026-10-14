@@ -67,6 +67,57 @@ interface CurrentUser {
   is_pro?: number;
 }
 
+// ==========================================
+// HELPER: Kompresi Gambar Otomatis di Browser
+// ==========================================
+const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 0.75): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        // Skalakan proporsional jika resolusi melebihi batas maksimal
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Ekspor ke format WebP (ringan & tajam), fallback ke JPEG
+        let compressed = canvas.toDataURL('image/webp', quality);
+        if (!compressed.startsWith('data:image/webp')) {
+          compressed = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        resolve(compressed);
+      };
+
+      img.onerror = (err) => reject(err);
+    };
+
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +126,7 @@ export default function AdminDashboard() {
   // User session
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
-  // Navigation tab (Ditambahkan tab 'stories')
+  // Navigation tab
   const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'stories' | 'inbox' | 'analytics'>('profile');
 
   // Profile states
@@ -103,6 +154,7 @@ export default function AdminDashboard() {
   const [storyCaption, setStoryCaption] = useState('');
   const [postingStory, setPostingStory] = useState(false);
   const [storySuccess, setStorySuccess] = useState(false);
+  const [compressingStory, setCompressingStory] = useState(false);
 
   // Modals states
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -119,7 +171,7 @@ export default function AdminDashboard() {
   const [supportSentSuccess, setSupportSentSuccess] = useState(false);
 
   // Derived variables
-  const activeUsername = currentUser?.username || 'vanth';
+  const activeUsername = currentUser?.username || 'creator';
   const isProUser = currentUser?.is_pro === 1;
   const viewsCount = 1240;
   const clicksCount = links.reduce((acc, l) => acc + (l.clicks || 0), 0);
@@ -220,39 +272,35 @@ export default function AdminDashboard() {
     }
   }, [currentUser]);
 
-  // Handle Photo Upload from local device (base64)
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload Foto Profil dengan kompresi otomatis (400x400)
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('File size exceeds 2MB limit. Please choose a smaller image.');
-        return;
+      try {
+        const compressed = await compressImage(file, 400, 400, 0.8);
+        setProfile((prev) => ({ ...prev, avatar: compressed }));
+      } catch (err) {
+        console.error('Error compressing avatar:', err);
+        alert('Gagal memproses gambar avatar.');
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setProfile((prev) => ({ ...prev, avatar: reader.result as string }));
-        }
-      };
-      reader.readAsDataURL(file);
     }
   };
 
-  // Handle Story Photo Upload from local device (base64)
-  const handleStoryPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload Foto Story dengan kompresi otomatis (1080x1920)
+  const handleStoryPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('File size exceeds 2MB limit. Please choose a smaller image.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setStoryMediaUrl(reader.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setCompressingStory(true);
+    try {
+      const compressed = await compressImage(file, 1080, 1920, 0.75);
+      setStoryMediaUrl(compressed);
+    } catch (err) {
+      console.error('Error compressing story image:', err);
+      alert('Gagal memproses gambar story. Gunakan file JPG/PNG.');
+    } finally {
+      setCompressingStory(false);
+      e.target.value = '';
     }
   };
 
@@ -474,7 +522,7 @@ export default function AdminDashboard() {
               </span>
             </button>
 
-            {/* TAB BARU: 24H STORIES */}
+            {/* TAB: 24H STORIES */}
             <button
               onClick={() => setActiveTab('stories')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
@@ -595,7 +643,7 @@ export default function AdminDashboard() {
                     <div className="flex flex-col gap-1.5 flex-1">
                       <p className="text-xs font-bold text-white">Upload New Image</p>
                       <p className="text-[11px] text-neutral-400 leading-relaxed">
-                        Square format recommended (JPG, PNG, or WebP up to 2MB).
+                        Foto otomatis dikompresi ringan &amp; responsif.
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <button
@@ -777,7 +825,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 3: 24h Stories (Fitur Baru) */}
+        {/* TAB 3: 24h Stories (Dengan Kompresi Otomatis) */}
         {activeTab === 'stories' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -788,7 +836,7 @@ export default function AdminDashboard() {
                 </span>
               </h1>
               <p className="text-xs text-neutral-400 mt-1">
-                Post visual updates, daily work in progress, or announcements that automatically expire after 24 hours.
+                Post visual updates that automatically expire after 24 hours. Gambar otomatis dikompresi agar ringan.
               </p>
             </div>
 
@@ -812,16 +860,17 @@ export default function AdminDashboard() {
                 <div className="flex flex-col gap-2 flex-1 w-full text-center sm:text-left">
                   <p className="text-xs font-bold text-white">Story Photo / Poster</p>
                   <p className="text-[11px] text-neutral-400">
-                    Upload from your device (JPG/PNG) or paste an image URL below.
+                    Pilih foto dari galeri HP/laptop (berapa pun ukurannya, sistem akan mengompresnya otomatis).
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                     <button
                       type="button"
+                      disabled={compressingStory}
                       onClick={() => storyFileInputRef.current?.click()}
-                      className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition"
+                      className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
                     >
                       <Upload className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Upload from Device</span>
+                      <span>{compressingStory ? 'Compressing Image...' : 'Upload from Device'}</span>
                     </button>
                   </div>
                   <input
@@ -867,7 +916,7 @@ export default function AdminDashboard() {
 
               <button
                 type="submit"
-                disabled={postingStory || !storyMediaUrl}
+                disabled={postingStory || !storyMediaUrl || compressingStory}
                 className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 mt-1 shadow-md shadow-emerald-500/20"
               >
                 <Radio className="w-4 h-4" />
