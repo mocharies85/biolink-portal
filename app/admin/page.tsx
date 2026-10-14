@@ -26,7 +26,9 @@ import {
   Clock,
   Image as ImageIcon,
   Music,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Play,
+  Pause
 } from 'lucide-react';
 
 interface LinkItem {
@@ -70,7 +72,54 @@ interface CurrentUser {
   is_pro?: number;
 }
 
-// Client-side automatic image compression helper
+interface MusicTrack {
+  id: string;
+  title: string;
+  category: string;
+  duration: string;
+  url: string;
+}
+
+// Preset library of royalty-free background soundtracks
+const FREE_MUSIC_LIBRARY: MusicTrack[] = [
+  {
+    id: 'lofi-sunset',
+    title: 'Chill Lo-Fi Sunset',
+    category: 'Relax / Aesthetic',
+    duration: '0:30',
+    url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3'
+  },
+  {
+    id: 'upbeat-funk',
+    title: 'Modern Upbeat Funk',
+    category: 'Energetic / Promo',
+    duration: '0:25',
+    url: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=funky-upbeat-10499.mp3'
+  },
+  {
+    id: 'acoustic-breeze',
+    title: 'Acoustic Morning Breeze',
+    category: 'Acoustic / Warm',
+    duration: '0:28',
+    url: 'https://cdn.pixabay.com/download/audio/2022/10/14/audio_9939f77cb7.mp3?filename=acoustic-guitars-ambient-124430.mp3'
+  },
+  {
+    id: 'ambient-calm',
+    title: 'Minimal Ambient Calm',
+    category: 'Atmospheric / Elegant',
+    duration: '0:35',
+    url: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=ambient-piano-amp-strings-10711.mp3'
+  },
+  {
+    id: 'synthwave-pulse',
+    title: 'Neon Cyber Synthwave',
+    category: 'Tech / Futuristic',
+    duration: '0:29',
+    url: 'https://cdn.pixabay.com/download/audio/2022/11/06/audio_c5df0d18dc.mp3?filename=synthwave-80s-126294.mp3'
+  }
+];
+
+// Helper: Client-side automatic image compression
 const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 0.75): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -121,6 +170,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // User session
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -156,6 +206,10 @@ export default function AdminDashboard() {
   const [postingStory, setPostingStory] = useState(false);
   const [storySuccess, setStorySuccess] = useState(false);
   const [compressingStory, setCompressingStory] = useState(false);
+
+  // Music library states
+  const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
+  const [selectedTrackTitle, setSelectedTrackTitle] = useState<string>('');
 
   // Modals states
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -272,6 +326,40 @@ export default function AdminDashboard() {
       fetchStories();
     }
   }, [currentUser]);
+
+  // Toggle Audio Preview in Admin
+  const handleTogglePreview = (track: MusicTrack) => {
+    if (!previewAudioRef.current) return;
+
+    if (previewingTrackId === track.id) {
+      previewAudioRef.current.pause();
+      setPreviewingTrackId(null);
+    } else {
+      previewAudioRef.current.src = track.url;
+      previewAudioRef.current.play().catch(() => {});
+      setPreviewingTrackId(track.id);
+    }
+  };
+
+  // Select Soundtrack
+  const handleSelectTrack = (track: MusicTrack) => {
+    setStoryAudioUrl(track.url);
+    setSelectedTrackTitle(track.title);
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+    }
+    setPreviewingTrackId(null);
+  };
+
+  // Remove Selected Soundtrack
+  const handleRemoveTrack = () => {
+    setStoryAudioUrl('');
+    setSelectedTrackTitle('');
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+    }
+    setPreviewingTrackId(null);
+  };
 
   // Upload Profile Avatar with auto-compression (400x400)
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -401,6 +489,7 @@ export default function AdminDashboard() {
         setStoryCaption('');
         setStoryAudioUrl('');
         setStoryLinkUrl('');
+        setSelectedTrackTitle('');
         fetchStories();
         setTimeout(() => setStorySuccess(false), 3500);
       } else {
@@ -475,6 +564,9 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row font-sans">
       
+      {/* Hidden audio element for previewing tracks */}
+      <audio ref={previewAudioRef} onEnded={() => setPreviewingTrackId(null)} />
+
       {/* Sidebar Navigation */}
       <aside className="w-full md:w-64 bg-neutral-900 border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0">
         <div>
@@ -840,7 +932,7 @@ export default function AdminDashboard() {
                 </span>
               </h1>
               <p className="text-xs text-neutral-400 mt-1">
-                Post visual updates with background music and clickable links that automatically expire after 24 hours.
+                Post visual updates with background soundtracks and clickable link stickers that automatically expire after 24 hours.
               </p>
             </div>
 
@@ -864,7 +956,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-col gap-2 flex-1 w-full text-center sm:text-left">
                   <p className="text-xs font-bold text-white">Story Photo / Poster</p>
                   <p className="text-[11px] text-neutral-400">
-                    Choose from your device (auto-compressed) or paste an image link below.
+                    Choose from your device (auto-compressed) or paste a direct image URL below.
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                     <button
@@ -929,21 +1021,73 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              {/* Background Music / Audio */}
-              <div>
-                <label className="text-[11px] text-neutral-300 font-semibold block mb-1 flex items-center gap-1.5">
-                  <Music className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Background Music URL (Optional MP3/WAV)</span>
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/audio/sample.mp3"
-                  value={storyAudioUrl}
-                  onChange={(e) => setStoryAudioUrl(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
-                />
-                <p className="text-[10px] text-neutral-500 mt-1">
-                  Plays automatically in the background with a mute/unmute toggle.
+              {/* Royalty-Free Soundtrack Selector (IG-Style) */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] text-neutral-300 font-semibold flex items-center gap-1.5">
+                    <Music className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Background Soundtrack (Free Music Library)</span>
+                  </label>
+                  {storyAudioUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveTrack}
+                      className="text-[10px] text-rose-400 hover:underline"
+                    >
+                      Remove Music
+                    </button>
+                  )}
+                </div>
+
+                {selectedTrackTitle ? (
+                  <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                      <span className="font-semibold truncate">Selected: {selectedTrackTitle}</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 font-normal shrink-0">Attached to story</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1.5 border border-neutral-800 rounded-xl bg-neutral-950">
+                    {FREE_MUSIC_LIBRARY.map((track) => (
+                      <div
+                        key={track.id}
+                        className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-between gap-2 hover:border-neutral-700 transition"
+                      >
+                        <div className="truncate flex-1">
+                          <p className="text-xs font-medium text-white truncate">{track.title}</p>
+                          <span className="text-[9px] text-neutral-400 block mt-0.5">{track.category} • {track.duration}</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePreview(track)}
+                            className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
+                            title={previewingTrackId === track.id ? 'Pause Preview' : 'Play Preview'}
+                          >
+                            {previewingTrackId === track.id ? (
+                              <Pause className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Play className="w-3 h-3 text-neutral-400" />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSelectTrack(track)}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-[10px] transition"
+                          >
+                            Select
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-[10px] text-neutral-500">
+                  Select any royalty-free track to play automatically when visitors view your story.
                 </p>
               </div>
 
