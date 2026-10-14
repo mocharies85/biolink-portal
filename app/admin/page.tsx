@@ -205,7 +205,6 @@ const trimAndCompressAudio = async (file: File, maxDurationSeconds: number): Pro
 
   const renderedBuffer = await offlineCtx.startRendering();
 
-  // Convert rendered AudioBuffer to WAV format
   const numOfChan = renderedBuffer.numberOfChannels;
   const length = renderedBuffer.length * numOfChan * 2 + 44;
   const buffer = new ArrayBuffer(length);
@@ -327,7 +326,7 @@ export default function AdminDashboard() {
   const viewsCount = profile.views || 0;
   const clicksCount = links.reduce((acc, l) => acc + (l.clicks || 0), 0);
 
-  // Durasi dinamis berdasarkan format & tier
+  // Dynamic planned duration: 25s for PRO photo, 60s for PRO video, 10s for Free
   const plannedDuration = storyMediaType === 'video' 
     ? (isProUser ? 60 : 10) 
     : (isProUser ? 25 : 10);
@@ -420,7 +419,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Ambil data rujukan & perangkat riil dari API
+  // Load real detailed analytics data
   const fetchDetailedAnalytics = async () => {
     if (!activeUsername) return;
     setLoadingDetailed(true);
@@ -476,7 +475,7 @@ export default function AdminDashboard() {
     setPreviewingTrackId(null);
   };
 
-  // Upload Custom Audio with Auto-trim (10s for Free, 25s for PRO Gambar)
+  // Upload Custom Audio with Auto-trim (10s for Free, 25s for PRO)
   const handleCustomAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -513,16 +512,15 @@ export default function AdminDashboard() {
     }
   };
 
-  // Upload Story Media
+  // Upload Story Media (Image or Video)
   const handleStoryMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.type.startsWith('video/')) {
       setStoryMediaType('video');
-      // Untuk video, baca FileReader sederhana (pastikan video singkat < 15MB)
       if (file.size > 15 * 1024 * 1024) {
-        alert('Ukuran video terlalu besar. Harap gunakan klip pendek di bawah 15MB atau tempelkan URL video langsung.');
+        alert('Video file is too large. Please use a short clip under 15MB or paste a direct video URL.');
         return;
       }
       const reader = new FileReader();
@@ -616,7 +614,7 @@ export default function AdminDashboard() {
   const handleCreateStory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storyMediaUrl.trim()) {
-      alert('Pilih gambar/video dari perangkat atau masukkan URL media terlebih dahulu.');
+      alert('Please choose an image/video or enter a media URL first.');
       return;
     }
 
@@ -631,7 +629,7 @@ export default function AdminDashboard() {
           caption: storyCaption.trim(),
           audio_url: storyAudioUrl.trim() || null,
           link_url: storyLinkUrl.trim() || null,
-          duration: plannedDuration, // 25s untuk Foto PRO, 60s untuk Video PRO, 10s untuk Free
+          duration: plannedDuration,
         }),
       });
 
@@ -657,7 +655,7 @@ export default function AdminDashboard() {
 
   // Delete story handler
   const handleDeleteStory = async (storyId: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus story ini?')) return;
+    if (!confirm('Are you sure you want to remove this story?')) return;
     setDeletingStoryId(storyId);
 
     try {
@@ -669,7 +667,7 @@ export default function AdminDashboard() {
         setStories((prev) => prev.filter((s) => s.id !== storyId));
       } else {
         const err = await res.json().catch(() => null);
-        alert(err?.error || 'Gagal menghapus story.');
+        alert(err?.error || 'Failed to delete story.');
       }
     } catch {
       alert('Network error while deleting story.');
@@ -1117,10 +1115,10 @@ export default function AdminDashboard() {
                   {isProUser ? (
                     <>
                       <Sparkles className="w-3 h-3 text-amber-400" />
-                      <span>PRO Tier: 25s Foto / 60s Video</span>
+                      <span>PRO Tier: 25s Photo / 60s Video</span>
                     </>
                   ) : (
-                    <span>Free Tier: Maks. 10s</span>
+                    <span>Free Tier: Max 10s</span>
                   )}
                 </span>
               </div>
@@ -1137,7 +1135,7 @@ export default function AdminDashboard() {
                   <span>Publish New Story</span>
                 </h3>
 
-                {/* Pemilih Format Media (Foto vs Video) */}
+                {/* Media Format Selector (Photo vs Video) */}
                 <div className="flex items-center p-1 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px]">
                   <button
                     type="button"
@@ -1149,7 +1147,7 @@ export default function AdminDashboard() {
                     }`}
                   >
                     <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Foto ({isProUser ? '25s' : '10s'})</span>
+                    <span>Photo ({isProUser ? '25s' : '10s'})</span>
                   </button>
 
                   <button
@@ -1187,12 +1185,12 @@ export default function AdminDashboard() {
 
                 <div className="flex flex-col gap-2 flex-1 w-full text-center sm:text-left">
                   <p className="text-xs font-bold text-white">
-                    {storyMediaType === 'video' ? 'Klip Video Story' : 'Foto / Poster Story'}
+                    {storyMediaType === 'video' ? 'Story Video Clip' : 'Story Photo / Poster'}
                   </p>
                   <p className="text-[11px] text-neutral-400">
                     {storyMediaType === 'video'
-                      ? `Durasi tayang video otomatis diatur ke ${plannedDuration} detik.`
-                      : `Durasi tayang foto otomatis diatur ke ${plannedDuration} detik (nyaman untuk musik).`}
+                      ? `Video display duration is automatically set to ${plannedDuration} seconds.`
+                      : `Photo display duration is automatically set to ${plannedDuration} seconds for rich music playback.`}
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                     <button
@@ -1202,7 +1200,7 @@ export default function AdminDashboard() {
                       className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
                     >
                       <Upload className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>{compressingStory ? 'Memproses Media...' : 'Pilih File dari Perangkat'}</span>
+                      <span>{compressingStory ? 'Processing Media...' : 'Upload from Device'}</span>
                     </button>
                   </div>
                   <input
@@ -1218,7 +1216,7 @@ export default function AdminDashboard() {
               {/* Direct Media URL fallback */}
               <div>
                 <label className="text-[11px] text-neutral-400 block mb-1">
-                  Atau tempelkan tautan URL langsung ({storyMediaType === 'video' ? 'Video .mp4' : 'Gambar .jpg/.png'})
+                  Or paste direct media URL ({storyMediaType === 'video' ? 'Video .mp4' : 'Image .jpg/.png'})
                 </label>
                 <input
                   type="url"
@@ -1231,10 +1229,10 @@ export default function AdminDashboard() {
 
               {/* Caption */}
               <div>
-                <label className="text-[11px] text-neutral-400 block mb-1">Story Caption (Opsional)</label>
+                <label className="text-[11px] text-neutral-400 block mb-1">Story Caption (Optional)</label>
                 <input
                   type="text"
-                  placeholder="e.g. Karya baru sudah rilis! Simak selengkapnya lewat link di bawah."
+                  placeholder="e.g. Launching our new design project! Tap the link below."
                   value={storyCaption}
                   onChange={(e) => setStoryCaption(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
@@ -1245,17 +1243,17 @@ export default function AdminDashboard() {
               <div>
                 <label className="text-[11px] text-neutral-300 font-semibold block mb-1 flex items-center gap-1.5">
                   <LinkIcon className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Clickable Story Link Sticker (Opsional)</span>
+                  <span>Clickable Story Link Sticker (Optional)</span>
                 </label>
                 <input
                   type="url"
-                  placeholder="https://yourshop.com atau https://youtube.com/..."
+                  placeholder="https://yourshop.com or https://youtube.com/..."
                   value={storyLinkUrl}
                   onChange={(e) => setStoryLinkUrl(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 />
                 <p className="text-[10px] text-neutral-500 mt-1">
-                  Tampil sebagai stiker interaktif rapi yang bisa langsung diklik oleh pengunjung.
+                  Displays as a clean, interactive link sticker that visitors can tap directly.
                 </p>
               </div>
 
@@ -1264,7 +1262,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] text-neutral-300 font-semibold flex items-center gap-1.5">
                     <Music className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Musik Latar Story (Free Music Library)</span>
+                    <span>Background Soundtrack (Free Music Library)</span>
                   </label>
                   {storyAudioUrl && (
                     <button
@@ -1272,7 +1270,7 @@ export default function AdminDashboard() {
                       onClick={handleRemoveTrack}
                       className="text-[10px] text-rose-400 hover:underline"
                     >
-                      Hapus Musik
+                      Remove Music
                     </button>
                   )}
                 </div>
@@ -1281,9 +1279,9 @@ export default function AdminDashboard() {
                   <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300">
                     <div className="flex items-center gap-2 truncate">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                      <span className="font-semibold truncate">Terpilih: {selectedTrackTitle}</span>
+                      <span className="font-semibold truncate">Selected: {selectedTrackTitle}</span>
                     </div>
-                    <span className="text-[10px] text-neutral-400 font-normal shrink-0">Tersambung ke story</span>
+                    <span className="text-[10px] text-neutral-400 font-normal shrink-0">Attached to story</span>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1.5 border border-neutral-800 rounded-xl bg-neutral-950">
@@ -1317,7 +1315,7 @@ export default function AdminDashboard() {
                             onClick={() => handleSelectTrack(track)}
                             className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-[10px] transition"
                           >
-                            Pilih
+                            Select
                           </button>
                         </div>
                       </div>
@@ -1328,10 +1326,10 @@ export default function AdminDashboard() {
                       <div className="truncate flex-1">
                         <p className="text-xs font-medium text-neutral-200 flex items-center gap-1.5 truncate">
                           <Upload className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          <span>Upload Lagu Sendiri</span>
+                          <span>Custom Audio</span>
                         </p>
                         <span className="text-[9px] text-neutral-400 block mt-0.5">
-                          {isProUser ? 'Auto-trim 25s (PRO)' : 'Auto-trim 10s (Free)'}
+                          {isProUser ? 'Auto-trimmed to 25s (PRO)' : 'Auto-trimmed to 10s (Free)'}
                         </span>
                       </div>
 
@@ -1341,7 +1339,7 @@ export default function AdminDashboard() {
                         onClick={() => customAudioInputRef.current?.click()}
                         className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-emerald-400 hover:text-emerald-300 font-bold text-[10px] transition disabled:opacity-50 shrink-0"
                       >
-                        {processingAudio ? 'Memotong...' : 'Upload MP3'}
+                        {processingAudio ? 'Trimming...' : 'Upload MP3'}
                       </button>
 
                       <input
@@ -1359,7 +1357,7 @@ export default function AdminDashboard() {
               {storySuccess && (
                 <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-400 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                  <span>Story berhasil dipublikasikan ({plannedDuration}s)! Tayang selama 24 jam.</span>
+                  <span>Story published successfully ({plannedDuration}s)! Active for 24 hours.</span>
                 </div>
               )}
 
@@ -1369,7 +1367,7 @@ export default function AdminDashboard() {
                 className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 mt-1 shadow-md shadow-emerald-500/20"
               >
                 <Radio className="w-4 h-4" />
-                <span>{postingStory ? 'Mempublikasikan Story...' : `Publikasikan Story (${plannedDuration}s)`}</span>
+                <span>{postingStory ? 'Publishing Story...' : `Publish Story (${plannedDuration}s)`}</span>
               </button>
             </form>
 
@@ -1379,13 +1377,13 @@ export default function AdminDashboard() {
                 Active Stories ({stories.length})
               </h3>
               {loadingStories ? (
-                <p className="text-xs text-neutral-500 py-6 text-center">Memeriksa story aktif...</p>
+                <p className="text-xs text-neutral-500 py-6 text-center">Checking active stories...</p>
               ) : stories.length === 0 ? (
                 <div className="p-8 rounded-2xl bg-neutral-900 border border-neutral-800 text-center">
                   <Clock className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
-                  <p className="text-xs text-neutral-400">Belum ada story aktif saat ini.</p>
+                  <p className="text-xs text-neutral-400">No active stories right now.</p>
                   <p className="text-[11px] text-neutral-500 mt-1">
-                    Saat Anda mengunggah story, avatar profil bio Anda akan otomatis menampilkan lingkaran story bercahaya!
+                    When you publish a story, your bio avatar will show an animated ring!
                   </p>
                 </div>
               ) : (
@@ -1411,7 +1409,7 @@ export default function AdminDashboard() {
                             </span>
                           </div>
                           <p className="text-xs text-neutral-200 truncate mt-0.5">
-                            {st.caption || 'Tanpa keterangan'}
+                            {st.caption || 'No caption'}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             {st.link_url && (
@@ -1428,13 +1426,13 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      {/* Tombol Hapus Story */}
+                      {/* Delete Story Button */}
                       <button
                         type="button"
                         disabled={deletingStoryId === st.id}
                         onClick={() => handleDeleteStory(st.id)}
                         className="p-2 rounded-xl bg-neutral-800 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition shrink-0 disabled:opacity-50"
-                        title="Hapus story"
+                        title="Delete story"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1636,31 +1634,31 @@ export default function AdminDashboard() {
               </div>
               <h3 className="text-lg font-bold text-white mt-4">Upgrade to Curiolot Link PRO</h3>
               <p className="text-xs text-neutral-400 mt-1">
-                Buka seluruh potensi platform untuk audiens tanpa batas.
+                Unlock full platform capabilities and grow your audience without limits.
               </p>
             </div>
 
             <div className="my-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Story Lebih Panjang:</strong> 25s Foto &amp; 60s Video (vs 10s pada Free)</span>
+                <span><strong>Extended Stories:</strong> 25s Photo &amp; 60s Video (vs 10s on Free)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Unlimited links</strong> (lewati batas 3 link free)</span>
+                <span><strong>Unlimited links</strong> (bypass 3-link free limit)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
-                <span>Lencana verifikasi eksklusif <strong>PRO Badge</strong></span>
+                <span>Exclusive verified <strong>PRO badge</strong> on your bio page</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
-                <span>Analitik pengunjung riil (Devices &amp; Top Referrers)</span>
+                <span>Advanced real visitor analytics (Devices &amp; Top Referrers)</span>
               </div>
             </div>
 
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-6">
-              💡 <strong>Aktivasi Instan:</strong> Saat bertransaksi di Ko-fi, masukkan email akun Anda (<strong>{currentUser?.email}</strong>) atau tulis <strong>@{activeUsername}</strong> di kolom pesan. Akun langsung aktif otomatis!
+              💡 <strong>Instant Activation:</strong> When paying on Ko-fi, please keep your account email (<strong>{currentUser?.email}</strong>) or write <strong>@{activeUsername}</strong> in the message box. Your account unlocks automatically!
             </div>
 
             <div className="flex items-center gap-3">
@@ -1669,7 +1667,7 @@ export default function AdminDashboard() {
                 onClick={() => setShowUpgradeModal(false)}
                 className="w-1/3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
               >
-                Batal
+                Cancel
               </button>
               <a
                 href="https://ko-fi.com/cycrack"
@@ -1678,7 +1676,7 @@ export default function AdminDashboard() {
                 onClick={() => setShowUpgradeModal(false)}
                 className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
               >
-                <span>Upgrade via Ko-fi</span>
+                <span>Upgrade on Ko-fi</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -1686,7 +1684,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal: PRO Detailed Analytics Dashboard (100% Data Riil) */}
+      {/* Modal: PRO Detailed Analytics Dashboard (100% Real Live Data) */}
       {showDetailedInsights && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -1769,7 +1767,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Devices Breakdown & Top Referrers Riil */}
+            {/* Devices Breakdown & Top Referrers */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               {/* Devices Breakdown */}
               <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
@@ -1779,16 +1777,16 @@ export default function AdminDashboard() {
                   </span>
                   {detailedData && (
                     <span className="text-[10px] text-neutral-500 font-normal">
-                      {detailedData.totalVisits} kunjungan
+                      {detailedData.totalVisits} visits logged
                     </span>
                   )}
                 </h5>
 
                 {loadingDetailed ? (
-                  <p className="text-[11px] text-neutral-500 py-5 text-center">Memuat statistik perangkat...</p>
+                  <p className="text-[11px] text-neutral-500 py-5 text-center">Loading device stats...</p>
                 ) : !detailedData || detailedData.totalVisits === 0 ? (
                   <div className="py-5 text-center text-[11px] text-neutral-500 leading-relaxed">
-                    Belum ada kunjungan tercatat.<br />Buka halaman bio Anda untuk kunjungan pertama!
+                    No visitor data recorded yet.<br />Visit your bio link to log your first impression!
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2.5 text-[11px]">
@@ -1824,16 +1822,16 @@ export default function AdminDashboard() {
                   </span>
                   {detailedData && (
                     <span className="text-[10px] text-neutral-500 font-normal">
-                      Sumber Trafik Asli
+                      Live Traffic Sources
                     </span>
                   )}
                 </h5>
 
                 {loadingDetailed ? (
-                  <p className="text-[11px] text-neutral-500 py-5 text-center">Memuat sumber trafik...</p>
+                  <p className="text-[11px] text-neutral-500 py-5 text-center">Loading traffic sources...</p>
                 ) : !detailedData || detailedData.referrers.length === 0 ? (
                   <div className="py-5 text-center text-[11px] text-neutral-500 leading-relaxed">
-                    Belum ada data sumber trafik.<br />Bagikan link bio ke media sosial Anda!
+                    No traffic sources recorded yet.<br />Share your bio link on social media to start tracking!
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2.5 text-[11px]">
@@ -1864,7 +1862,7 @@ export default function AdminDashboard() {
                 onClick={() => setShowDetailedInsights(false)}
                 className="px-5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
               >
-                Tutup Analitik
+                Close Insights
               </button>
             </div>
           </div>
@@ -1881,8 +1879,8 @@ export default function AdminDashboard() {
                   <MessageCircle className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Hubungi Admin Support</h3>
-                  <p className="text-[11px] text-neutral-400">Pertanyaan seputar fitur PRO atau bantuan teknis</p>
+                  <h3 className="text-sm font-bold text-white">Contact Admin Support</h3>
+                  <p className="text-[11px] text-neutral-400">Ask questions regarding PRO features or assistance</p>
                 </div>
               </div>
               <button
@@ -1899,19 +1897,19 @@ export default function AdminDashboard() {
                 <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-3 font-bold text-lg">
                   ✓
                 </div>
-                <p className="text-sm font-bold text-white">Pesan Berhasil Dikirim!</p>
-                <p className="text-xs text-neutral-400 mt-1">Admin akan meninjau dan membalas melalui email akun Anda.</p>
+                <p className="text-sm font-bold text-white">Message Sent Successfully!</p>
+                <p className="text-xs text-neutral-400 mt-1">Our team will review your inquiry and reply via email.</p>
               </div>
             ) : (
               <form onSubmit={handleSendSupport} className="flex flex-col gap-3">
                 <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Pertanyaan atau Bantuan</label>
+                  <label className="text-xs text-neutral-400 block mb-1">Your Question or Inquiry</label>
                   <textarea
                     rows={4}
                     required
                     value={supportMessage}
                     onChange={(e) => setSupportMessage(e.target.value)}
-                    placeholder="Tuliskan pertanyaan seputar upgrade PRO atau fitur..."
+                    placeholder="Have questions about subscription upgrades, custom features, or account settings? Write here..."
                     className="w-full p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition resize-none"
                   />
                 </div>
@@ -1921,14 +1919,14 @@ export default function AdminDashboard() {
                     onClick={() => setShowSupportModal(false)}
                     className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
                   >
-                    Batal
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={sendingSupport || !supportMessage.trim()}
                     className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 text-xs font-bold transition disabled:opacity-50"
                   >
-                    {sendingSupport ? 'Mengirim...' : 'Kirim Pesan'}
+                    {sendingSupport ? 'Sending...' : 'Send Inquiry'}
                   </button>
                 </div>
               </form>
