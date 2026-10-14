@@ -99,7 +99,6 @@ interface DetailedAnalyticsData {
   }[];
 }
 
-// Preset library of royalty-free background soundtracks
 const FREE_MUSIC_LIBRARY: MusicTrack[] = [
   {
     id: 'chill-melody',
@@ -138,7 +137,6 @@ const FREE_MUSIC_LIBRARY: MusicTrack[] = [
   }
 ];
 
-// Helper: Client-side automatic image compression
 const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 0.75): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -185,7 +183,6 @@ const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 
   });
 };
 
-// Helper: Automatic Audio Trimming and Compression using Web Audio API
 const trimAndCompressAudio = async (file: File, maxDurationSeconds: number): Promise<string> => {
   const arrayBuffer = await file.arrayBuffer();
   const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -216,18 +213,18 @@ const trimAndCompressAudio = async (file: File, maxDurationSeconds: number): Pro
   const setUint16 = (data: number) => { view.setUint16(pos, data, true); pos += 2; };
   const setUint32 = (data: number) => { view.setUint32(pos, data, true); pos += 4; };
 
-  setUint32(0x46464952); // "RIFF"
+  setUint32(0x46464952);
   setUint32(length - 8);
-  setUint32(0x45564157); // "WAVE"
-  setUint32(0x20746d66); // "fmt "
+  setUint32(0x45564157);
+  setUint32(0x20746d66);
   setUint32(16);
-  setUint16(1); // PCM
+  setUint16(1);
   setUint16(numOfChan);
   setUint32(sampleRate);
   setUint32(sampleRate * 2 * numOfChan);
   setUint16(numOfChan * 2);
   setUint16(16);
-  setUint32(0x61746164); // "data"
+  setUint32(0x61746164);
   setUint32(length - pos - 4);
 
   for (let i = 0; i < numOfChan; i++) {
@@ -261,13 +258,9 @@ export default function AdminDashboard() {
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const customAudioInputRef = useRef<HTMLInputElement>(null);
 
-  // User session
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-
-  // Navigation tab
   const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'stories' | 'inbox' | 'analytics'>('profile');
 
-  // Profile states
   const [profile, setProfile] = useState<ProfileData>({
     name: 'New Creator',
     tagline: 'Digital Creator',
@@ -278,7 +271,6 @@ export default function AdminDashboard() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSavedSuccess, setProfileSavedSuccess] = useState(false);
 
-  // Links states
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [loadingLinks, setLoadingLinks] = useState(true);
   const [newTitle, setNewTitle] = useState('');
@@ -286,7 +278,6 @@ export default function AdminDashboard() {
   const [newDesc, setNewDesc] = useState('');
   const [addingLink, setAddingLink] = useState(false);
 
-  // Stories states
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [storyMediaType, setStoryMediaType] = useState<'image' | 'video'>('image');
@@ -299,39 +290,32 @@ export default function AdminDashboard() {
   const [compressingStory, setCompressingStory] = useState(false);
   const [deletingStoryId, setDeletingStoryId] = useState<string | null>(null);
 
-  // Music library states
   const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
   const [selectedTrackTitle, setSelectedTrackTitle] = useState<string>('');
   const [processingAudio, setProcessingAudio] = useState(false);
 
-  // Modals states
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showDetailedInsights, setShowDetailedInsights] = useState(false);
   const [detailedData, setDetailedData] = useState<DetailedAnalyticsData | null>(null);
   const [loadingDetailed, setLoadingDetailed] = useState(false);
 
-  // Inbox states
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
 
-  // Contact Admin modal states
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [supportMessage, setSupportMessage] = useState('');
   const [sendingSupport, setSendingSupport] = useState(false);
   const [supportSentSuccess, setSupportSentSuccess] = useState(false);
 
-  // Derived variables
   const activeUsername = currentUser?.username || 'creator';
   const isProUser = currentUser?.is_pro === 1;
   const viewsCount = profile.views || 0;
   const clicksCount = links.reduce((acc, l) => acc + (l.clicks || 0), 0);
 
-  // Dynamic planned duration: 25s for PRO photo, 60s for PRO video, 10s for Free
-  const plannedDuration = storyMediaType === 'video' 
-    ? (isProUser ? 60 : 10) 
+  const plannedDuration = storyMediaType === 'video'
+    ? 60
     : (isProUser ? 25 : 10);
 
-  // Check auth session
   useEffect(() => {
     const storedUser = sessionStorage.getItem('curiolot_auth_user');
     if (storedUser) {
@@ -346,7 +330,6 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
-  // Load profile data
   const fetchProfile = async () => {
     if (!activeUsername) return;
     try {
@@ -368,7 +351,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Load links data
   const fetchLinks = async () => {
     if (!activeUsername) return;
     setLoadingLinks(true);
@@ -385,7 +367,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Load inbox messages
   const fetchMessages = async () => {
     if (!activeUsername) return;
     setLoadingMessages(true);
@@ -402,7 +383,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Load active stories
   const fetchStories = async () => {
     if (!activeUsername) return;
     setLoadingStories(true);
@@ -419,7 +399,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Load real detailed analytics data
   const fetchDetailedAnalytics = async () => {
     if (!activeUsername) return;
     setLoadingDetailed(true);
@@ -445,7 +424,6 @@ export default function AdminDashboard() {
     }
   }, [currentUser]);
 
-  // Toggle Audio Preview
   const handleTogglePreview = (track: MusicTrack) => {
     if (!previewAudioRef.current) return;
 
@@ -459,7 +437,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Select Preset Soundtrack
   const handleSelectTrack = (track: MusicTrack) => {
     setStoryAudioUrl(track.url);
     setSelectedTrackTitle(track.title);
@@ -467,7 +444,6 @@ export default function AdminDashboard() {
     setPreviewingTrackId(null);
   };
 
-  // Remove Selected Soundtrack
   const handleRemoveTrack = () => {
     setStoryAudioUrl('');
     setSelectedTrackTitle('');
@@ -475,7 +451,6 @@ export default function AdminDashboard() {
     setPreviewingTrackId(null);
   };
 
-  // Upload Custom Audio with Auto-trim (10s for Free, 25s for PRO)
   const handleCustomAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -498,7 +473,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Upload Profile Avatar with auto-compression (400x400)
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -512,15 +486,24 @@ export default function AdminDashboard() {
     }
   };
 
-  // Upload Story Media (Image or Video)
   const handleStoryMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.type.startsWith('video/')) {
+      if (!isProUser) {
+        setShowUpgradeModal(true);
+        e.target.value = '';
+        return;
+      }
+
       setStoryMediaType('video');
-      if (file.size > 15 * 1024 * 1024) {
-        alert('Video file is too large. Please use a short clip under 15MB or paste a direct video URL.');
+      if (file.size > 750 * 1024) {
+        alert(
+          'Video file from device exceeds database limit (max ~750KB for direct upload).\n\n' +
+          'For longer / HD videos, please host your video and paste the direct .mp4 link in the URL box below!'
+        );
+        e.target.value = '';
         return;
       }
       const reader = new FileReader();
@@ -542,7 +525,6 @@ export default function AdminDashboard() {
     e.target.value = '';
   };
 
-  // Save profile handler
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingProfile(true);
@@ -571,7 +553,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Add new link handler
   const handleAddLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newUrl.trim()) return;
@@ -610,9 +591,13 @@ export default function AdminDashboard() {
     }
   };
 
-  // Create new story handler
   const handleCreateStory = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (storyMediaType === 'video' && !isProUser) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     if (!storyMediaUrl.trim()) {
       alert('Please choose an image/video or enter a media URL first.');
       return;
@@ -653,7 +638,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Delete story handler
   const handleDeleteStory = async (storyId: string) => {
     if (!confirm('Are you sure you want to remove this story?')) return;
     setDeletingStoryId(storyId);
@@ -676,7 +660,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Delete link handler
   const handleDeleteLink = async (id: number) => {
     if (!confirm('Are you sure you want to remove this link?')) return;
 
@@ -694,13 +677,11 @@ export default function AdminDashboard() {
     }
   };
 
-  // Logout handler
   const handleLogout = () => {
     sessionStorage.removeItem('curiolot_auth_user');
     router.push('/login');
   };
 
-  // Send support message handler
   const handleSendSupport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supportMessage.trim()) return;
@@ -736,14 +717,10 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row font-sans">
-      
-      {/* Hidden audio element for previewing tracks */}
       <audio ref={previewAudioRef} onEnded={() => setPreviewingTrackId(null)} />
 
-      {/* Sidebar Navigation */}
       <aside className="w-full md:w-64 bg-neutral-900 border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0">
         <div>
-          {/* User Account Info */}
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800 mb-6">
             <img 
               src="/logo.png" 
@@ -761,7 +738,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Navigation Links */}
           <nav className="flex flex-col gap-1.5">
             <button
               onClick={() => setActiveTab('profile')}
@@ -844,7 +820,6 @@ export default function AdminDashboard() {
           </nav>
         </div>
 
-        {/* Sidebar Footer Buttons */}
         <div className="flex flex-col gap-2 pt-6 border-t border-neutral-800 mt-6">
           <button
             type="button"
@@ -875,10 +850,7 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        
-        {/* TAB 1: Profile & Bio */}
         {activeTab === 'profile' && (
           <div className="max-w-xl flex flex-col gap-6">
             <div>
@@ -987,7 +959,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 2: Links & Content */}
         {activeTab === 'links' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1010,7 +981,6 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Form Add Link */}
             <form onSubmit={handleAddLink} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Add New Link</h3>
               
@@ -1053,7 +1023,6 @@ export default function AdminDashboard() {
               </button>
             </form>
 
-            {/* List of Links */}
             <div className="flex flex-col gap-2.5">
               {loadingLinks ? (
                 <p className="text-xs text-neutral-500 py-6 text-center">Loading links...</p>
@@ -1094,7 +1063,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 3: 24h Stories */}
         {activeTab === 'stories' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -1106,7 +1074,6 @@ export default function AdminDashboard() {
                   </span>
                 </h1>
                 
-                {/* Duration Badge based on Tier */}
                 <span className={`text-[11px] px-2.5 py-1 rounded-xl font-semibold border flex items-center gap-1.5 w-fit ${
                   isProUser 
                     ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
@@ -1118,7 +1085,7 @@ export default function AdminDashboard() {
                       <span>PRO Tier: 25s Photo / 60s Video</span>
                     </>
                   ) : (
-                    <span>Free Tier: Max 10s</span>
+                    <span>Free Tier: 10s Photo Only</span>
                   )}
                 </span>
               </div>
@@ -1127,7 +1094,6 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* Publish Story Form */}
             <form onSubmit={handleCreateStory} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -1135,7 +1101,6 @@ export default function AdminDashboard() {
                   <span>Publish New Story</span>
                 </h3>
 
-                {/* Media Format Selector (Photo vs Video) */}
                 <div className="flex items-center p-1 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px]">
                   <button
                     type="button"
@@ -1152,7 +1117,13 @@ export default function AdminDashboard() {
 
                   <button
                     type="button"
-                    onClick={() => setStoryMediaType('video')}
+                    onClick={() => {
+                      if (!isProUser) {
+                        setShowUpgradeModal(true);
+                        return;
+                      }
+                      setStoryMediaType('video');
+                    }}
                     className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition ${
                       storyMediaType === 'video'
                         ? 'bg-neutral-800 text-white font-bold'
@@ -1160,12 +1131,12 @@ export default function AdminDashboard() {
                     }`}
                   >
                     <VideoIcon className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Video ({isProUser ? '60s' : '10s'})</span>
+                    <span>Video (60s)</span>
+                    {!isProUser && <Lock className="w-3 h-3 text-amber-400 ml-0.5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Upload Media Widget */}
               <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
                 <div className="w-24 h-24 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden shrink-0">
                   {storyMediaUrl ? (
@@ -1185,12 +1156,12 @@ export default function AdminDashboard() {
 
                 <div className="flex flex-col gap-2 flex-1 w-full text-center sm:text-left">
                   <p className="text-xs font-bold text-white">
-                    {storyMediaType === 'video' ? 'Story Video Clip' : 'Story Photo / Poster'}
+                    {storyMediaType === 'video' ? 'Story Video Clip (PRO Only)' : 'Story Photo / Poster'}
                   </p>
                   <p className="text-[11px] text-neutral-400">
                     {storyMediaType === 'video'
-                      ? `Video display duration is automatically set to ${plannedDuration} seconds.`
-                      : `Photo display duration is automatically set to ${plannedDuration} seconds for rich music playback.`}
+                      ? 'Video display duration is automatically set to 60 seconds.'
+                      : `Photo display duration is automatically set to ${plannedDuration} seconds.`}
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                     <button
@@ -1213,7 +1184,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Direct Media URL fallback */}
               <div>
                 <label className="text-[11px] text-neutral-400 block mb-1">
                   Or paste direct media URL ({storyMediaType === 'video' ? 'Video .mp4' : 'Image .jpg/.png'})
@@ -1227,7 +1197,6 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Caption */}
               <div>
                 <label className="text-[11px] text-neutral-400 block mb-1">Story Caption (Optional)</label>
                 <input
@@ -1239,7 +1208,6 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Clickable CTA Link */}
               <div>
                 <label className="text-[11px] text-neutral-300 font-semibold block mb-1 flex items-center gap-1.5">
                   <LinkIcon className="w-3.5 h-3.5 text-emerald-400" />
@@ -1257,7 +1225,6 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              {/* Soundtrack Selector */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] text-neutral-300 font-semibold flex items-center gap-1.5">
@@ -1285,7 +1252,6 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1.5 border border-neutral-800 rounded-xl bg-neutral-950">
-                    {/* 5 Preset Royalty-Free Tracks */}
                     {FREE_MUSIC_LIBRARY.map((track) => (
                       <div
                         key={track.id}
@@ -1321,7 +1287,6 @@ export default function AdminDashboard() {
                       </div>
                     ))}
 
-                    {/* 6th Slot: Custom Audio Upload with Auto-Trim 25s */}
                     <div className="p-2.5 rounded-lg bg-neutral-900/50 border border-dashed border-neutral-700 hover:border-emerald-500/50 flex items-center justify-between gap-2 transition">
                       <div className="truncate flex-1">
                         <p className="text-xs font-medium text-neutral-200 flex items-center gap-1.5 truncate">
@@ -1371,7 +1336,6 @@ export default function AdminDashboard() {
               </button>
             </form>
 
-            {/* List Active Stories with Delete Action */}
             <div>
               <h3 className="text-xs font-bold text-neutral-300 uppercase tracking-wider mb-3">
                 Active Stories ({stories.length})
@@ -1426,7 +1390,6 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      {/* Delete Story Button */}
                       <button
                         type="button"
                         disabled={deletingStoryId === st.id}
@@ -1444,7 +1407,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 4: Messaging & Inbox */}
         {activeTab === 'inbox' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -1486,7 +1448,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 5: Audience & Global Insights */}
         {activeTab === 'analytics' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -1572,16 +1533,13 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
-
       </main>
 
-      {/* Live Phone Preview Simulator */}
       <aside className="hidden xl:flex w-96 bg-neutral-900/40 border-l border-neutral-800 p-8 items-center justify-center shrink-0">
         <div className="w-full max-w-[280px] h-[560px] bg-neutral-950 border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden">
           <div className="w-20 h-4 bg-neutral-800 rounded-full mb-6 shrink-0" />
           
           <div className="w-full flex-1 overflow-y-auto flex flex-col items-center">
-            {/* Avatar Simulator with Story Ring */}
             <div className="relative">
               <img
                 src={profile.avatar}
@@ -1624,7 +1582,6 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      {/* Modal: Ko-fi Upgrade to PRO */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative">
@@ -1641,7 +1598,7 @@ export default function AdminDashboard() {
             <div className="my-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Extended Stories:</strong> 25s Photo &amp; 60s Video (vs 10s on Free)</span>
+                <span><strong>60s Video &amp; 25s Photo Stories</strong> (Free tier: 10s Photo only)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
@@ -1684,7 +1641,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal: PRO Detailed Analytics Dashboard (100% Real Live Data) */}
       {showDetailedInsights && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -1767,9 +1723,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Devices Breakdown & Top Referrers */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {/* Devices Breakdown */}
               <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
                 <h5 className="font-bold text-neutral-300 mb-3 flex items-center justify-between">
                   <span className="flex items-center gap-2">
@@ -1814,7 +1768,6 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* Top Referrers */}
               <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
                 <h5 className="font-bold text-neutral-300 mb-3 flex items-center justify-between">
                   <span className="flex items-center gap-2">
@@ -1869,7 +1822,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal: Contact Admin Support Dialog */}
       {showSupportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative">
@@ -1934,7 +1886,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
