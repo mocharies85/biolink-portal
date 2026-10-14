@@ -26,7 +26,7 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-// 2. POST: Publikasikan story baru
+// 2. POST: Publikasikan story baru dengan validasi durasi (10s, 25s, 60s)
 export async function onRequestPost({ request, env }) {
   try {
     const { username, media_url, caption, audio_url, link_url, duration } = await request.json();
@@ -36,7 +36,10 @@ export async function onRequestPost({ request, env }) {
     }
 
     const id = crypto.randomUUID();
-    const storyDuration = duration === 60 ? 60 : 10;
+    
+    // Validasi durasi: 10s (Free), 25s (PRO Foto), atau 60s (PRO Video)
+    const validDurations = [10, 25, 60];
+    const storyDuration = validDurations.includes(Number(duration)) ? Number(duration) : 10;
 
     await env.DB.prepare(
       `INSERT INTO stories (id, username, media_url, caption, audio_url, link_url, duration, expires_at)
@@ -51,7 +54,7 @@ export async function onRequestPost({ request, env }) {
       storyDuration
     ).run();
 
-    return new Response(JSON.stringify({ success: true, id }), {
+    return new Response(JSON.stringify({ success: true, id, duration: storyDuration }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -60,7 +63,7 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
-// 3. DELETE: Hapus story tertentu milik kreator
+// 3. DELETE: Hapus story tertentu
 export async function onRequestDelete({ request, env }) {
   try {
     const url = new URL(request.url);

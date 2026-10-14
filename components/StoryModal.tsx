@@ -9,7 +9,7 @@ interface Story {
   caption?: string;
   audio_url?: string;
   link_url?: string;
-  duration?: number; // 10 atau 60 detik
+  duration?: number; // 10s (Free), 25s (PRO Foto), atau 60s (PRO Video)
 }
 
 interface StoryModalProps {
@@ -20,15 +20,25 @@ interface StoryModalProps {
   isPro?: boolean;
 }
 
+// Helper: Deteksi apakah URL media merupakan file video
+const isVideoUrl = (url?: string): boolean => {
+  if (!url) return false;
+  return url.startsWith('data:video') || /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
+};
+
 export default function StoryModal({ stories, isOpen, onClose, username, isPro }: StoryModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const current = stories[currentIndex];
-  // Durasi dinamis per slide (default 10 detik untuk free, 60 detik untuk PRO)
-  const currentDurationMs = ((current?.duration || (isPro ? 60 : 10)) * 1000);
+
+  // Hitung durasi dinamis: 25s (PRO Foto), 60s (PRO Video), 10s (Free/Default)
+  const currentDurationSec = current?.duration || (isPro ? 25 : 10);
+  const currentDurationMs = currentDurationSec * 1000;
+  const isVideo = isVideoUrl(current?.media_url);
 
   // Reset indeks saat modal dibuka
   useEffect(() => {
@@ -38,10 +48,11 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
     }
   }, [isOpen]);
 
-  // Kelola pemutaran audio tiap ganti slide
+  // Kelola pemutaran audio soundtrack & reset video tiap ganti slide
   useEffect(() => {
     if (!isOpen || !current) return;
 
+    // Putar soundtrack terpisah jika ada
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -52,20 +63,31 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
         audioRef.current.play().catch(() => {});
       }
     }
-  }, [isOpen, currentIndex, current?.audio_url]);
 
-  // Mute / Unmute toggle
+    // Putar video dari awal jika media bertipe video
+    if (videoRef.current && isVideo) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.muted = Boolean(current.audio_url) || isMuted;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isOpen, currentIndex, current?.audio_url, current?.media_url, isVideo]);
+
+  // Sinkronisasi status Mute / Unmute
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.muted = isMuted;
     }
-  }, [isMuted]);
+    if (videoRef.current) {
+      // Jika ada audio soundtrack terpisah, video selalu di-mute agar tidak bentrok
+      videoRef.current.muted = Boolean(current?.audio_url) || isMuted;
+    }
+  }, [isMuted, current?.audio_url]);
 
-  // Timer transisi progresif sesuai durasi story (10 detik atau 60 detik)
+  // Timer transisi progresif bar atas sesuai durasi slide
   useEffect(() => {
     if (!isOpen || stories.length === 0) return;
 
-    const interval = 50; // update setiap 50ms
+    const interval = 50; // Update progres tiap 50ms
     const step = 100 / (currentDurationMs / interval);
 
     const timer = setInterval(() => {
@@ -90,6 +112,9 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
     if (audioRef.current) {
       audioRef.current.pause();
     }
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
     onClose();
   };
 
@@ -111,10 +136,9 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
     }
   };
 
-  const isCurrentStoryPro = current.duration === 60;
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 font-sans">
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 font-sans select-none">
+      {/* Audio element untuk pemutaran musik latar */}
       <audio ref={audioRef} loop />
 
       <div className="relative w-full max-w-sm h-[600px] bg-neutral-950 rounded-3xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col justify-between">
@@ -133,19 +157,23 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           ))}
         </div>
 
-        {/* Header: Username, PRO Badge & Controls */}
+        {/* Header: Username, Durasi Badge & Tombol Kontrol */}
         <div className="absolute top-7 left-4 right-4 z-30 flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-xs text-neutral-200">@{username}</span>
-            {isCurrentStoryPro ? (
+
+            {/* Badge Durasi Dinamis */}
+            {currentDurationSec > 10 ? (
               <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold flex items-center gap-1 border border-amber-500/30">
-                <Sparkles className="w-2.5 h-2.5" /> PRO 60s
+                <Sparkles className="w-2.5 h-2.5" /> PRO {currentDurationSec}s
               </span>
             ) : (
               <span className="px-1.5 py-0.5 rounded bg-neutral-800/80 text-neutral-400 text-[9px] font-medium border border-neutral-700">
                 10s
               </span>
             )}
+
+            {/* Indikator Soundtrack */}
             {current.audio_url && (
               <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold border border-emerald-500/30">
                 ♫
@@ -154,14 +182,18 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           </div>
 
           <div className="flex items-center gap-2">
-            {current.audio_url && (
+            {(current.audio_url || isVideo) && (
               <button 
                 type="button"
                 onClick={() => setIsMuted(!isMuted)} 
                 className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition text-white"
-                title={isMuted ? 'Unmute' : 'Mute'}
+                title={isMuted ? 'Suarakan' : 'Bisukan'}
               >
-                {isMuted ? <VolumeX className="w-3.5 h-3.5 text-neutral-400" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
+                {isMuted ? (
+                  <VolumeX className="w-3.5 h-3.5 text-neutral-400" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                )}
               </button>
             )}
 
@@ -169,21 +201,33 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
               type="button"
               onClick={handleClose} 
               className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition"
+              title="Tutup"
             >
               <X className="w-3.5 h-3.5 text-white" />
             </button>
           </div>
         </div>
 
-        {/* Media Story */}
+        {/* Media Story (Otomatis Render Video atau Gambar) */}
         <div className="relative w-full h-full flex items-center justify-center bg-neutral-900">
-          <img 
-            src={current.media_url} 
-            alt="Story content" 
-            className="w-full h-full object-cover"
-          />
+          {isVideo ? (
+            <video 
+              ref={videoRef}
+              src={current.media_url} 
+              autoPlay 
+              playsInline 
+              loop
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img 
+              src={current.media_url} 
+              alt="Story content" 
+              className="w-full h-full object-cover"
+            />
+          )}
 
-          {/* Stiker Link Tautan */}
+          {/* Stiker Tautan Interaktif */}
           {current.link_url && (
             <div className="absolute bottom-20 z-30 flex justify-center w-full px-6">
               <a
@@ -202,14 +246,24 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
             </div>
           )}
           
-          {/* Navigasi Layar Sentuh Kiri / Kanan */}
-          <button onClick={handlePrev} className="absolute left-0 top-0 bottom-0 w-1/3 z-10" />
-          <button onClick={handleNext} className="absolute right-0 top-0 bottom-0 w-1/3 z-10" />
+          {/* Navigasi Sentuh Kiri / Kanan */}
+          <button 
+            type="button" 
+            onClick={handlePrev} 
+            className="absolute left-0 top-0 bottom-0 w-1/3 z-10" 
+            aria-label="Story Sebelumnya"
+          />
+          <button 
+            type="button" 
+            onClick={handleNext} 
+            className="absolute right-0 top-0 bottom-0 w-1/3 z-10" 
+            aria-label="Story Selanjutnya"
+          />
         </div>
 
-        {/* Caption */}
+        {/* Story Caption */}
         {current.caption && (
-          <div className="absolute bottom-4 left-4 right-4 z-20 p-3 bg-neutral-950/85 backdrop-blur-md rounded-2xl border border-neutral-800 text-xs text-center text-white">
+          <div className="absolute bottom-4 left-4 right-4 z-20 p-3 bg-neutral-950/85 backdrop-blur-md rounded-2xl border border-neutral-800 text-xs text-center text-white leading-relaxed">
             {current.caption}
           </div>
         )}
