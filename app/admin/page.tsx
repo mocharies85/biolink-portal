@@ -70,7 +70,7 @@ interface CurrentUser {
   is_pro?: number;
 }
 
-// Helper: Kompresi Gambar Otomatis Menggunakan Canvas API
+// Client-side automatic image compression helper
 const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 0.75): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -273,7 +273,7 @@ export default function AdminDashboard() {
     }
   }, [currentUser]);
 
-  // Upload Foto Profil dengan kompresi otomatis (400x400)
+  // Upload Profile Avatar with auto-compression (400x400)
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -282,12 +282,12 @@ export default function AdminDashboard() {
         setProfile((prev) => ({ ...prev, avatar: compressed }));
       } catch (err) {
         console.error('Error compressing avatar:', err);
-        alert('Gagal memproses gambar profil.');
+        alert('Failed to process profile avatar.');
       }
     }
   };
 
-  // Upload Foto Story dengan kompresi otomatis (1080x1920)
+  // Upload Story Media with auto-compression (1080x1920)
   const handleStoryPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
       setStoryMediaUrl(compressed);
     } catch (err) {
       console.error('Error compressing story image:', err);
-      alert('Gagal memproses gambar story. Gunakan file JPG/PNG.');
+      alert('Failed to process story image. Please use JPG or PNG format.');
     } finally {
       setCompressingStory(false);
       e.target.value = '';
@@ -377,7 +377,7 @@ export default function AdminDashboard() {
   const handleCreateStory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storyMediaUrl.trim()) {
-      alert('Pilih gambar atau masukkan tautan gambar terlebih dahulu.');
+      alert('Please choose an image or enter an image URL first.');
       return;
     }
 
@@ -405,10 +405,10 @@ export default function AdminDashboard() {
         setTimeout(() => setStorySuccess(false), 3500);
       } else {
         const err = await res.json();
-        alert(err.error || 'Gagal mempublikasikan story.');
+        alert(err.error || 'Failed to publish story.');
       }
     } catch {
-      alert('Terjadi gangguan jaringan saat memposting story.');
+      alert('Network error while publishing story.');
     } finally {
       setPostingStory(false);
     }
@@ -647,7 +647,7 @@ export default function AdminDashboard() {
                     <div className="flex flex-col gap-1.5 flex-1">
                       <p className="text-xs font-bold text-white">Upload New Image</p>
                       <p className="text-[11px] text-neutral-400 leading-relaxed">
-                        Foto otomatis dikompresi ringan &amp; responsif.
+                        Photos are automatically optimized and compressed.
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <button
@@ -829,7 +829,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 3: 24h Stories (Dengan Gambar Kompresi, Audio Musik & Link CTA) */}
+        {/* TAB 3: 24h Stories */}
         {activeTab === 'stories' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -844,7 +844,7 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* Form Buat Story Baru */}
+            {/* Publish Story Form */}
             <form onSubmit={handleCreateStory} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <Radio className="w-4 h-4 text-emerald-400" />
@@ -864,7 +864,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-col gap-2 flex-1 w-full text-center sm:text-left">
                   <p className="text-xs font-bold text-white">Story Photo / Poster</p>
                   <p className="text-[11px] text-neutral-400">
-                    Pilih foto dari galeri (otomatis dikompresi) atau tempel URL gambar di bawah.
+                    Choose from your device (auto-compressed) or paste an image link below.
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                     <button
@@ -925,7 +925,7 @@ export default function AdminDashboard() {
                   className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 />
                 <p className="text-[10px] text-neutral-500 mt-1">
-                  Akan muncul sebagai stiker tombol tautan elegan yang bisa langsung diklik oleh pengunjung story.
+                  Displays as a clean, interactive link sticker that visitors can tap directly.
                 </p>
               </div>
 
@@ -943,7 +943,7 @@ export default function AdminDashboard() {
                   className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 />
                 <p className="text-[10px] text-neutral-500 mt-1">
-                  Musik akan otomatis diputar saat pengunjung membuka story (dengan tombol mute/unmute).
+                  Plays automatically in the background with a mute/unmute toggle.
                 </p>
               </div>
 
@@ -1155,7 +1155,7 @@ export default function AdminDashboard() {
           <div className="w-20 h-4 bg-neutral-800 rounded-full mb-6 shrink-0" />
           
           <div className="w-full flex-1 overflow-y-auto flex flex-col items-center">
-            {/* Avatar dengan Indikator Story di Simulator */}
+            {/* Avatar Simulator with Story Ring */}
             <div className="relative">
               <img
                 src={profile.avatar}
