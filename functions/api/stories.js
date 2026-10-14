@@ -1,4 +1,6 @@
-// GET: Ambil story yang masih aktif (belum lewat 24 jam)
+// functions/api/stories.js
+
+// GET: Ambil story aktif beserta audio & link tujuannya
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
@@ -9,7 +11,7 @@ export async function onRequestGet({ request, env }) {
     }
 
     const { results } = await env.DB.prepare(
-      `SELECT id, media_url, caption, created_at 
+      `SELECT id, media_url, caption, audio_url, link_url, created_at 
        FROM stories 
        WHERE username = ? AND expires_at > datetime('now') 
        ORDER BY created_at ASC`
@@ -24,10 +26,10 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-// POST: Buat story baru (kedaluwarsa otomatis dalam 24 jam)
+// POST: Buat story baru dengan audio & link CTA
 export async function onRequestPost({ request, env }) {
   try {
-    const { username, media_url, caption } = await request.json();
+    const { username, media_url, caption, audio_url, link_url } = await request.json();
 
     if (!username || !media_url) {
       return new Response(JSON.stringify({ error: 'Username and media_url are required' }), { status: 400 });
@@ -36,9 +38,16 @@ export async function onRequestPost({ request, env }) {
     const id = crypto.randomUUID();
 
     await env.DB.prepare(
-      `INSERT INTO stories (id, username, media_url, caption, expires_at)
-       VALUES (?, ?, ?, ?, datetime('now', '+1 day'))`
-    ).bind(id, username.toLowerCase(), media_url, caption || '').run();
+      `INSERT INTO stories (id, username, media_url, caption, audio_url, link_url, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now', '+1 day'))`
+    ).bind(
+      id, 
+      username.toLowerCase(), 
+      media_url, 
+      caption || '', 
+      audio_url || null, 
+      link_url || null
+    ).run();
 
     return new Response(JSON.stringify({ success: true, id }), {
       status: 201,

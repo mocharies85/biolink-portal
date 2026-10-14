@@ -10,7 +10,6 @@ import {
   Plus,
   Trash2,
   ExternalLink,
-  Sparkles,
   Save,
   CheckCircle2,
   Lock,
@@ -25,7 +24,9 @@ import {
   Upload,
   Radio,
   Clock,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Music,
+  Link as LinkIcon
 } from 'lucide-react';
 
 interface LinkItem {
@@ -50,6 +51,8 @@ interface StoryItem {
   id: string;
   media_url: string;
   caption?: string;
+  audio_url?: string;
+  link_url?: string;
   created_at: string;
 }
 
@@ -67,9 +70,7 @@ interface CurrentUser {
   is_pro?: number;
 }
 
-// ==========================================
-// HELPER: Kompresi Gambar Otomatis di Browser
-// ==========================================
+// Helper: Kompresi Gambar Otomatis Menggunakan Canvas API
 const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 0.75): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -83,7 +84,6 @@ const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 
         let width = img.width;
         let height = img.height;
 
-        // Skalakan proporsional jika resolusi melebihi batas maksimal
         if (width > maxWidth || height > maxHeight) {
           const ratio = Math.min(maxWidth / width, maxHeight / height);
           width = Math.round(width * ratio);
@@ -102,7 +102,6 @@ const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 
 
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Ekspor ke format WebP (ringan & tajam), fallback ke JPEG
         let compressed = canvas.toDataURL('image/webp', quality);
         if (!compressed.startsWith('data:image/webp')) {
           compressed = canvas.toDataURL('image/jpeg', quality);
@@ -152,6 +151,8 @@ export default function AdminDashboard() {
   const [loadingStories, setLoadingStories] = useState(true);
   const [storyMediaUrl, setStoryMediaUrl] = useState('');
   const [storyCaption, setStoryCaption] = useState('');
+  const [storyAudioUrl, setStoryAudioUrl] = useState('');
+  const [storyLinkUrl, setStoryLinkUrl] = useState('');
   const [postingStory, setPostingStory] = useState(false);
   const [storySuccess, setStorySuccess] = useState(false);
   const [compressingStory, setCompressingStory] = useState(false);
@@ -281,7 +282,7 @@ export default function AdminDashboard() {
         setProfile((prev) => ({ ...prev, avatar: compressed }));
       } catch (err) {
         console.error('Error compressing avatar:', err);
-        alert('Gagal memproses gambar avatar.');
+        alert('Gagal memproses gambar profil.');
       }
     }
   };
@@ -376,7 +377,7 @@ export default function AdminDashboard() {
   const handleCreateStory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storyMediaUrl.trim()) {
-      alert('Please provide an image for the story.');
+      alert('Pilih gambar atau masukkan tautan gambar terlebih dahulu.');
       return;
     }
 
@@ -389,6 +390,8 @@ export default function AdminDashboard() {
           username: activeUsername,
           media_url: storyMediaUrl,
           caption: storyCaption.trim(),
+          audio_url: storyAudioUrl.trim() || null,
+          link_url: storyLinkUrl.trim() || null,
         }),
       });
 
@@ -396,14 +399,16 @@ export default function AdminDashboard() {
         setStorySuccess(true);
         setStoryMediaUrl('');
         setStoryCaption('');
+        setStoryAudioUrl('');
+        setStoryLinkUrl('');
         fetchStories();
         setTimeout(() => setStorySuccess(false), 3500);
       } else {
         const err = await res.json();
-        alert(err.error || 'Failed to post story.');
+        alert(err.error || 'Gagal mempublikasikan story.');
       }
     } catch {
-      alert('Network error while posting story.');
+      alert('Terjadi gangguan jaringan saat memposting story.');
     } finally {
       setPostingStory(false);
     }
@@ -522,7 +527,6 @@ export default function AdminDashboard() {
               </span>
             </button>
 
-            {/* TAB: 24H STORIES */}
             <button
               onClick={() => setActiveTab('stories')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
@@ -825,7 +829,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 3: 24h Stories (Dengan Kompresi Otomatis) */}
+        {/* TAB 3: 24h Stories (Dengan Gambar Kompresi, Audio Musik & Link CTA) */}
         {activeTab === 'stories' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -836,7 +840,7 @@ export default function AdminDashboard() {
                 </span>
               </h1>
               <p className="text-xs text-neutral-400 mt-1">
-                Post visual updates that automatically expire after 24 hours. Gambar otomatis dikompresi agar ringan.
+                Post visual updates with background music and clickable links that automatically expire after 24 hours.
               </p>
             </div>
 
@@ -860,7 +864,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-col gap-2 flex-1 w-full text-center sm:text-left">
                   <p className="text-xs font-bold text-white">Story Photo / Poster</p>
                   <p className="text-[11px] text-neutral-400">
-                    Pilih foto dari galeri HP/laptop (berapa pun ukurannya, sistem akan mengompresnya otomatis).
+                    Pilih foto dari galeri (otomatis dikompresi) atau tempel URL gambar di bawah.
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                     <button
@@ -897,20 +901,56 @@ export default function AdminDashboard() {
 
               {/* Caption */}
               <div>
-                <label className="text-[11px] text-neutral-400 block mb-1">Story Caption / Call To Action (Optional)</label>
+                <label className="text-[11px] text-neutral-400 block mb-1">Story Caption (Optional)</label>
                 <input
                   type="text"
-                  placeholder="e.g. Working on a new vector project! Check link below."
+                  placeholder="e.g. Launching our new design project! Tap the link below."
                   value={storyCaption}
                   onChange={(e) => setStoryCaption(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 />
               </div>
 
+              {/* Clickable CTA Link */}
+              <div>
+                <label className="text-[11px] text-neutral-300 font-semibold block mb-1 flex items-center gap-1.5">
+                  <LinkIcon className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Clickable Story Link Sticker (Optional)</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://yourshop.com or https://youtube.com/..."
+                  value={storyLinkUrl}
+                  onChange={(e) => setStoryLinkUrl(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                />
+                <p className="text-[10px] text-neutral-500 mt-1">
+                  Akan muncul sebagai stiker tombol tautan elegan yang bisa langsung diklik oleh pengunjung story.
+                </p>
+              </div>
+
+              {/* Background Music / Audio */}
+              <div>
+                <label className="text-[11px] text-neutral-300 font-semibold block mb-1 flex items-center gap-1.5">
+                  <Music className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Background Music URL (Optional MP3/WAV)</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/audio/sample.mp3"
+                  value={storyAudioUrl}
+                  onChange={(e) => setStoryAudioUrl(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                />
+                <p className="text-[10px] text-neutral-500 mt-1">
+                  Musik akan otomatis diputar saat pengunjung membuka story (dengan tombol mute/unmute).
+                </p>
+              </div>
+
               {storySuccess && (
                 <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-400 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                  <span>Story published successfully! It will remain live on your avatar for 24 hours.</span>
+                  <span>Story published successfully! Active for 24 hours.</span>
                 </div>
               )}
 
@@ -958,9 +998,18 @@ export default function AdminDashboard() {
                         <p className="text-xs text-neutral-200 truncate mt-0.5">
                           {st.caption || 'No caption'}
                         </p>
-                        <p className="text-[10px] text-neutral-500 mt-0.5">
-                          {new Date(st.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {st.link_url && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 truncate max-w-[100px]">
+                              <LinkIcon className="w-2.5 h-2.5 shrink-0" /> Link
+                            </span>
+                          )}
+                          {st.audio_url && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                              <Music className="w-2.5 h-2.5 shrink-0" /> Music
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
