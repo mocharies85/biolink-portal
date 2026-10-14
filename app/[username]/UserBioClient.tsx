@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import { 
   Send, 
   MessageSquare, 
@@ -47,23 +46,16 @@ interface StoryItem {
   duration?: number;
 }
 
-interface UserBioClientProps {
-  username?: string;
-}
-
-export default function UserBioClient({ username: propUsername }: UserBioClientProps) {
-  const params = useParams();
-
-  // 1. Ambil username secara andal
+export default function UserBioClient() {
+  // 1. Ambil username murni langsung dari URL browser saat ini (misal: /vanth)
   const [username, setUsername] = useState<string>(() => {
-    if (propUsername) return propUsername.toLowerCase();
     if (typeof window !== 'undefined') {
       const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
-      if (pathPart && pathPart !== 'admin' && pathPart !== 'login' && pathPart !== 'register') {
+      if (pathPart && !['admin', 'login', 'register', 'api'].includes(pathPart.toLowerCase())) {
         return pathPart.toLowerCase();
       }
     }
-    return ((params?.username as string) || 'creator').toLowerCase();
+    return '';
   });
 
   const [profile, setProfile] = useState<{
@@ -74,10 +66,10 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
     socials?: string | SocialLinks;
     is_pro?: number;
   }>({
-    name: username.toUpperCase(),
-    tagline: "Digital Creator & Independent Maker",
-    bio: `Welcome to the official hub of @${username}. Explore featured portfolios, stores, and collaborative projects below.`,
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces",
+    name: '',
+    tagline: 'Digital Creator & Independent Maker',
+    bio: '',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces',
     socials: {},
     is_pro: 0
   });
@@ -91,63 +83,82 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [isStoryOpen, setIsStoryOpen] = useState(false);
 
-  // Sinkronkan username dari URL saat pertama kali dimuat di browser
+  // Sinkronkan username jika terjadi navigasi URL di browser
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
-      if (pathPart && pathPart !== 'admin' && pathPart !== 'login' && pathPart !== 'register') {
+      if (pathPart && !['admin', 'login', 'register', 'api'].includes(pathPart.toLowerCase())) {
         setUsername(pathPart.toLowerCase());
       }
     }
   }, []);
 
-  // 2. Ambil profil, tautan, dan story dari API berdasarkan username
+  // 2. Ambil profil, tautan, dan story KHUSUS untuk username aktif
   useEffect(() => {
     if (!username) return;
 
-    // 1. Ambil data profil
-    fetch(`/api/profile?username=${username}`)
+    let isCurrent = true;
+    setLoadingLinks(true);
+
+    // 1. Ambil data profil username bersangkutan
+    fetch(`/api/profile?username=${encodeURIComponent(username)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.profile) setProfile(data.profile);
+        if (!isCurrent) return;
+        if (data.profile) {
+          setProfile(data.profile);
+        } else {
+          setProfile({
+            name: username.toUpperCase(),
+            tagline: 'Digital Creator',
+            bio: `Welcome to the official hub of @${username}.`,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces',
+            socials: {},
+            is_pro: 0
+          });
+        }
       })
       .catch((err) => console.error('Failed to load profile:', err));
 
-    // 2. Ambil data link
-    fetch(`/api/links?username=${username}`)
+    // 2. Ambil data tautan & status PRO user bersangkutan
+    fetch(`/api/links?username=${encodeURIComponent(username)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.links) setLinks(data.links);
-        if (data.isPro !== undefined) setIsProUser(Boolean(data.isPro));
+        if (!isCurrent) return;
+        setLinks(data.links || []);
+        setIsProUser(Boolean(data.isPro));
       })
       .catch((err) => console.error('Failed to load links:', err))
-      .finally(() => setLoadingLinks(false));
+      .finally(() => {
+        if (isCurrent) setLoadingLinks(false);
+      });
 
-    // 3. Ambil data story aktif
-    fetch(`/api/stories?username=${username}`)
+    // 3. Ambil story aktif user bersangkutan
+    fetch(`/api/stories?username=${encodeURIComponent(username)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.stories && Array.isArray(data.stories)) {
-          setStories(data.stories);
-        }
+        if (!isCurrent) return;
+        setStories(Array.isArray(data.stories) ? data.stories : []);
       })
       .catch((err) => console.error('Failed to load stories:', err));
 
-    // 4. Catat view baru (otomatis +1 per sesi kunjungan)
+    // 4. Catat kunjungan views
     const sessionKey = `curiolot_viewed_${username}`;
     if (typeof window !== 'undefined' && !sessionStorage.getItem(sessionKey)) {
-      fetch(`/api/views?username=${username}`, { method: 'POST' })
+      fetch(`/api/views?username=${encodeURIComponent(username)}`, { method: 'POST' })
         .then(() => sessionStorage.setItem(sessionKey, '1'))
         .catch((err) => console.error('Failed to log view:', err));
     }
+
+    return () => {
+      isCurrent = false; // Mencegah data user lain menimpa jika berpindah halaman
+    };
   }, [username]);
 
-  // Tracking klik tautan
   const handleLinkClick = (id: number) => {
     fetch(`/api/click?id=${id}`, { method: 'POST' }).catch(() => {});
   };
 
-  // 3. Tombol Share responsif & andal
   const handleShare = async () => {
     const currentUrl = typeof window !== 'undefined' ? window.location.href : `https://link.curiolot.com/${username}`;
 
@@ -174,17 +185,14 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
     if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
       try {
         await navigator.share({
-          title: profile.name,
+          title: profile.name || username,
           text: profile.bio,
           url: currentUrl,
         });
-      } catch {
-        // user cancel share dialog
-      }
+      } catch {}
     }
   };
 
-  // State & Handler Form Direct Message
   const [senderName, setSenderName] = useState('');
   const [message, setMessage] = useState('');
   const [isSent, setIsSent] = useState(false);
@@ -223,7 +231,6 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
     }
   };
 
-  // Parsing data medsos
   let parsedSocials: SocialLinks = {};
   if (typeof profile.socials === 'string') {
     try {
@@ -242,7 +249,7 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
 
       <div className="w-full max-w-md flex flex-col items-center relative z-10">
         
-        {/* Top Navigation Bar: Register, Login & Share */}
+        {/* Top Navigation Bar */}
         <div className="w-full flex items-center justify-between mb-6 pb-3 border-b border-neutral-900">
           <a
             href="/register"
@@ -284,7 +291,6 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
         {/* Profile Header */}
         <header className="flex flex-col items-center text-center mb-6">
           <div className="relative group">
-            {/* Lingkaran Avatar dengan Story Ring interaktif */}
             <div 
               onClick={() => {
                 if (stories.length > 0) setIsStoryOpen(true);
@@ -296,13 +302,12 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
               } shadow-xl shadow-emerald-500/10`}
             >
               <img
-                src={profile.avatar}
-                alt={profile.name}
+                src={profile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces'}
+                alt={profile.name || username}
                 className="w-full h-full rounded-full object-cover border-2 border-neutral-950"
               />
             </div>
 
-            {/* Badge Story jika ada story aktif */}
             {stories.length > 0 ? (
               <span 
                 onClick={() => setIsStoryOpen(true)}
@@ -319,7 +324,7 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
 
           <div className="mt-4 flex items-center justify-center gap-1.5">
             <h1 className="text-2xl font-bold tracking-tight text-white">
-              {profile.name}
+              {profile.name || username.toUpperCase()}
             </h1>
             {isPro && (
               <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30 flex items-center gap-0.5 shadow-sm">
@@ -332,12 +337,14 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
             @{username} • {profile.tagline}
           </p>
 
-          <p className="text-sm text-neutral-400 mt-2 max-w-xs leading-relaxed">
-            {profile.bio}
-          </p>
+          {profile.bio && (
+            <p className="text-sm text-neutral-400 mt-2 max-w-xs leading-relaxed">
+              {profile.bio}
+            </p>
+          )}
         </header>
 
-        {/* Social Icons Bar (Instagram, TikTok, YouTube, X, GitHub, WhatsApp) */}
+        {/* Social Icons Bar */}
         {(parsedSocials.instagram || parsedSocials.tiktok || parsedSocials.youtube || parsedSocials.x || parsedSocials.github || parsedSocials.whatsapp) && (
           <div className="flex items-center justify-center gap-3 mb-7 flex-wrap">
             {parsedSocials.instagram && (
@@ -414,7 +421,7 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
           </div>
         )}
 
-        {/* Links List with Spotlight and Featured badges */}
+        {/* Links List with Spotlight */}
         <section className="w-full flex flex-col gap-3.5 mb-8">
           {loadingLinks ? (
             <div className="p-8 text-center text-xs text-neutral-500 animate-pulse">
@@ -443,7 +450,6 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
                         : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/80'
                     }`}
                   >
-                    {/* Spotlight Badge */}
                     {isSpotlight && (
                       <span className="absolute -top-2.5 right-4 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-neutral-950 font-black text-[9px] uppercase tracking-wider flex items-center gap-1 shadow-md">
                         <Flame className="w-2.5 h-2.5 fill-current" /> HOT
@@ -537,7 +543,6 @@ export default function UserBioClient({ username: propUsername }: UserBioClientP
 
       </div>
 
-      {/* Story Modal Viewer */}
       <StoryModal
         stories={stories}
         isOpen={isStoryOpen}
