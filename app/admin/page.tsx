@@ -34,7 +34,8 @@ import {
   Flame,
   QrCode,
   Download,
-  Share2
+  Share2,
+  Palette
 } from 'lucide-react';
 
 interface LinkItem {
@@ -85,6 +86,8 @@ interface ProfileData {
   og_title?: string;
   og_description?: string;
   og_image?: string;
+  theme?: string;
+  bg_image?: string;
 }
 
 interface CurrentUser {
@@ -153,6 +156,15 @@ const FREE_MUSIC_LIBRARY: MusicTrack[] = [
     duration: '1:15',
     url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3'
   }
+];
+
+const THEME_OPTIONS = [
+  { id: 'dark', name: 'Minimal Dark', preview: 'bg-neutral-900 border-neutral-700', isPro: false },
+  { id: 'light', name: 'Clean White', preview: 'bg-slate-100 border-slate-300', isPro: false },
+  { id: 'emerald', name: 'Forest Emerald', preview: 'bg-[#0a261e] border-emerald-700', isPro: false },
+  { id: 'midnight', name: 'Midnight Navy', preview: 'bg-[#111827] border-sky-800', isPro: false },
+  { id: 'cyberpunk', name: 'Neon Cyberpunk', preview: 'bg-[#180a33] border-fuchsia-600', isPro: true },
+  { id: 'sunset', name: 'Sunset Crimson', preview: 'bg-[#290e14] border-amber-600', isPro: true },
 ];
 
 const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 0.75): Promise<string> => {
@@ -273,12 +285,13 @@ export default function AdminDashboard() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ogFileInputRef = useRef<HTMLInputElement>(null);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const customAudioInputRef = useRef<HTMLInputElement>(null);
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'stories' | 'inbox' | 'analytics'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'themes' | 'stories' | 'inbox' | 'analytics'>('profile');
 
   const [profile, setProfile] = useState<ProfileData>({
     name: 'New Creator',
@@ -289,7 +302,9 @@ export default function AdminDashboard() {
     socials: {},
     og_title: '',
     og_description: '',
-    og_image: ''
+    og_image: '',
+    theme: 'dark',
+    bg_image: ''
   });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSavedSuccess, setProfileSavedSuccess] = useState(false);
@@ -384,7 +399,9 @@ export default function AdminDashboard() {
             socials: parsedSocials,
             og_title: data.profile.og_title || '',
             og_description: data.profile.og_description || '',
-            og_image: data.profile.og_image || ''
+            og_image: data.profile.og_image || '',
+            theme: data.profile.theme || 'dark',
+            bg_image: data.profile.bg_image || ''
           });
         }
       }
@@ -538,28 +555,29 @@ export default function AdminDashboard() {
     }
 
     try {
-      // Unggah gambar banner ke Cloudflare R2 agar menghasilkan URL publik https://...
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('username', activeUsername);
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setProfile((prev) => ({ ...prev, og_image: data.url }));
-      } else {
-        const err = await res.json().catch(() => null);
-        alert(err?.error || 'Failed to upload banner to Cloudflare storage.');
-      }
+      const compressed = await compressImage(file, 1200, 630, 0.85);
+      setProfile((prev) => ({ ...prev, og_image: compressed }));
     } catch (err) {
-      console.error('Error uploading OG image:', err);
-      alert('Network error while uploading banner.');
-    } finally {
-      e.target.value = '';
+      console.error('Error processing OG image:', err);
+      alert('Failed to process social share image.');
+    }
+  };
+
+  const handleBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    try {
+      const compressed = await compressImage(file, 1920, 1080, 0.8);
+      setProfile((prev) => ({ ...prev, bg_image: compressed }));
+    } catch (err) {
+      console.error('Error processing background wallpaper:', err);
+      alert('Failed to process wallpaper.');
     }
   };
 
@@ -622,8 +640,8 @@ export default function AdminDashboard() {
     e.target.value = '';
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveProfile = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setSavingProfile(true);
     setProfileSavedSuccess(false);
 
@@ -918,6 +936,19 @@ export default function AdminDashboard() {
               </span>
             </button>
 
+            {/* Tab Themes & Styling */}
+            <button
+              onClick={() => setActiveTab('themes')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'themes'
+                  ? 'bg-neutral-800 text-white shadow-sm'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-850'
+              }`}
+            >
+              <Palette className="w-4 h-4 text-amber-400" />
+              <span>Themes &amp; Styling</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('stories')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
@@ -971,7 +1002,6 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex flex-col gap-2 pt-6 border-t border-neutral-800 mt-6">
-          {/* Tombol QR Code Generator */}
           <button
             type="button"
             onClick={() => setShowQrModal(true)}
@@ -1012,7 +1042,7 @@ export default function AdminDashboard() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {/* TAB 1: Profile & Socials & SEO Card */}
+        {/* TAB 1: Profile & Bio */}
         {activeTab === 'profile' && (
           <div className="max-w-xl flex flex-col gap-6">
             <div>
@@ -1101,7 +1131,7 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* Social Media Icons Input (Generik Internasional) */}
+                {/* Social Media Icons Input */}
                 <div className="pt-4 border-t border-neutral-800">
                   <label className="text-xs font-bold text-white block mb-1 flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-emerald-400" />
@@ -1198,7 +1228,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Custom Social Share Card & OpenGraph (Generik Internasional) */}
+                {/* Custom Social Share Card & OpenGraph */}
                 <div className="pt-4 border-t border-neutral-800">
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -1297,7 +1327,148 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 2: Links & Content */}
+        {/* TAB 2: Themes & Styling */}
+        {activeTab === 'themes' && (
+          <div className="max-w-xl flex flex-col gap-6">
+            <div>
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                <Palette className="w-5 h-5 text-amber-400" />
+                <span>Themes &amp; Visual Styling</span>
+              </h1>
+              <p className="text-xs text-neutral-400 mt-1">
+                Personalize your bio page appearance with curated color palettes and custom wallpapers.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-6">
+              
+              {/* Preset Color Themes */}
+              <div>
+                <label className="text-xs font-bold text-white block mb-2">Preset Color Themes</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {THEME_OPTIONS.map((thm) => {
+                    const isSelected = (profile.theme || 'dark') === thm.id;
+                    const isLocked = thm.isPro && !isProUser;
+
+                    return (
+                      <button
+                        key={thm.id}
+                        type="button"
+                        onClick={() => {
+                          if (isLocked) {
+                            setShowUpgradeModal(true);
+                            return;
+                          }
+                          setProfile({ ...profile, theme: thm.id });
+                        }}
+                        className={`p-3 rounded-2xl border text-left transition flex flex-col gap-2 relative overflow-hidden ${
+                          isSelected
+                            ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-neutral-800'
+                            : 'border-neutral-800 bg-neutral-950 hover:border-neutral-700'
+                        }`}
+                      >
+                        <div className={`w-full h-12 rounded-xl border ${thm.preview} flex items-center justify-center`}>
+                          {isLocked && <Lock className="w-4 h-4 text-amber-400" />}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white truncate">{thm.name}</span>
+                          {thm.isPro && (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[8px] font-black">
+                              PRO
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom Background Wallpaper */}
+              <div className="pt-5 border-t border-neutral-800 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Custom Background Wallpaper</span>
+                      {!isProUser && (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                          PRO
+                        </span>
+                      )}
+                    </label>
+                    <p className="text-[11px] text-neutral-400 mt-0.5">
+                      Upload your own high-resolution backdrop image for your bio page.
+                    </p>
+                  </div>
+                  {profile.bg_image && (
+                    <button
+                      type="button"
+                      onClick={() => setProfile({ ...profile, bg_image: '' })}
+                      className="text-xs text-rose-400 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
+                  <div className="w-24 h-16 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden shrink-0">
+                    {profile.bg_image ? (
+                      <img src={profile.bg_image} alt="Custom Background" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-neutral-600" />
+                    )}
+                  </div>
+
+                  <div className="flex-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isProUser) {
+                          setShowUpgradeModal(true);
+                          return;
+                        }
+                        bgFileInputRef.current?.click();
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{profile.bg_image ? 'Change Wallpaper' : 'Upload Wallpaper'}</span>
+                    </button>
+                    <input
+                      type="file"
+                      ref={bgFileInputRef}
+                      accept="image/*"
+                      onChange={handleBgImageUpload}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                {profileSavedSuccess && (
+                  <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" /> Theme styling saved successfully!
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleSaveProfile()}
+                  disabled={savingProfile}
+                  className="ml-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/20"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{savingProfile ? 'Saving...' : 'Apply & Save Theme'}</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: Links & Content */}
         {activeTab === 'links' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1468,7 +1639,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 3: Stories */}
+        {/* TAB 4: Stories */}
         {activeTab === 'stories' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -1626,9 +1797,6 @@ export default function AdminDashboard() {
                   onChange={(e) => setStoryLinkUrl(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 />
-                <p className="text-[10px] text-neutral-500 mt-1">
-                  Displays as a clean, interactive link sticker that visitors can tap directly.
-                </p>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -1752,9 +1920,6 @@ export default function AdminDashboard() {
                 <div className="p-8 rounded-2xl bg-neutral-900 border border-neutral-800 text-center">
                   <Clock className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
                   <p className="text-xs text-neutral-400">No active stories right now.</p>
-                  <p className="text-[11px] text-neutral-500 mt-1">
-                    When you publish a story, your bio avatar will show an animated ring!
-                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1781,18 +1946,6 @@ export default function AdminDashboard() {
                           <p className="text-xs text-neutral-200 truncate mt-0.5">
                             {st.caption || 'No caption'}
                           </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            {st.link_url && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 truncate max-w-[100px]">
-                                <LinkIcon className="w-2.5 h-2.5 shrink-0" /> Link
-                              </span>
-                            )}
-                            {st.audio_url && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                                <Music className="w-2.5 h-2.5 shrink-0" /> Music
-                              </span>
-                            )}
-                          </div>
                         </div>
                       </div>
 
@@ -1813,7 +1966,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 4: Messages */}
+        {/* TAB 5: Messages */}
         {activeTab === 'inbox' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -1855,7 +2008,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 5: Analytics */}
+        {/* TAB 6: Analytics */}
         {activeTab === 'analytics' && (
           <div className="max-w-2xl flex flex-col gap-6">
             <div>
@@ -1945,8 +2098,19 @@ export default function AdminDashboard() {
 
       {/* Right Side Mockup Phone Preview */}
       <aside className="hidden xl:flex w-96 bg-neutral-900/40 border-l border-neutral-800 p-8 items-center justify-center shrink-0">
-        <div className="w-full max-w-[280px] h-[560px] bg-neutral-950 border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden">
-          <div className="w-20 h-4 bg-neutral-800 rounded-full mb-5 shrink-0" />
+        <div 
+          className="w-full max-w-[280px] h-[560px] bg-neutral-950 border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden transition-all duration-300"
+          style={
+            profile.bg_image
+              ? {
+                  backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.85)), url(${profile.bg_image})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }
+              : undefined
+          }
+        >
+          <div className="w-20 h-4 bg-neutral-800/80 rounded-full mb-5 shrink-0" />
           
           <div className="w-full flex-1 overflow-y-auto flex flex-col items-center">
             <div className="relative">
@@ -1977,34 +2141,34 @@ export default function AdminDashboard() {
 
             <p className="text-[10px] text-emerald-400 font-medium text-center">{profile.tagline}</p>
             {profile.bio && (
-              <p className="text-[9px] text-neutral-400 text-center mt-1 px-2 line-clamp-2 leading-relaxed">{profile.bio}</p>
+              <p className="text-[9px] text-neutral-300 text-center mt-1 px-2 line-clamp-2 leading-relaxed">{profile.bio}</p>
             )}
 
             {/* Social Icons Bar in Mockup */}
             {profile.socials && Object.values(profile.socials).some((val) => Boolean(val)) && (
               <div className="flex items-center justify-center gap-1.5 my-2.5 flex-wrap">
                 {profile.socials.instagram && (
-                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">ig</span>
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">ig</span>
                 )}
                 {profile.socials.tiktok && (
-                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">tt</span>
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">tt</span>
                 )}
                 {profile.socials.youtube && (
-                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">yt</span>
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">yt</span>
                 )}
                 {profile.socials.whatsapp && (
-                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">wa</span>
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">wa</span>
                 )}
                 {profile.socials.x && (
-                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">x</span>
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">x</span>
                 )}
                 {profile.socials.github && (
-                  <span className="w-5 h-5 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 text-[9px]">gh</span>
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">gh</span>
                 )}
               </div>
             )}
 
-            {/* Links in Mockup with Spotlight Glow */}
+            {/* Links in Mockup */}
             <div className="w-full flex flex-col gap-2 mt-2">
               {links.map((l) => {
                 const isSpotlight = l.is_spotlight === 1;
@@ -2012,10 +2176,10 @@ export default function AdminDashboard() {
                 return (
                   <div
                     key={l.id}
-                    className={`relative w-full py-2.5 px-3 rounded-xl border text-[10px] text-center truncate shadow-sm transition ${
+                    className={`relative w-full py-2.5 px-3 rounded-xl border text-[10px] text-center truncate shadow-sm transition backdrop-blur-sm ${
                       isSpotlight
                         ? 'bg-gradient-to-r from-amber-500/20 via-neutral-900 to-amber-500/20 border-amber-400 text-amber-300 font-bold shadow-amber-500/10'
-                        : 'bg-neutral-900 border-neutral-800 text-neutral-200'
+                        : 'bg-black/40 border-white/10 text-neutral-200'
                     }`}
                   >
                     {isSpotlight && (
@@ -2024,16 +2188,13 @@ export default function AdminDashboard() {
                       </span>
                     )}
                     <span className="block truncate">{l.title}</span>
-                    {l.description && (
-                      <span className="text-[8px] text-neutral-400 block truncate mt-0.5 font-normal">{l.description}</span>
-                    )}
                   </div>
                 );
               })}
             </div>
           </div>
 
-          <p className="text-[9px] text-neutral-600 mt-2 shrink-0">Live Preview (@{activeUsername})</p>
+          <p className="text-[9px] text-neutral-500 mt-2 shrink-0">Live Preview (@{activeUsername})</p>
         </div>
       </aside>
 
@@ -2083,14 +2244,12 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
             
-            {/* Header Modal & Harga */}
             <div className="text-center">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-neutral-950 font-bold text-xl mx-auto shadow-lg shadow-amber-500/20">
                 ⭐
               </div>
               <h3 className="text-lg font-bold text-white mt-3">Upgrade to Curiolot Link PRO</h3>
               
-              {/* Price Tag */}
               <div className="flex items-baseline justify-center gap-1 mt-2">
                 <span className="text-3xl font-black text-white tracking-tight">$3</span>
                 <span className="text-xs text-neutral-400 font-medium">/ month</span>
@@ -2104,8 +2263,14 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* List Keuntungan PRO Lengkap */}
             <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Custom Wallpapers &amp; Themes:</strong> Unlock Neon Cyberpunk, Sunset, and custom background image uploads.
+                </div>
+              </div>
+
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -2147,21 +2312,12 @@ export default function AdminDashboard() {
                   <strong className="text-white">Verified PRO Badge:</strong> Exclusive gold verification badge displayed beside your name.
                 </div>
               </div>
-
-              <div className="flex items-start gap-2.5">
-                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
-                <div>
-                  <strong className="text-white">Priority Creator Support:</strong> Direct assistance from our team for custom requests.
-                </div>
-              </div>
             </div>
 
-            {/* Kotak Aktivasi Ko-fi */}
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-5">
               💡 <strong>Instant Activation:</strong> When subscribing on Ko-fi, please keep your account email (<strong>{currentUser?.email}</strong>) or write <strong>@{activeUsername}</strong> in the message box. Your account unlocks automatically!
             </div>
 
-            {/* Tombol Aksi */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -2288,7 +2444,7 @@ export default function AdminDashboard() {
                   <p className="text-[11px] text-neutral-500 py-5 text-center">Loading device stats...</p>
                 ) : !detailedData || detailedData.totalVisits === 0 ? (
                   <div className="py-5 text-center text-[11px] text-neutral-500 leading-relaxed">
-                    No visitor data recorded yet.<br />Visit your bio link to log your first impression!
+                    No visitor data recorded yet.
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2.5 text-[11px]">
@@ -2332,7 +2488,7 @@ export default function AdminDashboard() {
                   <p className="text-[11px] text-neutral-500 py-5 text-center">Loading traffic sources...</p>
                 ) : !detailedData || detailedData.referrers.length === 0 ? (
                   <div className="py-5 text-center text-[11px] text-neutral-500 leading-relaxed">
-                    No traffic sources recorded yet.<br />Share your bio link on social media to start tracking!
+                    No traffic sources recorded yet.
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2.5 text-[11px]">
