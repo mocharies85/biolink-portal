@@ -1084,7 +1084,7 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* Social Media Icons Input */}
+                {/* Social Media Icons Input (Generik Internasional) */}
                 <div className="pt-4 border-t border-neutral-800">
                   <label className="text-xs font-bold text-white block mb-1 flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-emerald-400" />
@@ -1099,7 +1099,7 @@ export default function AdminDashboard() {
                       <label className="text-[11px] text-neutral-400 block mb-1">Instagram (@username)</label>
                       <input
                         type="text"
-                        placeholder="e.g. aries"
+                        placeholder="e.g. yourname"
                         value={profile.socials?.instagram || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1110,10 +1110,10 @@ export default function AdminDashboard() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-neutral-400 block mb-1">WhatsApp (e.g. 628...)</label>
+                      <label className="text-[11px] text-neutral-400 block mb-1">WhatsApp (Country code + number)</label>
                       <input
                         type="text"
-                        placeholder="e.g. 628123456789"
+                        placeholder="e.g. 15551234567"
                         value={profile.socials?.whatsapp || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1127,7 +1127,7 @@ export default function AdminDashboard() {
                       <label className="text-[11px] text-neutral-400 block mb-1">TikTok (@username)</label>
                       <input
                         type="text"
-                        placeholder="e.g. aries"
+                        placeholder="e.g. yourname"
                         value={profile.socials?.tiktok || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1141,7 +1141,7 @@ export default function AdminDashboard() {
                       <label className="text-[11px] text-neutral-400 block mb-1">YouTube Channel URL</label>
                       <input
                         type="url"
-                        placeholder="https://youtube.com/@channel"
+                        placeholder="https://youtube.com/@yourchannel"
                         value={profile.socials?.youtube || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1155,7 +1155,7 @@ export default function AdminDashboard() {
                       <label className="text-[11px] text-neutral-400 block mb-1">X / Twitter (@username)</label>
                       <input
                         type="text"
-                        placeholder="e.g. aries"
+                        placeholder="e.g. yourhandle"
                         value={profile.socials?.x || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1169,7 +1169,7 @@ export default function AdminDashboard() {
                       <label className="text-[11px] text-neutral-400 block mb-1">GitHub (username)</label>
                       <input
                         type="text"
-                        placeholder="e.g. mocharies85"
+                        placeholder="e.g. yourgithub"
                         value={profile.socials?.github || ''}
                         onChange={(e) => setProfile({
                           ...profile,
@@ -1181,7 +1181,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Custom Social Share Card & OpenGraph (PRO Exclusive) */}
+                {/* Custom Social Share Card & OpenGraph (Generik Internasional) */}
                 <div className="pt-4 border-t border-neutral-800">
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -1204,7 +1204,7 @@ export default function AdminDashboard() {
                       <input
                         type="text"
                         disabled={!isProUser}
-                        placeholder={profile.name || "e.g. Moch. Aries | Official Bio Hub"}
+                        placeholder="e.g. Official Creator Portfolio & Hub"
                         value={profile.og_title || ''}
                         onChange={(e) => setProfile({ ...profile, og_title: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition disabled:opacity-50"
@@ -1216,7 +1216,7 @@ export default function AdminDashboard() {
                       <input
                         type="text"
                         disabled={!isProUser}
-                        placeholder={profile.bio ? profile.bio.slice(0, 100) : "Discover projects, stores, and stories..."}
+                        placeholder="e.g. Explore my latest projects, digital store, and creative works."
                         value={profile.og_description || ''}
                         onChange={(e) => setProfile({ ...profile, og_description: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition disabled:opacity-50"
