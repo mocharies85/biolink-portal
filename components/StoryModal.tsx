@@ -185,9 +185,10 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           ))}
         </div>
 
-        {/* Header: Username, Badge Durasi Dinamis & Tombol Tutup */}
-        <div className="absolute top-7 left-4 right-4 z-30 flex items-center justify-between text-white">
-          <div className="flex items-center gap-2">
+        {/* Header: Username, Badge Durasi, Tombol Link Atas & Kontrol */}
+        <div className="absolute top-7 left-3 right-3 z-30 flex items-center justify-between text-white gap-1.5">
+          {/* Sisi Kiri: Username & Badges */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="font-semibold text-xs text-neutral-200">@{username}</span>
 
             {/* Badge Durasi Dinamis */}
@@ -213,10 +214,29 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Sisi Tengah: Stiker Link Tautan (Dipindahkan ke Bar Atas) */}
+          {current.link_url && (
+            <a
+              href={current.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="px-2.5 py-1 rounded-full bg-white text-neutral-950 font-bold text-[10px] flex items-center gap-1 shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 border border-neutral-200 group truncate shrink min-w-0 max-w-[130px] sm:max-w-[150px]"
+              title={current.link_url}
+            >
+              <LinkIcon className="w-3 h-3 text-emerald-600 group-hover:rotate-45 transition-transform shrink-0" />
+              <span className="truncate">
+                {current.link_url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+              </span>
+              <ExternalLink className="w-2.5 h-2.5 text-neutral-500 shrink-0" />
+            </a>
+          )}
+
+          {/* Sisi Kanan: Audio & Tutup */}
+          <div className="flex items-center gap-1.5 shrink-0">
             {(current.audio_url || isVideo) && (
               <button 
-                type="button"
+                type="button" 
                 onClick={() => setIsMuted(!isMuted)} 
                 className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition text-white"
                 title={isMuted ? 'Unmute' : 'Mute'}
@@ -230,7 +250,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
             )}
 
             <button 
-              type="button"
+              type="button" 
               onClick={handleClose} 
               className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition"
               title="Close"
@@ -240,7 +260,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           </div>
         </div>
 
-        {/* Media Container: object-contain menjaga orientasi landscape maupun portrait tetap utuh */}
+        {/* Media Container: Menjaga orientasi gambar & video */}
         <div className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden">
           {isVideo ? (
             <video 
@@ -259,25 +279,6 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
               className="w-full h-full object-contain"
             />
           )}
-
-          {/* Stiker Link Tautan */}
-          {current.link_url && (
-            <div className="absolute bottom-20 z-30 flex justify-center w-full px-6">
-              <a
-                href={current.link_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="px-4 py-2.5 rounded-full bg-white text-neutral-950 font-bold text-xs flex items-center gap-2 shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 border border-neutral-200 group"
-              >
-                <LinkIcon className="w-3.5 h-3.5 text-emerald-600 group-hover:rotate-45 transition-transform" />
-                <span className="max-w-[180px] truncate">
-                  {current.link_url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
-                </span>
-                <ExternalLink className="w-3 h-3 text-neutral-500" />
-              </a>
-            </div>
-          )}
           
           {/* Area Sentuh Kiri / Kanan untuk Navigasi Slide */}
           <button 
@@ -294,7 +295,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           />
         </div>
 
-        {/* Story Caption */}
+        {/* Story Caption Bawah: Sekarang leluasa dan tidak tertutup stiker */}
         {current.caption && (
           <div className="absolute bottom-4 left-4 right-4 z-20 p-3 bg-neutral-950/85 backdrop-blur-md rounded-2xl border border-neutral-800 text-xs text-center text-white leading-relaxed">
             {current.caption}
