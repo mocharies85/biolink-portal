@@ -1427,8 +1427,12 @@ export default function AdminDashboard() {
                         key={thm.id}
                         type="button"
                         onClick={() => {
-                          // Seketika mengubah tampilan di mockup ponsel sebelah kanan
+                          // Ubah warna mockup HP di kanan agar bisa dilihat
                           setProfile((prev) => ({ ...prev, theme: thm.id }));
+                          // Jika tema PRO diklik oleh akun Free, otomatis buka pop-up upgrade PRO
+                          if (thm.isPro && !isProUser) {
+                            setShowUpgradeModal(true);
+                          }
                         }}
                         className={`p-3 rounded-2xl border text-left transition flex flex-col gap-2 relative overflow-hidden ${
                           isSelected
@@ -1480,12 +1484,19 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="flex items-center gap-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
-                  <div className="w-24 h-16 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden shrink-0">
+                  <div 
+                    onClick={() => {
+                      if (!isProUser) setShowUpgradeModal(true);
+                    }}
+                    className={`w-24 h-16 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden shrink-0 ${
+                      !isProUser ? 'cursor-pointer hover:border-amber-500/40' : ''
+                    }`}
+                  >
                     {isProUser && profile.bg_image ? (
                       <img src={profile.bg_image} alt="Custom Background" className="w-full h-full object-cover" />
                     ) : (
                       <div className="flex flex-col items-center justify-center text-neutral-600 gap-1">
-                        <ImageIcon className="w-5 h-5" />
+                        <ImageIcon className="w-5 h-5 text-neutral-600" />
                         <span className="text-[8px] font-semibold text-neutral-500">Default (Free)</span>
                       </div>
                     )}
@@ -1521,7 +1532,7 @@ export default function AdminDashboard() {
                     </button>
                     {!isProUser && (
                       <p className="text-[10px] text-neutral-500 mt-1.5">
-                        Wallpaper is disabled on Free tier. Profile uses standard theme background.
+                        Wallpaper is locked on Free tier. Profile uses standard theme background.
                       </p>
                     )}
                     <input
@@ -1619,7 +1630,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Spotlight Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-855">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-800">
                 <div className="flex items-center gap-2">
                   <Flame className={`w-4 h-4 ${newIsSpotlight ? 'text-amber-400' : 'text-neutral-500'}`} />
                   <div>
@@ -2341,6 +2352,113 @@ export default function AdminDashboard() {
       )}
 
       {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            
+            {/* Header Modal */}
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 flex items-center justify-center text-neutral-950 font-bold text-xl mx-auto shadow-lg shadow-amber-500/25">
+                ⭐
+              </div>
+              <h3 className="text-lg font-bold text-white mt-3">Upgrade to Curiolot Link PRO</h3>
+              
+              <div className="flex items-baseline justify-center gap-1 mt-2">
+                <span className="text-3xl font-black text-white tracking-tight">$3</span>
+                <span className="text-xs text-neutral-400 font-medium">/ month</span>
+                <span className="ml-2 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                  Cancel anytime
+                </span>
+              </div>
+              
+              <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">
+                Supercharge your biolink with creator tools designed to boost engagement, branding, and click conversions.
+              </p>
+            </div>
+
+            {/* List Fasilitas Unggulan PRO */}
+            <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-3 text-xs text-neutral-300">
+              
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Custom Wallpapers &amp; PRO Themes:</strong> Upload high-res background backdrops and access premium themes (Neon Cyberpunk &amp; Sunset Crimson).
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Custom Social Share Card &amp; SEO:</strong> Dedicated 1200x630 rich banner thumbnail, custom title, and snippet description on WhatsApp, Telegram, and X.
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Spotlight Glow &amp; 'HOT' Badge:</strong> Animated gold neon glow and hot badge on priority links to maximize click-through rates (CTR).
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">60s Video &amp; 25s Photo 24h Stories:</strong> Full 60s video streaming via Cloudflare R2, 25s photo duration (Free: 10s only), and custom audio upload.
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Unlimited Links &amp; Content:</strong> Add unlimited portfolio, store, and social links (Free tier is limited to 3 links).
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Deep Real-Time Analytics:</strong> Track individual link CTR, device breakdown (iOS/Android vs Desktop), and top live referral sources.
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Verified PRO Badge:</strong> Exclusive gold verification badge displayed beside your profile name to build trust and credibility.
+                </div>
+              </div>
+
+            </div>
+
+            {/* Kotak Info Aktivasi Instan */}
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-5">
+              💡 <strong>Instant Activation:</strong> When subscribing via Ko-fi, please keep your account email (<strong>{currentUser?.email}</strong>) or write <strong>@{activeUsername}</strong> in the message box. Your PRO features will unlock automatically!
+            </div>
+
+            {/* Tombol Aksi */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-1/3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
+              >
+                Cancel
+              </button>
+              <a
+                href="https://ko-fi.com/cycrack"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
+              >
+                <span>Get PRO Access ($3/mo)</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Detailed Insights Modal */}
       {showDetailedInsights && (
