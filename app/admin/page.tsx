@@ -567,8 +567,8 @@ export default function AdminDashboard() {
     }
 
     try {
-      // 1200x630 dengan kualitas 0.78 menghasilkan file JPEG murni ~150KB (Sangat disukai WhatsApp)
-      const compressed = await compressImage(file, 1200, 630, 0.78, true);
+      // 800x418 (rasio 1.91:1) kualitas 0.70 menghasilkan file JPEG murni ~100KB-140KB (Sangat aman untuk batas 300KB WhatsApp)
+      const compressed = await compressImage(file, 800, 418, 0.70, true);
       setProfile((prev) => ({ ...prev, og_image: compressed }));
     } catch (err) {
       console.error('Error processing OG image:', err);
