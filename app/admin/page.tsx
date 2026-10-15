@@ -31,7 +31,10 @@ import {
   Play,
   Pause,
   Sparkles,
-  Flame
+  Flame,
+  QrCode,
+  Download,
+  Share2
 } from 'lucide-react';
 
 interface LinkItem {
@@ -79,6 +82,9 @@ interface ProfileData {
   avatar: string;
   views?: number;
   socials?: SocialLinks;
+  og_title?: string;
+  og_description?: string;
+  og_image?: string;
 }
 
 interface CurrentUser {
@@ -266,6 +272,7 @@ const trimAndCompressAudio = async (file: File, maxDurationSeconds: number): Pro
 export default function AdminDashboard() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const ogFileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const customAudioInputRef = useRef<HTMLInputElement>(null);
@@ -279,7 +286,10 @@ export default function AdminDashboard() {
     bio: '',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
     views: 0,
-    socials: {}
+    socials: {},
+    og_title: '',
+    og_description: '',
+    og_image: ''
   });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSavedSuccess, setProfileSavedSuccess] = useState(false);
@@ -309,6 +319,7 @@ export default function AdminDashboard() {
   const [processingAudio, setProcessingAudio] = useState(false);
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [showDetailedInsights, setShowDetailedInsights] = useState(false);
   const [detailedData, setDetailedData] = useState<DetailedAnalyticsData | null>(null);
   const [loadingDetailed, setLoadingDetailed] = useState(false);
@@ -329,6 +340,12 @@ export default function AdminDashboard() {
   const plannedDuration = storyMediaType === 'video'
     ? 60
     : (isProUser ? 25 : 10);
+
+  const liveProfileUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/${activeUsername}`
+    : `https://link.curiolot.com/${activeUsername}`;
+
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&data=${encodeURIComponent(liveProfileUrl)}`;
 
   useEffect(() => {
     const storedUser = sessionStorage.getItem('curiolot_auth_user');
@@ -364,7 +381,10 @@ export default function AdminDashboard() {
             bio: data.profile.bio || '',
             avatar: data.profile.avatar || profile.avatar,
             views: data.profile.views || 0,
-            socials: parsedSocials
+            socials: parsedSocials,
+            og_title: data.profile.og_title || '',
+            og_description: data.profile.og_description || '',
+            og_image: data.profile.og_image || ''
           });
         }
       }
@@ -508,7 +528,24 @@ export default function AdminDashboard() {
     }
   };
 
-  // Upload Story Media (Image auto-compress or Video to Cloudflare R2)
+  const handleOgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    try {
+      const compressed = await compressImage(file, 1200, 630, 0.85);
+      setProfile((prev) => ({ ...prev, og_image: compressed }));
+    } catch (err) {
+      console.error('Error processing OG image:', err);
+      alert('Failed to process social share image.');
+    }
+  };
+
   const handleStoryMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -637,7 +674,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Toggle Spotlight Status for PRO accounts
   const handleToggleSpotlight = async (link: LinkItem) => {
     if (!isProUser) {
       setShowUpgradeModal(true);
@@ -794,6 +830,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDownloadQr = async () => {
+    try {
+      const response = await fetch(qrImageUrl);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${activeUsername}-biolink-qr.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(qrImageUrl, '_blank');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row font-sans">
       <audio ref={previewAudioRef} onEnded={() => setPreviewingTrackId(null)} />
@@ -901,6 +954,16 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex flex-col gap-2 pt-6 border-t border-neutral-800 mt-6">
+          {/* Tombol QR Code Generator */}
+          <button
+            type="button"
+            onClick={() => setShowQrModal(true)}
+            className="w-full py-2.5 px-3 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-xs font-semibold text-neutral-200 flex items-center justify-center gap-2 transition"
+          >
+            <QrCode className="w-4 h-4 text-emerald-400" />
+            <span>Generate QR Code</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowSupportModal(true)}
@@ -932,7 +995,7 @@ export default function AdminDashboard() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {/* TAB 1: Profile & Socials */}
+        {/* TAB 1: Profile & Socials & SEO Card */}
         {activeTab === 'profile' && (
           <div className="max-w-xl flex flex-col gap-6">
             <div>
@@ -1117,6 +1180,85 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Custom Social Share Card & OpenGraph (PRO Exclusive) */}
+                <div className="pt-4 border-t border-neutral-800">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Share2 className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Custom Social Share Card &amp; SEO</span>
+                      {!isProUser && (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                          PRO
+                        </span>
+                      )}
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-neutral-400 mb-3">
+                    Customize the rich snippet banner and metadata shown when your bio link is shared on WhatsApp, Telegram, or X.
+                  </p>
+
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">Social Card Title</label>
+                      <input
+                        type="text"
+                        disabled={!isProUser}
+                        placeholder={profile.name || "e.g. Moch. Aries | Official Bio Hub"}
+                        value={profile.og_title || ''}
+                        onChange={(e) => setProfile({ ...profile, og_title: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition disabled:opacity-50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">Social Card Description</label>
+                      <input
+                        type="text"
+                        disabled={!isProUser}
+                        placeholder={profile.bio ? profile.bio.slice(0, 100) : "Discover projects, stores, and stories..."}
+                        value={profile.og_description || ''}
+                        onChange={(e) => setProfile({ ...profile, og_description: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition disabled:opacity-50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">Social Banner Image (1200x630)</label>
+                      <div className="flex items-center gap-3">
+                        {profile.og_image && (
+                          <img
+                            src={profile.og_image}
+                            alt="OG Preview"
+                            className="w-20 h-11 object-cover rounded-lg border border-neutral-700"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!isProUser) {
+                              setShowUpgradeModal(true);
+                              return;
+                            }
+                            ogFileInputRef.current?.click();
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{profile.og_image ? 'Change Banner' : 'Upload Banner'}</span>
+                        </button>
+                        <input
+                          type="file"
+                          ref={ogFileInputRef}
+                          accept="image/*"
+                          onChange={handleOgImageUpload}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               <div className="flex items-center justify-between">
@@ -1276,7 +1418,6 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
-                        {/* Spotlight Flame Button */}
                         <button
                           type="button"
                           onClick={() => handleToggleSpotlight(link)}
@@ -1879,6 +2020,47 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
+      {/* QR Code Generator Modal */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+          <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative flex flex-col items-center text-center">
+            <button
+              type="button"
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3">
+              <QrCode className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-base font-bold text-white">Profile QR Code</h3>
+            <p className="text-xs text-neutral-400 mt-1 max-w-[240px]">
+              Scan to open <strong>@{activeUsername}</strong>'s biolink hub instantly.
+            </p>
+
+            <div className="my-5 p-4 bg-white rounded-2xl shadow-xl flex items-center justify-center">
+              <img
+                src={qrImageUrl}
+                alt="Biolink QR Code"
+                className="w-48 h-48 object-contain"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleDownloadQr}
+              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-500/20"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download High-Res PNG</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Upgrade Modal */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -1896,6 +2078,10 @@ export default function AdminDashboard() {
             <div className="my-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>Custom Social Share Card &amp; SEO</strong> for WhatsApp &amp; Twitter</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">✓</span>
                 <span><strong>Spotlight Glow Links</strong> with exclusive HOT badge</span>
               </div>
               <div className="flex items-center gap-2">
@@ -1909,10 +2095,6 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
                 <span>Exclusive verified <strong>PRO badge</strong> on your bio page</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span>Advanced real visitor analytics (Devices &amp; Top Referrers)</span>
               </div>
             </div>
 
