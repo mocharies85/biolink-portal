@@ -327,15 +327,19 @@ export default function UserBioClient() {
     parsedSocials = profile.socials;
   }
 
+  // Hak akses PRO & Aturan Wallpaper
   const isPro = isProUser || profile.is_pro === 1;
   const currentThemeKey = profile.theme && THEMES[profile.theme] ? profile.theme : 'dark';
   const theme = THEMES[currentThemeKey];
+
+  // Wallpaper HANYA aktif jika akun berstatus PRO
+  const hasActiveWallpaper = Boolean(isPro && profile.bg_image);
 
   return (
     <main 
       className={`min-h-screen flex justify-center py-10 px-4 sm:px-6 relative overflow-hidden font-sans transition-colors duration-300 ${theme.pageBg}`}
       style={
-        profile.bg_image
+        hasActiveWallpaper
           ? {
               backgroundImage: `linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.85)), url(${profile.bg_image})`,
               backgroundSize: 'cover',
@@ -345,7 +349,7 @@ export default function UserBioClient() {
           : undefined
       }
     >
-      {!profile.bg_image && (
+      {!hasActiveWallpaper && (
         <>
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -561,7 +565,7 @@ export default function UserBioClient() {
                         ? 'bg-gradient-to-r from-amber-500/15 via-neutral-900 to-amber-500/15 border-2 border-amber-400 shadow-lg shadow-amber-500/20 hover:border-amber-300'
                         : isHighlight
                         ? 'bg-gradient-to-r from-emerald-950/40 via-neutral-900 to-neutral-900 border-emerald-500/50 hover:border-emerald-400'
-                        : `${theme.cardBg} ${theme.cardBorder}`
+                        : `${theme.cardBg}${theme.cardBorder}`
                     }`}
                   >
                     {isSpotlight && (

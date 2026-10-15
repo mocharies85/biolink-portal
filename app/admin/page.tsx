@@ -1468,16 +1468,10 @@ export default function AdminDashboard() {
                       Upload your own high-resolution backdrop image for your bio page.
                     </p>
                   </div>
-                  {profile.bg_image && (
+                  {isProUser && profile.bg_image && (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!isProUser) {
-                          setShowUpgradeModal(true);
-                          return;
-                        }
-                        setProfile((prev) => ({ ...prev, bg_image: '' }));
-                      }}
+                      onClick={() => setProfile((prev) => ({ ...prev, bg_image: '' }))}
                       className="text-xs text-rose-400 hover:underline"
                     >
                       Remove
@@ -1487,10 +1481,13 @@ export default function AdminDashboard() {
 
                 <div className="flex items-center gap-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
                   <div className="w-24 h-16 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden shrink-0">
-                    {profile.bg_image ? (
+                    {isProUser && profile.bg_image ? (
                       <img src={profile.bg_image} alt="Custom Background" className="w-full h-full object-cover" />
                     ) : (
-                      <ImageIcon className="w-6 h-6 text-neutral-600" />
+                      <div className="flex flex-col items-center justify-center text-neutral-600 gap-1">
+                        <ImageIcon className="w-5 h-5" />
+                        <span className="text-[8px] font-semibold text-neutral-500">Default (Free)</span>
+                      </div>
                     )}
                   </div>
 
@@ -1522,6 +1519,11 @@ export default function AdminDashboard() {
                         </>
                       )}
                     </button>
+                    {!isProUser && (
+                      <p className="text-[10px] text-neutral-500 mt-1.5">
+                        Wallpaper is disabled on Free tier. Profile uses standard theme background.
+                      </p>
+                    )}
                     <input
                       type="file"
                       ref={bgFileInputRef}
@@ -2194,7 +2196,7 @@ export default function AdminDashboard() {
         <div 
           className={`w-full max-w-[280px] h-[560px] border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden transition-all duration-300 ${activeTheme.mockupBg}`}
           style={
-            profile.bg_image
+            (isProUser && profile.bg_image)
               ? {
                   backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.85)), url(${profile.bg_image})`,
                   backgroundSize: 'cover',
