@@ -35,9 +35,7 @@ import {
   QrCode,
   Download,
   Share2,
-  Palette,
-  Disc3,
-  Check
+  Palette
 } from 'lucide-react';
 
 interface LinkItem {
@@ -322,10 +320,9 @@ export default function AdminDashboard() {
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const customAudioInputRef = useRef<HTMLInputElement>(null);
-  const superadminAudioInputRef = useRef<HTMLInputElement>(null);
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'themes' | 'stories' | 'inbox' | 'analytics' | 'music_manager'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'themes' | 'stories' | 'inbox' | 'analytics'>('profile');
 
   const [profile, setProfile] = useState<ProfileData>({
     name: 'New Creator',
@@ -363,20 +360,12 @@ export default function AdminDashboard() {
   const [compressingStory, setCompressingStory] = useState(false);
   const [deletingStoryId, setDeletingStoryId] = useState<string | null>(null);
 
-  // Dynamic Music Library State
+  // Dynamic Music Library (Read-only for creators, managed via /superadmin)
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
   const [loadingMusic, setLoadingMusic] = useState(true);
   const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
   const [selectedTrackTitle, setSelectedTrackTitle] = useState<string>('');
   const [processingAudio, setProcessingAudio] = useState(false);
-
-  // Superadmin Music Manager State
-  const [newTrackTitle, setNewTrackTitle] = useState('');
-  const [newTrackCategory, setNewTrackCategory] = useState('Relax / Aesthetic');
-  const [newTrackDuration, setNewTrackDuration] = useState('1:30');
-  const [newTrackUrl, setNewTrackUrl] = useState('');
-  const [uploadingSuperMusic, setUploadingSuperMusic] = useState(false);
-  const [deletingTrackId, setDeletingTrackId] = useState<string | null>(null);
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -394,10 +383,6 @@ export default function AdminDashboard() {
 
   const activeUsername = currentUser?.username || 'creator';
   const isProUser = currentUser?.is_pro === 1;
-  const isSuperAdmin = currentUser?.role === 'admin' || 
-                       currentUser?.role === 'superadmin' || 
-                       activeUsername.toLowerCase() === 'vanth' || 
-                       activeUsername.toLowerCase() === 'aries';
 
   const viewsCount = profile.views || 0;
   const clicksCount = links.reduce((acc, l) => acc + (l.clicks || 0), 0);
@@ -598,101 +583,6 @@ export default function AdminDashboard() {
     } finally {
       setProcessingAudio(false);
       e.target.value = '';
-    }
-  };
-
-  // Superadmin: Upload MP3 to R2 and Add to Database
-  const handleSuperadminAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingSuperMusic(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('username', 'superadmin_library');
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setNewTrackUrl(data.url);
-        if (!newTrackTitle) {
-          setNewTrackTitle(file.name.replace(/\.[^/.]+$/, ''));
-        }
-      } else {
-        const err = await res.json().catch(() => null);
-        alert(err?.error || 'Failed to upload MP3 file to storage.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Network error while uploading MP3.');
-    } finally {
-      setUploadingSuperMusic(false);
-      e.target.value = '';
-    }
-  };
-
-  const handleAddMusicTrack = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTrackTitle.trim() || !newTrackUrl.trim()) {
-      alert('Please provide a track title and upload or paste an MP3 audio URL.');
-      return;
-    }
-
-    setUploadingSuperMusic(true);
-    try {
-      const res = await fetch('/api/music', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newTrackTitle.trim(),
-          category: newTrackCategory.trim(),
-          duration: newTrackDuration.trim() || '1:30',
-          url: newTrackUrl.trim(),
-        }),
-      });
-
-      if (res.ok) {
-        setNewTrackTitle('');
-        setNewTrackUrl('');
-        fetchMusicTracks();
-        alert('Music track added successfully to global library!');
-      } else {
-        const err = await res.json().catch(() => null);
-        alert(err?.error || 'Failed to add music track.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Network error while adding music track.');
-    } finally {
-      setUploadingSuperMusic(false);
-    }
-  };
-
-  const handleDeleteMusicTrack = async (trackId: string) => {
-    if (!confirm('Are you sure you want to delete this track from the global library?')) return;
-
-    setDeletingTrackId(trackId);
-    try {
-      const res = await fetch(`/api/music?id=${encodeURIComponent(trackId)}`, {
-        method: 'DELETE',
-      });
-
-      if (res.ok) {
-        setMusicTracks((prev) => prev.filter((t) => t.id !== trackId));
-      } else {
-        const err = await res.json().catch(() => null);
-        alert(err?.error || 'Failed to delete track.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Network error while deleting track.');
-    } finally {
-      setDeletingTrackId(null);
     }
   };
 
@@ -1050,7 +940,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row font-sans">
       <audio ref={previewAudioRef} onEnded={() => setPreviewingTrackId(null)} />
 
-      {/* Sidebar Navigation */}
+      {/* Sidebar Navigation (Clean: No Music Manager) */}
       <aside className="w-full md:w-64 bg-neutral-900 border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0">
         <div>
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800 mb-6">
@@ -1064,7 +954,7 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className={`w-2 h-2 rounded-full ${isProUser ? 'bg-amber-400' : 'bg-emerald-400'}`} />
                 <span className="text-[11px] text-neutral-400 font-medium">
-                  {isSuperAdmin ? 'Superadmin' : isProUser ? 'PRO Creator' : 'Free Creator'}
+                  {isProUser ? 'PRO Creator' : 'Free Creator'}
                 </span>
               </div>
             </div>
@@ -1131,26 +1021,6 @@ export default function AdminDashboard() {
                 </span>
               )}
             </button>
-
-            {/* TAB KHUSUS SUPERADMIN: Music Manager */}
-            {isSuperAdmin && (
-              <button
-                onClick={() => setActiveTab('music_manager')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
-                  activeTab === 'music_manager'
-                    ? 'bg-neutral-800 text-white shadow-sm'
-                    : 'text-neutral-400 hover:text-white hover:bg-neutral-850'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Disc3 className="w-4 h-4 text-emerald-400" />
-                  <span>Music Manager</span>
-                </div>
-                <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold">
-                  ADMIN
-                </span>
-              </button>
-            )}
 
             <button
               onClick={() => setActiveTab('inbox')}
@@ -2015,7 +1885,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Dynamic Soundtracks from Database */}
+              {/* Dynamic Soundtracks from Superadmin Database */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] text-neutral-300 font-semibold flex items-center gap-1.5">
@@ -2084,6 +1954,7 @@ export default function AdminDashboard() {
                       ))
                     )}
 
+                    {/* Custom Audio Upload (Tetap Bisa Upload Sendiri) */}
                     <div className="p-2.5 rounded-lg bg-neutral-900/50 border border-dashed border-neutral-700 hover:border-emerald-500/50 flex items-center justify-between gap-2 transition col-span-1 sm:col-span-2">
                       <div className="truncate flex-1">
                         <p className="text-xs font-medium text-neutral-200 flex items-center gap-1.5 truncate">
@@ -2099,7 +1970,7 @@ export default function AdminDashboard() {
                         type="button"
                         disabled={processingAudio}
                         onClick={() => customAudioInputRef.current?.click()}
-                        className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-emerald-400 hover:text-emerald-300 font-bold text-[10px] transition disabled:opacity-50 shrink-0"
+                        className="px-2.5 py-1.5 rounded-lg bg-neutral-850 hover:bg-neutral-750 text-emerald-400 hover:text-emerald-300 font-bold text-[10px] transition disabled:opacity-50 shrink-0"
                       >
                         {processingAudio ? 'Trimming...' : 'Upload MP3'}
                       </button>
@@ -2178,179 +2049,6 @@ export default function AdminDashboard() {
                         onClick={() => handleDeleteStory(st.id)}
                         className="p-2 rounded-xl bg-neutral-800 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition shrink-0 disabled:opacity-50"
                         title="Delete story"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* TAB KHUSUS SUPERADMIN: Music Manager */}
-        {activeTab === 'music_manager' && isSuperAdmin && (
-          <div className="max-w-3xl flex flex-col gap-6">
-            <div>
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                <Disc3 className="w-5 h-5 text-emerald-400" />
-                <span>Global Music Library Manager</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
-                  SUPERADMIN
-                </span>
-              </h1>
-              <p className="text-xs text-neutral-400 mt-1">
-                Upload new MP3 soundtracks to Cloudflare Storage. Added tracks will instantly appear on all Free &amp; PRO creator dashboards globally.
-              </p>
-            </div>
-
-            {/* Form Tambah Track MP3 */}
-            <form onSubmit={handleAddMusicTrack} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Plus className="w-4 h-4 text-emerald-400" />
-                <span>Upload New Soundtrack</span>
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-[11px] text-neutral-400 block mb-1">Track Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Cyber City Drive"
-                    value={newTrackTitle}
-                    onChange={(e) => setNewTrackTitle(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-neutral-400 block mb-1">Category / Vibe</label>
-                  <select
-                    value={newTrackCategory}
-                    onChange={(e) => setNewTrackCategory(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
-                  >
-                    <option value="Relax / Aesthetic">Relax / Aesthetic</option>
-                    <option value="Energetic / Promo">Energetic / Promo</option>
-                    <option value="Acoustic / Warm">Acoustic / Warm</option>
-                    <option value="Atmospheric / Elegant">Atmospheric / Elegant</option>
-                    <option value="Tech / Futuristic">Tech / Futuristic</option>
-                    <option value="Hip Hop / Beats">Hip Hop / Beats</option>
-                    <option value="Cinematic / Epic">Cinematic / Epic</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-neutral-400 block mb-1">Duration Tag</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 1:45"
-                    value={newTrackDuration}
-                    onChange={(e) => setNewTrackDuration(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
-                  />
-                </div>
-              </div>
-
-              {/* Upload MP3 File or Direct URL */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 p-3.5 rounded-xl bg-neutral-950 border border-neutral-800">
-                <button
-                  type="button"
-                  disabled={uploadingSuperMusic}
-                  onClick={() => superadminAudioInputRef.current?.click()}
-                  className="px-4 py-2 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-emerald-400 text-xs font-semibold flex items-center gap-2 transition shrink-0 disabled:opacity-50"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>{uploadingSuperMusic ? 'Uploading MP3...' : 'Upload MP3 File'}</span>
-                </button>
-
-                <span className="text-xs text-neutral-500">or</span>
-
-                <input
-                  type="url"
-                  placeholder="Paste direct .mp3 URL (e.g. https://.../audio.mp3)"
-                  value={newTrackUrl}
-                  onChange={(e) => setNewTrackUrl(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
-                />
-
-                <input
-                  type="file"
-                  ref={superadminAudioInputRef}
-                  accept="audio/mp3,audio/*"
-                  onChange={handleSuperadminAudioUpload}
-                  className="hidden"
-                />
-              </div>
-
-              {newTrackUrl && (
-                <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-400 flex items-center justify-between">
-                  <span className="truncate pr-2 font-medium">Ready: {newTrackUrl}</span>
-                  <Check className="w-4 h-4 shrink-0" />
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={uploadingSuperMusic || !newTrackTitle || !newTrackUrl}
-                className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/20"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Save Track to Creator Library</span>
-              </button>
-            </form>
-
-            {/* List Lagu Aktif di Database */}
-            <div>
-              <h3 className="text-xs font-bold text-neutral-300 uppercase tracking-wider mb-3">
-                Active Library Soundtracks ({musicTracks.length})
-              </h3>
-
-              {loadingMusic ? (
-                <p className="text-xs text-neutral-500 py-6 text-center">Loading soundtracks from database...</p>
-              ) : musicTracks.length === 0 ? (
-                <div className="p-8 rounded-2xl bg-neutral-900 border border-neutral-800 text-center">
-                  <Disc3 className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
-                  <p className="text-xs text-neutral-400">Library is currently empty. Upload the first track above.</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2.5">
-                  {musicTracks.map((track) => (
-                    <div
-                      key={track.id}
-                      className="p-3.5 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-between gap-4 hover:border-neutral-700 transition"
-                    >
-                      <div className="flex items-center gap-3 truncate flex-1">
-                        <button
-                          type="button"
-                          onClick={() => handleTogglePreview(track)}
-                          className="w-9 h-9 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center text-neutral-300 hover:text-white transition shrink-0"
-                          title={previewingTrackId === track.id ? 'Pause Preview' : 'Play Preview'}
-                        >
-                          {previewingTrackId === track.id ? (
-                            <Pause className="w-4 h-4 text-emerald-400" />
-                          ) : (
-                            <Play className="w-4 h-4 text-neutral-400" />
-                          )}
-                        </button>
-
-                        <div className="truncate flex-1">
-                          <p className="text-xs font-bold text-white truncate">{track.title}</p>
-                          <p className="text-[10px] text-neutral-400 truncate mt-0.5">
-                            {track.category} • {track.duration}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        disabled={deletingTrackId === track.id}
-                        onClick={() => handleDeleteMusicTrack(track.id)}
-                        className="p-2 rounded-xl bg-neutral-800 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition shrink-0 disabled:opacity-50"
-                        title="Delete soundtrack"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -2581,7 +2279,7 @@ export default function AdminDashboard() {
                     className={`relative w-full py-2.5 px-3 rounded-xl border text-[10px] text-center truncate shadow-sm transition backdrop-blur-sm ${
                       isSpotlight
                         ? 'bg-gradient-to-r from-amber-500/20 via-neutral-900 to-amber-500/20 border-amber-400 text-amber-300 font-bold shadow-amber-500/10'
-                        : `${activeTheme.cardBg} ${activeTheme.cardBorder} ${activeTheme.textPrimary}`
+                        : `${activeTheme.cardBg} ${activeTheme.cardBorder}${activeTheme.textPrimary}`
                     }`}
                   >
                     {isSpotlight && (
