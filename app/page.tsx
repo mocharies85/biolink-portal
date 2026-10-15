@@ -6,14 +6,13 @@ import { useRouter } from 'next/navigation';
 import {
   Sparkles,
   ArrowRight,
-  Zap,
-  BarChart3,
+  Radio,
+  Flame,
+  Palette,
+  Share2,
   MessageSquare,
-  ShieldCheck,
-  CheckCircle2,
+  BarChart3,
   ExternalLink,
-  Smartphone,
-  Globe,
   X,
   Check
 } from 'lucide-react';
@@ -23,7 +22,7 @@ export default function HomePage() {
   const [claimUsername, setClaimUsername] = useState('');
   const [showPromo, setShowPromo] = useState(false);
 
-  // Munculkan popup otomatis setelah 3 detik
+  // Munculkan pop-up promo otomatis setelah 3 detik
   useEffect(() => {
     const timer = setTimeout(() => {
       const seen = sessionStorage.getItem('curiolot_promo_closed');
@@ -91,17 +90,14 @@ export default function HomePage() {
       {/* Hero Section */}
       <main className="flex-1">
         <section className="relative pt-20 pb-16 px-6 overflow-hidden">
-          {/* Subtle Ambient Glow */}
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[350px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="max-w-4xl mx-auto text-center relative z-10">
-            {/* Top Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[11px] text-emerald-400 font-semibold mb-6 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>Next-Generation Bio Hub for Independent Creators</span>
             </div>
 
-            {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-tight">
               One sleek link to share <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
@@ -109,7 +105,6 @@ export default function HomePage() {
               </span>
             </h1>
 
-            {/* Sub-headline */}
             <p className="mt-5 text-sm sm:text-base text-neutral-400 max-w-2xl mx-auto leading-relaxed">
               Ditch heavy, slow bio pages. Curiolot delivers clean profiles, instant visitor inquiries, 
               and privacy-friendly analytics—powered globally by Cloudflare Edge.
@@ -143,37 +138,73 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Feature Highlights Grid */}
+        {/* Feature Highlights Grid (6 Kartu Fitur Lengkap) */}
         <section className="max-w-5xl mx-auto px-6 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             
-            <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-850 hover:border-neutral-750 transition flex flex-col gap-3">
+            {/* Card 1: 24h Stories */}
+            <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-emerald-500/40 transition flex flex-col gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                <Zap className="w-5 h-5" />
+                <Radio className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-bold text-white">Edge-Powered Speed</h3>
+              <h3 className="text-sm font-bold text-white">24h Visual Stories</h3>
               <p className="text-xs text-neutral-400 leading-relaxed">
-                Loads instantaneously from 300+ edge locations worldwide. Zero unnecessary scripts or slow third-party trackers.
+                Post photo and video updates with background soundtracks and clickable link stickers that automatically expire after 24 hours.
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-850 hover:border-neutral-750 transition flex flex-col gap-3">
+            {/* Card 2: Spotlight Glow */}
+            <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-amber-500/40 transition flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <Flame className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white">Spotlight Glow Links</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Highlight priority content, drops, or affiliate offers with eye-catching gold neon glow animations and 'HOT' badges to multiply clicks.
+              </p>
+            </div>
+
+            {/* Card 3: Themes & Wallpaper */}
+            <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                <Palette className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white">Curated Themes &amp; Wallpapers</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Choose from sleek dark and vibrant neon color palettes, or upload your own high-resolution backdrop wallpaper for complete branding.
+              </p>
+            </div>
+
+            {/* Card 4: Social Share Card & SEO */}
+            <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
+                <Share2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white">Custom Social Share Cards</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Stand out in chats with dedicated 1200x630 rich banner previews, custom titles, and meta descriptions when shared on WhatsApp, Telegram, or X.
+              </p>
+            </div>
+
+            {/* Card 5: Audience Inbox */}
+            <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition flex flex-col gap-3">
               <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
                 <MessageSquare className="w-5 h-5" />
               </div>
               <h3 className="text-sm font-bold text-white">Direct Audience Inbox</h3>
               <p className="text-xs text-neutral-400 leading-relaxed">
-                Allow visitors to send you inquiries and feedback straight from your profile page directly to your dashboard.
+                Let your fans and brand partners submit collaboration proposals, questions, and inquiries directly to your dashboard inbox.
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-850 hover:border-neutral-750 transition flex flex-col gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            {/* Card 6: Actionable Analytics */}
+            <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
                 <BarChart3 className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-bold text-white">Actionable Analytics</h3>
+              <h3 className="text-sm font-bold text-white">Actionable Traffic Analytics</h3>
               <p className="text-xs text-neutral-400 leading-relaxed">
-                Track individual link clicks, overall click-through rates (CTR), and visitor referrer channels with precision.
+                Monitor individual link CTR, device breakdown (mobile vs desktop), and live traffic referrers without sacrificing visitor privacy.
               </p>
             </div>
 
@@ -201,7 +232,7 @@ export default function HomePage() {
               <Link
                 href="/aries"
                 target="_blank"
-                className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-755 text-xs font-semibold text-neutral-200 transition flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-xs font-semibold text-neutral-200 transition flex items-center gap-1.5"
               >
                 <span>View @aries</span>
                 <ExternalLink className="w-3 h-3 text-neutral-400" />
@@ -316,7 +347,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Tombol FREE: Menutup Modal dan Melihat Beranda */}
+                {/* Tombol FREE */}
                 <button
                   type="button"
                   onClick={handleClosePromo}
@@ -362,7 +393,7 @@ export default function HomePage() {
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                      <span><strong className="text-amber-200">60s Video & 25s Photo Stories:</strong> 60s video streaming via R2 + custom MP3 upload.</span>
+                      <span><strong className="text-amber-200">60s Video & 25s/45s/60s Photo:</strong> Streaming video 60s via R2 + custom audio upload.</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
@@ -376,14 +407,10 @@ export default function HomePage() {
                       <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
                       <span><strong className="text-amber-200">Verified Gold PRO Badge:</strong> Gold checkmark badge beside your name for instant trust.</span>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                      <span><strong className="text-amber-200">Priority Feature Access:</strong> Always be the first to experience upcoming features.</span>
-                    </div>
                   </div>
                 </div>
 
-                {/* Tombol PRO: Dialihkan ke Halaman Pembayaran Ko-fi */}
+                {/* Tombol PRO */}
                 <a
                   href="https://ko-fi.com/cycrack"
                   target="_blank"
