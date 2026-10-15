@@ -538,11 +538,28 @@ export default function AdminDashboard() {
     }
 
     try {
-      const compressed = await compressImage(file, 1200, 630, 0.85);
-      setProfile((prev) => ({ ...prev, og_image: compressed }));
+      // Unggah gambar banner ke Cloudflare R2 agar menghasilkan URL publik https://...
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('username', activeUsername);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setProfile((prev) => ({ ...prev, og_image: data.url }));
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Failed to upload banner to Cloudflare storage.');
+      }
     } catch (err) {
-      console.error('Error processing OG image:', err);
-      alert('Failed to process social share image.');
+      console.error('Error uploading OG image:', err);
+      alert('Network error while uploading banner.');
+    } finally {
+      e.target.value = '';
     }
   };
 
