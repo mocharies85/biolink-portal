@@ -167,6 +167,64 @@ const THEME_OPTIONS = [
   { id: 'sunset', name: 'Sunset Crimson', preview: 'bg-[#290e14] border-amber-600', isPro: true },
 ];
 
+const THEME_STYLES: Record<string, {
+  mockupBg: string;
+  cardBg: string;
+  cardBorder: string;
+  textPrimary: string;
+  textSecondary: string;
+  accent: string;
+}> = {
+  dark: {
+    mockupBg: 'bg-neutral-950',
+    cardBg: 'bg-neutral-900/90',
+    cardBorder: 'border-neutral-800',
+    textPrimary: 'text-neutral-100',
+    textSecondary: 'text-neutral-400',
+    accent: 'text-emerald-400',
+  },
+  light: {
+    mockupBg: 'bg-slate-50',
+    cardBg: 'bg-white shadow-sm',
+    cardBorder: 'border-slate-200',
+    textPrimary: 'text-slate-900',
+    textSecondary: 'text-slate-600',
+    accent: 'text-indigo-600',
+  },
+  emerald: {
+    mockupBg: 'bg-[#061a14]',
+    cardBg: 'bg-[#0a261e]/90',
+    cardBorder: 'border-emerald-900/60',
+    textPrimary: 'text-emerald-100',
+    textSecondary: 'text-emerald-400/80',
+    accent: 'text-emerald-400',
+  },
+  midnight: {
+    mockupBg: 'bg-[#0b0f19]',
+    cardBg: 'bg-[#111827]/90',
+    cardBorder: 'border-slate-800',
+    textPrimary: 'text-slate-100',
+    textSecondary: 'text-slate-400',
+    accent: 'text-sky-400',
+  },
+  cyberpunk: {
+    mockupBg: 'bg-[#080312]',
+    cardBg: 'bg-[#150a29]/90',
+    cardBorder: 'border-fuchsia-900/60',
+    textPrimary: 'text-fuchsia-100',
+    textSecondary: 'text-fuchsia-300/70',
+    accent: 'text-yellow-400',
+  },
+  sunset: {
+    mockupBg: 'bg-[#18080a]',
+    cardBg: 'bg-[#260e12]/90',
+    cardBorder: 'border-amber-950/80',
+    textPrimary: 'text-amber-100',
+    textSecondary: 'text-rose-300/80',
+    accent: 'text-amber-400',
+  },
+};
+
 const compressImage = (
   file: File, 
   maxWidth = 1080, 
@@ -204,7 +262,6 @@ const compressImage = (
 
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Jika forceJpeg aktif, paksa selalu hasilkan image/jpeg murni untuk WhatsApp
         if (forceJpeg) {
           resolve(canvas.toDataURL('image/jpeg', quality));
           return;
@@ -363,6 +420,9 @@ export default function AdminDashboard() {
   const isProUser = currentUser?.is_pro === 1;
   const viewsCount = profile.views || 0;
   const clicksCount = links.reduce((acc, l) => acc + (l.clicks || 0), 0);
+
+  const currentThemeKey = profile.theme && THEME_STYLES[profile.theme] ? profile.theme : 'dark';
+  const activeTheme = THEME_STYLES[currentThemeKey];
 
   const plannedDuration = storyMediaType === 'video'
     ? 60
@@ -567,7 +627,6 @@ export default function AdminDashboard() {
     }
 
     try {
-      // 800x418 (rasio 1.91:1) kualitas 0.70 menghasilkan file JPEG murni ~100KB-140KB (Sangat aman untuk batas 300KB WhatsApp)
       const compressed = await compressImage(file, 800, 418, 0.70, true);
       setProfile((prev) => ({ ...prev, og_image: compressed }));
     } catch (err) {
@@ -1368,11 +1427,8 @@ export default function AdminDashboard() {
                         key={thm.id}
                         type="button"
                         onClick={() => {
-                          if (isLocked) {
-                            setShowUpgradeModal(true);
-                            return;
-                          }
-                          setProfile({ ...profile, theme: thm.id });
+                          // Seketika mengubah tampilan di mockup ponsel sebelah kanan
+                          setProfile((prev) => ({ ...prev, theme: thm.id }));
                         }}
                         className={`p-3 rounded-2xl border text-left transition flex flex-col gap-2 relative overflow-hidden ${
                           isSelected
@@ -1397,18 +1453,16 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Custom Background Wallpaper */}
+              {/* Custom Background Wallpaper (PRO Only) */}
               <div className="pt-5 border-t border-neutral-800 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <label className="text-xs font-bold text-white flex items-center gap-1.5">
                       <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
                       <span>Custom Background Wallpaper</span>
-                      {!isProUser && (
-                        <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
-                          PRO
-                        </span>
-                      )}
+                      <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold flex items-center gap-0.5 shadow-sm">
+                        <Sparkles className="w-2.5 h-2.5" /> PRO
+                      </span>
                     </label>
                     <p className="text-[11px] text-neutral-400 mt-0.5">
                       Upload your own high-resolution backdrop image for your bio page.
@@ -1417,7 +1471,13 @@ export default function AdminDashboard() {
                   {profile.bg_image && (
                     <button
                       type="button"
-                      onClick={() => setProfile({ ...profile, bg_image: '' })}
+                      onClick={() => {
+                        if (!isProUser) {
+                          setShowUpgradeModal(true);
+                          return;
+                        }
+                        setProfile((prev) => ({ ...prev, bg_image: '' }));
+                      }}
                       className="text-xs text-rose-400 hover:underline"
                     >
                       Remove
@@ -1444,10 +1504,23 @@ export default function AdminDashboard() {
                         }
                         bgFileInputRef.current?.click();
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition"
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition ${
+                        isProUser
+                          ? 'bg-neutral-850 hover:bg-neutral-800 border-neutral-700 text-neutral-200'
+                          : 'bg-neutral-900 border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
+                      }`}
                     >
-                      <Upload className="w-3.5 h-3.5 text-amber-400" />
-                      <span>{profile.bg_image ? 'Change Wallpaper' : 'Upload Wallpaper'}</span>
+                      {isProUser ? (
+                        <>
+                          <Upload className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{profile.bg_image ? 'Change Wallpaper' : 'Upload Wallpaper'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Unlock Wallpaper (PRO)</span>
+                        </>
+                      )}
                     </button>
                     <input
                       type="file"
@@ -1468,7 +1541,14 @@ export default function AdminDashboard() {
                 )}
                 <button
                   type="button"
-                  onClick={() => handleSaveProfile()}
+                  onClick={() => {
+                    const selectedThemeObj = THEME_OPTIONS.find((t) => t.id === (profile.theme || 'dark'));
+                    if (selectedThemeObj?.isPro && !isProUser) {
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+                    handleSaveProfile();
+                  }}
                   disabled={savingProfile}
                   className="ml-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/20"
                 >
@@ -1537,7 +1617,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Spotlight Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-850">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-855">
                 <div className="flex items-center gap-2">
                   <Flame className={`w-4 h-4 ${newIsSpotlight ? 'text-amber-400' : 'text-neutral-500'}`} />
                   <div>
@@ -2112,7 +2192,7 @@ export default function AdminDashboard() {
       {/* Right Side Mockup Phone Preview */}
       <aside className="hidden xl:flex w-96 bg-neutral-900/40 border-l border-neutral-800 p-8 items-center justify-center shrink-0">
         <div 
-          className="w-full max-w-[280px] h-[560px] bg-neutral-950 border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden transition-all duration-300"
+          className={`w-full max-w-[280px] h-[560px] border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden transition-all duration-300 ${activeTheme.mockupBg}`}
           style={
             profile.bg_image
               ? {
@@ -2144,7 +2224,9 @@ export default function AdminDashboard() {
             </div>
 
             <div className="flex items-center justify-center gap-1 mt-1">
-              <h4 className="text-xs font-bold text-white text-center truncate max-w-[180px]">{profile.name}</h4>
+              <h4 className={`text-xs font-bold text-center truncate max-w-[180px] ${activeTheme.textPrimary}`}>
+                {profile.name}
+              </h4>
               {isProUser && (
                 <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[8px] font-bold border border-amber-500/30">
                   PRO
@@ -2152,9 +2234,13 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            <p className="text-[10px] text-emerald-400 font-medium text-center">{profile.tagline}</p>
+            <p className={`text-[10px] font-medium text-center ${activeTheme.accent}`}>
+              {profile.tagline}
+            </p>
             {profile.bio && (
-              <p className="text-[9px] text-neutral-300 text-center mt-1 px-2 line-clamp-2 leading-relaxed">{profile.bio}</p>
+              <p className={`text-[9px] text-center mt-1 px-2 line-clamp-2 leading-relaxed ${activeTheme.textSecondary}`}>
+                {profile.bio}
+              </p>
             )}
 
             {/* Social Icons Bar in Mockup */}
@@ -2181,7 +2267,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Links in Mockup */}
+            {/* Links in Mockup with Dynamic Theme Styling */}
             <div className="w-full flex flex-col gap-2 mt-2">
               {links.map((l) => {
                 const isSpotlight = l.is_spotlight === 1;
@@ -2192,7 +2278,7 @@ export default function AdminDashboard() {
                     className={`relative w-full py-2.5 px-3 rounded-xl border text-[10px] text-center truncate shadow-sm transition backdrop-blur-sm ${
                       isSpotlight
                         ? 'bg-gradient-to-r from-amber-500/20 via-neutral-900 to-amber-500/20 border-amber-400 text-amber-300 font-bold shadow-amber-500/10'
-                        : 'bg-black/40 border-white/10 text-neutral-200'
+                        : `${activeTheme.cardBg} ${activeTheme.cardBorder}${activeTheme.textPrimary}`
                     }`}
                   >
                     {isSpotlight && (
@@ -2254,11 +2340,12 @@ export default function AdminDashboard() {
 
       {/* Upgrade Modal */}
       {showUpgradeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
             
+            {/* Header Modal */}
             <div className="text-center">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-neutral-950 font-bold text-xl mx-auto shadow-lg shadow-amber-500/20">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 flex items-center justify-center text-neutral-950 font-bold text-xl mx-auto shadow-lg shadow-amber-500/25">
                 ⭐
               </div>
               <h3 className="text-lg font-bold text-white mt-3">Upgrade to Curiolot Link PRO</h3>
@@ -2266,78 +2353,83 @@ export default function AdminDashboard() {
               <div className="flex items-baseline justify-center gap-1 mt-2">
                 <span className="text-3xl font-black text-white tracking-tight">$3</span>
                 <span className="text-xs text-neutral-400 font-medium">/ month</span>
-                <span className="ml-2 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                <span className="ml-2 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
                   Cancel anytime
                 </span>
               </div>
               
               <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">
-                Supercharge your biolink with creator tools designed to boost engagement and branding.
+                Buka semua fitur kreator eksklusif untuk meningkatkan personal branding, konversi klik, dan kredibilitas profil Anda.
               </p>
             </div>
 
-            <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
+            {/* List Fasilitas Unggulan PRO */}
+            <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-3 text-xs text-neutral-300">
+              
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
-                  <strong className="text-white">Custom Wallpapers &amp; Themes:</strong> Unlock Neon Cyberpunk, Sunset, and custom background image uploads.
+                  <strong className="text-white">Custom Background Wallpaper &amp; PRO Themes:</strong> Bebas unggah wallpaper latar beresolusi tinggi serta akses tema premium (Neon Cyberpunk &amp; Sunset Crimson).
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
-                  <strong className="text-white">Spotlight Glow Links:</strong> Animated gold neon glow &amp; 'HOT' badge to maximize clicks.
+                  <strong className="text-white">Custom Social Share Card &amp; SEO:</strong> Banner thumbnail khusus 1200x630, custom judul, dan deskripsi pratinjau saat link dibagikan di WhatsApp, Telegram, dan X.
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
-                  <strong className="text-white">Custom Social Share Card &amp; SEO:</strong> Custom rich banner thumbnail when shared on WhatsApp, Telegram &amp; X.
+                  <strong className="text-white">Spotlight Glow &amp; 'HOT' Badge:</strong> Efek animasi neon emas menyala pada tautan prioritas untuk melipatgandakan jumlah klik audiens (CTR).
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
-                  <strong className="text-white">60s Video &amp; 25s Photo Stories:</strong> Full 60s video streaming via Cloudflare R2 (Free: 10s Photo only).
+                  <strong className="text-white">60s Video &amp; 25s Photo 24h Stories:</strong> Dukungan penuh video streaming 60 detik via Cloudflare R2, durasi foto 25 detik (Free hanya 10 detik), serta bebas unggah custom audio MP3.
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
-                  <strong className="text-white">Unlimited Links &amp; Content:</strong> Bypass the 3-link limit and build complete creator hubs.
+                  <strong className="text-white">Unlimited Links &amp; Content:</strong> Pasang tautan portofolio, toko online, dan media sosial tanpa batas (Akun Free dibatasi maksimal 3 link).
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
-                  <strong className="text-white">Advanced Real-Time Analytics:</strong> Device breakdown (iOS/Android vs Desktop) &amp; live traffic referrers.
+                  <strong className="text-white">Deep Real-Time Analytics:</strong> Analisis CTR per tautan, pembagian perangkat pengunjung (iOS/Android vs Desktop), dan rincian sumber trafik (Top Referrers).
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
-                  <strong className="text-white">Verified PRO Badge:</strong> Exclusive gold verification badge displayed beside your name.
+                  <strong className="text-white">Verified PRO Badge:</strong> Lencana verifikasi emas eksklusif di samping nama profil untuk meningkatkan kepercayaan audiens dan klien bisnis.
                 </div>
               </div>
+
             </div>
 
+            {/* Kotak Info Aktivasi Instan */}
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-5">
-              💡 <strong>Instant Activation:</strong> When subscribing on Ko-fi, please keep your account email (<strong>{currentUser?.email}</strong>) or write <strong>@{activeUsername}</strong> in the message box. Your account unlocks automatically!
+              💡 <strong>Instant Activation:</strong> Saat berlangganan via Ko-fi, gunakan email akun Anda (<strong>{currentUser?.email}</strong>) atau tulis <strong>@{activeUsername}</strong> di kolom pesan. Fitur PRO akan langsung aktif otomatis!
             </div>
 
+            {/* Tombol Aksi */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setShowUpgradeModal(false)}
                 className="w-1/3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
               >
-                Cancel
+                Kembali
               </button>
               <a
                 href="https://ko-fi.com/cycrack"
