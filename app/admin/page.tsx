@@ -167,7 +167,13 @@ const THEME_OPTIONS = [
   { id: 'sunset', name: 'Sunset Crimson', preview: 'bg-[#290e14] border-amber-600', isPro: true },
 ];
 
-const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 0.75): Promise<string> => {
+const compressImage = (
+  file: File, 
+  maxWidth = 1080, 
+  maxHeight = 1920, 
+  quality = 0.75, 
+  forceJpeg = false
+): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -197,6 +203,12 @@ const compressImage = (file: File, maxWidth = 1080, maxHeight = 1920, quality = 
         }
 
         ctx.drawImage(img, 0, 0, width, height);
+
+        // Jika forceJpeg aktif, paksa selalu hasilkan image/jpeg murni untuk WhatsApp
+        if (forceJpeg) {
+          resolve(canvas.toDataURL('image/jpeg', quality));
+          return;
+        }
 
         let compressed = canvas.toDataURL('image/webp', quality);
         if (!compressed.startsWith('data:image/webp')) {
@@ -555,7 +567,8 @@ export default function AdminDashboard() {
     }
 
     try {
-      const compressed = await compressImage(file, 1200, 630, 0.85);
+      // 1200x630 dengan kualitas 0.78 menghasilkan file JPEG murni ~150KB (Sangat disukai WhatsApp)
+      const compressed = await compressImage(file, 1200, 630, 0.78, true);
       setProfile((prev) => ({ ...prev, og_image: compressed }));
     } catch (err) {
       console.error('Error processing OG image:', err);

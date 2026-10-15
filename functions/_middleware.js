@@ -15,7 +15,54 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const pathname = url.pathname;
 
-  // Abaikan API, asset Next.js, file statis, dan rute dasbor
+  // 1. Tangani permintaan gambar langsung khusus WhatsApp/Telegram: /og-image/username.jpg
+  if (pathname.startsWith('/og-image/')) {
+    const filename = pathname.replace('/og-image/', '');
+    const cleanUsername = filename.replace(/\.(jpg|jpeg|png|webp)$/i, '').toLowerCase();
+
+    if (cleanUsername) {
+      try {
+        const profile = await env.DB.prepare(
+          'SELECT og_image, avatar FROM user_profiles WHERE LOWER(username) = ?'
+        ).bind(cleanUsername).first();
+
+        const rawImage = profile?.og_image || profile?.avatar || '';
+
+        if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
+          return Response.redirect(rawImage, 302);
+        }
+
+        const cleanData = rawImage.trim();
+        const commaIndex = cleanData.indexOf(',');
+
+        if (cleanData.startsWith('data:image/') && commaIndex !== -1) {
+          const base64Data = cleanData.substring(commaIndex + 1);
+          const binaryString = atob(base64Data);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          return new Response(bytes, {
+            status: 200,
+            headers: {
+              'Content-Type': 'image/jpeg',
+              'Content-Length': String(bytes.length),
+              'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+              'Access-Control-Allow-Origin': '*'
+            }
+          });
+        }
+
+        return Response.redirect('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop', 302);
+      } catch (err) {
+        return new Response('Error loading image', { status: 500 });
+      }
+    }
+  }
+
+  // 2. Abaikan API, asset Next.js, file statis, dan rute dashboard
   if (
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
@@ -62,8 +109,8 @@ export async function onRequest(context) {
     const cardTitle = profile.og_title?.trim() || profile.name || `@${username} | Curiolot Link`;
     const cardDesc = profile.og_description?.trim() || profile.bio || profile.tagline || `Explore portfolio, links, and updates from @${username}.`;
     
-    // Gunakan URL endpoint API publik agar bot perayap media sosial dapat mengunduhnya secara valid
-    const cardImageUrl = `${url.origin}/api/og-image?username=${encodeURIComponent(username)}`;
+    // URL gambar berakhiran .jpg langsung tanpa tanda tanya agar ramah WhatsApp
+    const cardImageUrl = `${url.origin}/og-image/${encodeURIComponent(username)}.jpg`;
 
     return new HTMLRewriter()
       .on('title', {
@@ -75,10 +122,12 @@ export async function onRequest(context) {
         element(e) {
           e.append(`\n  <!-- Dynamic OpenGraph & Twitter Card Injected by Cloudflare Edge -->\n`, { html: true });
           e.append(`  <meta property="og:site_name" content="Curiolot Link" />\n`, { html: true });
-          e.append(`  <meta property="og:type" content="profile" />\n`, { html: true });
+          e.append(`  <meta property="og:type" content="website" />\n`, { html: true });
           e.append(`  <meta property="og:title" content="${escapeHtml(cardTitle)}" />\n`, { html: true });
           e.append(`  <meta property="og:description" content="${escapeHtml(cardDesc)}" />\n`, { html: true });
           e.append(`  <meta property="og:image" content="${escapeHtml(cardImageUrl)}" />\n`, { html: true });
+          e.append(`  <meta property="og:image:secure_url" content="${escapeHtml(cardImageUrl)}" />\n`, { html: true });
+          e.append(`  <meta property="og:image:type" content="image/jpeg" />\n`, { html: true });
           e.append(`  <meta property="og:image:width" content="1200" />\n`, { html: true });
           e.append(`  <meta property="og:image:height" content="630" />\n`, { html: true });
           e.append(`  <meta property="og:url" content="${escapeHtml(url.href)}" />\n`, { html: true });
