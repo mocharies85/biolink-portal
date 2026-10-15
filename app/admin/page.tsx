@@ -2063,45 +2063,88 @@ export default function AdminDashboard() {
 
       {/* Upgrade Modal */}
       {showUpgradeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            
+            {/* Header Modal & Harga */}
             <div className="text-center">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-neutral-950 font-bold text-xl mx-auto shadow-lg shadow-amber-500/20">
                 ⭐
               </div>
-              <h3 className="text-lg font-bold text-white mt-4">Upgrade to Curiolot Link PRO</h3>
-              <p className="text-xs text-neutral-400 mt-1">
-                Unlock full platform capabilities and grow your audience without limits.
+              <h3 className="text-lg font-bold text-white mt-3">Upgrade to Curiolot Link PRO</h3>
+              
+              {/* Price Tag */}
+              <div className="flex items-baseline justify-center gap-1 mt-2">
+                <span className="text-3xl font-black text-white tracking-tight">$3</span>
+                <span className="text-xs text-neutral-400 font-medium">/ month</span>
+                <span className="ml-2 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                  Cancel anytime
+                </span>
+              </div>
+              
+              <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">
+                Supercharge your biolink with creator tools designed to boost engagement and branding.
               </p>
             </div>
 
-            <div className="my-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Custom Social Share Card &amp; SEO</strong> for WhatsApp &amp; Twitter</span>
+            {/* List Keuntungan PRO Lengkap */}
+            <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2.5 text-xs text-neutral-300">
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Spotlight Glow Links:</strong> Animated gold neon glow &amp; 'HOT' badge to maximize clicks.
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Spotlight Glow Links</strong> with exclusive HOT badge</span>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Custom Social Share Card &amp; SEO:</strong> Custom rich banner thumbnail when shared on WhatsApp, Telegram &amp; X.
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>60s Video &amp; 25s Photo Stories</strong> (Free tier: 10s Photo only)</span>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">60s Video &amp; 25s Photo Stories:</strong> Full 60s video streaming via Cloudflare R2 (Free: 10s Photo only).
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Unlimited links</strong> (bypass 3-link free limit)</span>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Unlimited Links &amp; Content:</strong> Bypass the 3-link limit and build complete creator hubs.
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span>Exclusive verified <strong>PRO badge</strong> on your bio page</span>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Advanced Real-Time Analytics:</strong> Device breakdown (iOS/Android vs Desktop) &amp; live traffic referrers.
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Verified PRO Badge:</strong> Exclusive gold verification badge displayed beside your name.
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Priority Creator Support:</strong> Direct assistance from our team for custom requests.
+                </div>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-6">
-              💡 <strong>Instant Activation:</strong> When paying on Ko-fi, please keep your account email (<strong>{currentUser?.email}</strong>) or write <strong>@{activeUsername}</strong> in the message box. Your account unlocks automatically!
+            {/* Kotak Aktivasi Ko-fi */}
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-5">
+              💡 <strong>Instant Activation:</strong> When subscribing on Ko-fi, please keep your account email (<strong>{currentUser?.email}</strong>) or write <strong>@{activeUsername}</strong> in the message box. Your account unlocks automatically!
             </div>
 
+            {/* Tombol Aksi */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -2117,10 +2160,11 @@ export default function AdminDashboard() {
                 onClick={() => setShowUpgradeModal(false)}
                 className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
               >
-                <span>Upgrade on Ko-fi</span>
+                <span>Get PRO Access ($3/mo)</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
+
           </div>
         </div>
       )}
