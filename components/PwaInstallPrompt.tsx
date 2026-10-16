@@ -8,7 +8,6 @@ export default function PwaInstallPrompt() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Tangkap event instalasi bawaan browser Android/Chrome
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -23,7 +22,6 @@ export default function PwaInstallPrompt() {
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
 
-    // Munculkan dialog instalasi asli milik sistem HP
     deferredPrompt.prompt();
 
     const { outcome } = await deferredPrompt.userChoice;
@@ -42,8 +40,8 @@ export default function PwaInstallPrompt() {
           <Download className="w-5 h-5 text-emerald-400" />
         </div>
         <div className="text-left">
-          <p className="text-xs font-semibold">Pasang Aplikasi Curiolot</p>
-          <p className="text-[10px] text-neutral-400">Akses lebih cepat langsung dari layar utama HP</p>
+          <p className="text-xs font-semibold">Install Curiolot App</p>
+          <p className="text-[10px] text-neutral-400">Instant access right from your home screen</p>
         </div>
       </div>
 
@@ -53,12 +51,13 @@ export default function PwaInstallPrompt() {
           onClick={handleInstallClick}
           className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition"
         >
-          Instal
+          Install
         </button>
         <button
           type="button"
           onClick={() => setIsVisible(false)}
           className="p-1 rounded-md text-neutral-500 hover:text-white transition"
+          aria-label="Close"
         >
           <X className="w-4 h-4" />
         </button>
