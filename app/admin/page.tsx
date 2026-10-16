@@ -323,6 +323,30 @@ export default function AdminDashboard() {
   const bgFileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Inisialisasi satu instance Audio player stabil (anti re-render)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const audio = new Audio();
+      audio.preload = 'metadata';
+
+      audio.onended = () => {
+        setPreviewingTrackId(null);
+      };
+
+      audio.onerror = (e) => {
+        console.warn('Audio playback/load error:', e);
+        setPreviewingTrackId(null);
+      };
+
+      previewAudioRef.current = audio;
+
+      return () => {
+        audio.pause();
+        audio.src = '';
+      };
+    }
+  }, []);
   const customAudioInputRef = useRef<HTMLInputElement>(null);
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -543,7 +567,6 @@ export default function AdminDashboard() {
   }, [currentUser]);
 
   const handleTogglePreview = async (track: MusicTrack, e?: React.MouseEvent) => {
-    // 1. KUNCI UTAMA: Hentikan rembetan klik (event bubbling) & cegah submit form
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -552,14 +575,14 @@ export default function AdminDashboard() {
     if (!previewAudioRef.current) return;
     const audio = previewAudioRef.current;
 
-    // Jika lagu yang sama sedang diputar, pause
+    // Jika lagu yang sama sedang aktif, matikan (Pause)
     if (previewingTrackId === track.id) {
       audio.pause();
       setPreviewingTrackId(null);
       return;
     }
 
-    // 2. Aktifkan mode playback untuk iOS / Safari
+    // Dukungan audio mode untuk iOS Safari
     if (typeof navigator !== 'undefined' && 'audioSession' in navigator) {
       try {
         (navigator as any).audioSession.type = 'playback';
@@ -567,22 +590,24 @@ export default function AdminDashboard() {
     }
 
     try {
-      // 3. Muat dan putar audio
+      // Hentikan lagu sebelumnya
       audio.pause();
       audio.currentTime = 0;
-      audio.src = track.url;
-      audio.volume = 1.0;
-      audio.load();
 
+      // Set URL lagu baru
+      audio.src = track.url;
+
+      // Nyalakan status UI preview
       setPreviewingTrackId(track.id);
 
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        await playPromise;
+      // Jalankan pemutaran
+      await audio.play();
+    } catch (err: any) {
+      console.warn('Audio play interrupted or failed:', err);
+      // Abaikan jika hanya AbortError karena pergantian cepat antar lagu
+      if (err.name !== 'AbortError') {
+        setPreviewingTrackId(null);
       }
-    } catch (err) {
-      console.warn('Audio preview playback blocked or interrupted:', err);
-      setPreviewingTrackId(null);
     }
   };
 
