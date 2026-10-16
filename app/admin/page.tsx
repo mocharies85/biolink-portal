@@ -545,9 +545,35 @@ export default function AdminDashboard() {
       previewAudioRef.current.pause();
       setPreviewingTrackId(null);
     } else {
-      previewAudioRef.current.src = track.url;
-      previewAudioRef.current.play().catch(() => {});
-      setPreviewingTrackId(track.id);
+      // 1. Dukungan sesi audio iOS/Safari agar tidak terbendung mode hening
+      if (typeof navigator !== 'undefined' && 'audioSession' in navigator) {
+        try {
+          (navigator as any).audioSession.type = 'playback';
+        } catch {}
+      }
+
+      const audio = previewAudioRef.current;
+
+      // 2. Reset dan muat ulang buffer audio secara eksplisit untuk mobile
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = track.url;
+      audio.volume = 1.0;
+      audio.load(); // Wajib dipanggil di browser ponsel sebelum play()
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setPreviewingTrackId(track.id);
+          })
+          .catch((err) => {
+            console.error('Audio play blocked or failed on mobile:', err);
+            setPreviewingTrackId(null);
+          });
+      } else {
+        setPreviewingTrackId(track.id);
+      }
     }
   };
 
@@ -569,7 +595,8 @@ export default function AdminDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxAllowedDuration = isProUser ? 25 : 10;
+    // Otomatis mengikuti opsi durasi yang dipilih (10s, 25s, 45s, atau 60s)
+    const maxAllowedDuration = plannedDuration;
     setProcessingAudio(true);
 
     try {
@@ -939,7 +966,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row font-sans">
-      <audio ref={previewAudioRef} onEnded={() => setPreviewingTrackId(null)} />
+      <audio 
+  ref={previewAudioRef} 
+  preload="auto"
+  playsInline
+  crossOrigin="anonymous"
+  onEnded={() => setPreviewingTrackId(null)} 
+/>
 
       {/* Sidebar Navigation (Clean: No Music Manager) */}
       <aside className="w-full md:w-64 bg-neutral-900 border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0">
