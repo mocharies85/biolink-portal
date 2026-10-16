@@ -2043,6 +2043,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))
+                    )}
 
                     {/* Custom Audio Upload */}
                     <div className="p-2.5 rounded-lg bg-neutral-900/50 border border-dashed border-neutral-700 hover:border-emerald-500/50 flex items-center justify-between gap-2 transition col-span-1 sm:col-span-2">
