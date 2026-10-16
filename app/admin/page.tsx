@@ -351,6 +351,7 @@ export default function AdminDashboard() {
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [storyMediaType, setStoryMediaType] = useState<'image' | 'video'>('image');
+  const [selectedPhotoDuration, setSelectedPhotoDuration] = useState<number>(25);
   const [storyMediaUrl, setStoryMediaUrl] = useState('');
   const [storyCaption, setStoryCaption] = useState('');
   const [storyAudioUrl, setStoryAudioUrl] = useState('');
@@ -392,7 +393,7 @@ export default function AdminDashboard() {
 
   const plannedDuration = storyMediaType === 'video'
     ? 60
-    : (isProUser ? 25 : 10);
+    : (isProUser ? selectedPhotoDuration : 10);
 
   const liveProfileUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/${activeUsername}`
@@ -1745,7 +1746,7 @@ export default function AdminDashboard() {
                   {isProUser ? (
                     <>
                       <Sparkles className="w-3 h-3 text-amber-400" />
-                      <span>PRO Tier: 25s Photo / 60s Video</span>
+                      <span>PRO Tier: 25s, 45s, 60s Photo / 60s Video</span>
                     </>
                   ) : (
                     <span>Free Tier: 10s Photo Only</span>
@@ -1775,7 +1776,7 @@ export default function AdminDashboard() {
                     }`}
                   >
                     <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Photo ({isProUser ? '25s' : '10s'})</span>
+                    <span>Photo ({isProUser ? `${selectedPhotoDuration}s` : '10s'})</span>
                   </button>
 
                   <button
@@ -1800,6 +1801,55 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* FITUR BARU: TOMBOL PILIHAN WAKTU TAYANG FOTO (25s, 45s, 60s) */}
+              {storyMediaType === 'image' && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Photo Display Duration</span>
+                      {!isProUser && (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                          PRO
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-neutral-400">
+                      {isProUser ? 'Select how long your photo story remains on screen.' : 'Free tier is fixed to 10 seconds. Upgrade to unlock longer durations.'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                    {[25, 45, 60].map((dur) => {
+                      const isSelected = isProUser && selectedPhotoDuration === dur;
+                      return (
+                        <button
+                          key={dur}
+                          type="button"
+                          onClick={() => {
+                            if (!isProUser) {
+                              setShowUpgradeModal(true);
+                              return;
+                            }
+                            setSelectedPhotoDuration(dur);
+                          }}
+                          className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+                            isSelected
+                              ? 'bg-amber-500 text-neutral-950 shadow-md shadow-amber-500/20'
+                              : isProUser
+                              ? 'bg-neutral-900 border border-neutral-700 text-neutral-300 hover:text-white hover:border-amber-500/40'
+                              : 'bg-neutral-900/60 border border-neutral-800 text-neutral-500 hover:border-amber-500/30'
+                          }`}
+                        >
+                          {!isProUser && <Lock className="w-2.5 h-2.5 text-amber-400/80" />}
+                          <span>{dur}s</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
                 <div className="w-24 h-24 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden shrink-0">
                   {storyMediaUrl ? (
@@ -1819,12 +1869,12 @@ export default function AdminDashboard() {
 
                 <div className="flex flex-col gap-2 flex-1 w-full text-center sm:text-left">
                   <p className="text-xs font-bold text-white">
-                    {storyMediaType === 'video' ? 'Story Video Clip (PRO Only)' : 'Story Photo / Poster'}
+                    {storyMediaType === 'video' ? 'Story Video Clip (PRO Only)' : `Story Photo / Poster (${plannedDuration}s)`}
                   </p>
                   <p className="text-[11px] text-neutral-400">
                     {storyMediaType === 'video'
                       ? 'Video display duration is automatically set to 60 seconds.'
-                      : `Photo display duration is automatically set to ${plannedDuration} seconds.`}
+                      : `Photo display duration is set to ${plannedDuration} seconds.`}
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                     <button
@@ -1954,7 +2004,7 @@ export default function AdminDashboard() {
                       ))
                     )}
 
-                    {/* Custom Audio Upload (Tetap Bisa Upload Sendiri) */}
+                    {/* Custom Audio Upload */}
                     <div className="p-2.5 rounded-lg bg-neutral-900/50 border border-dashed border-neutral-700 hover:border-emerald-500/50 flex items-center justify-between gap-2 transition col-span-1 sm:col-span-2">
                       <div className="truncate flex-1">
                         <p className="text-xs font-medium text-neutral-200 flex items-center gap-1.5 truncate">
@@ -1962,7 +2012,7 @@ export default function AdminDashboard() {
                           <span>Custom Audio</span>
                         </p>
                         <span className="text-[9px] text-neutral-400 block mt-0.5">
-                          {isProUser ? 'Auto-trimmed to 25s (PRO)' : 'Auto-trimmed to 10s (Free)'}
+                          {isProUser ? `Auto-trimmed to ${plannedDuration}s (PRO)` : 'Auto-trimmed to 10s (Free)'}
                         </span>
                       </div>
 
