@@ -16,6 +16,8 @@ import {
   X
 } from 'lucide-react';
 import StoryModal from '@/components/StoryModal';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface LinkItem {
   id: number;
@@ -123,6 +125,8 @@ const THEMES: Record<string, {
 };
 
 export default function UserBioClient() {
+  const { t } = useLanguage();
+
   const [username, setUsername] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
@@ -146,7 +150,7 @@ export default function UserBioClient() {
     name: '',
     tagline: 'Digital Creator',
     bio: '',
-    avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFn1j2rBLlFiBcfGcVJIaDSgFJtkTTyax4OwTrI_sH5Q&s=10',
+    avatar: '/default-avatar.svg',
     socials: {},
     is_pro: 0,
     theme: 'dark',
@@ -359,7 +363,7 @@ export default function UserBioClient() {
       <div className="w-full max-w-md flex flex-col items-center relative z-10">
         
         {/* Top Navigation Bar */}
-        <div className="w-full flex items-center justify-between mb-6 pb-3 border-b border-white/10">
+        <div className="w-full flex items-center justify-between mb-6 pb-3 border-b border-white/10 gap-2">
           <a
             href="/register"
             className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full transition shadow-sm ${theme.accentBadge}`}
@@ -369,6 +373,9 @@ export default function UserBioClient() {
           </a>
 
           <div className="flex items-center gap-2">
+            {/* Pemilih Bahasa Otomatis */}
+            <LanguageSwitcher />
+
             <a
               href="/login"
               className="text-[11px] font-medium text-neutral-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/10 transition"
@@ -420,8 +427,11 @@ export default function UserBioClient() {
               } shadow-xl shadow-emerald-500/10`}
             >
               <img
-                src={profile.avatar || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFn1j2rBLlFiBcfGcVJIaDSgFJtkTTyax4OwTrI_sH5Q&s=10'}
+                src={profile.avatar || '/default-avatar.svg'}
                 alt={profile.name || username}
+                onError={(e) => {
+                  e.currentTarget.src = '/default-avatar.svg';
+                }}
                 className="w-full h-full rounded-full object-cover border-2 border-neutral-950"
               />
             </div>
@@ -452,7 +462,7 @@ export default function UserBioClient() {
           </div>
 
           <p className={`text-xs font-semibold mt-1 tracking-wider uppercase ${theme.accent}`}>
-            @{username} • {profile.tagline}
+            @{username} {profile.tagline ? `• ${profile.tagline}` : ''}
           </p>
 
           {profile.bio && (
@@ -605,7 +615,7 @@ export default function UserBioClient() {
         <section className={`w-full p-5 rounded-2xl border backdrop-blur-md mb-10 ${theme.inboxBg}`}>
           <div className="flex items-center gap-2 mb-2">
             <MessageSquare className={`w-4 h-4 ${theme.accent}`} />
-            <h2 className="text-sm font-semibold">Direct Inquiry to @{username}</h2>
+            <h2 className="text-sm font-semibold">{t('messages')}</h2>
           </div>
           <p className={`text-xs mb-4 leading-relaxed ${theme.textSecondary}`}>
             Have a project collaboration, freelance inquiry, or message? Send a note directly to this inbox.
@@ -623,7 +633,7 @@ export default function UserBioClient() {
                 type="text"
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
-                placeholder="Your Name or Email (Optional)"
+                placeholder={t('namePlaceholder')}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500 transition"
               />
               <textarea
@@ -631,7 +641,7 @@ export default function UserBioClient() {
                 onChange={(e) => setMessage(e.target.value)}
                 rows={3}
                 required
-                placeholder="Write your message here..."
+                placeholder={t('messagePlaceholder')}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500 transition resize-none"
               />
               <button
@@ -644,7 +654,7 @@ export default function UserBioClient() {
                 ) : (
                   <>
                     <Send className="w-3.5 h-3.5" />
-                    <span>Send Message</span>
+                    <span>{t('sendBtn')}</span>
                   </>
                 )}
               </button>
