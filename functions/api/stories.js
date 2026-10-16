@@ -17,7 +17,13 @@ export async function onRequestGet({ request, env }) {
        ORDER BY created_at ASC`
     ).bind(username).all();
 
-    return new Response(JSON.stringify({ stories: results || [] }), {
+    // Pastikan duration selalu berupa angka (default 10 jika null)
+    const formattedStories = (results || []).map((s) => ({
+      ...s,
+      duration: s.duration ? Number(s.duration) : 10,
+    }));
+
+    return new Response(JSON.stringify({ stories: formattedStories }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -26,7 +32,7 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-// 2. POST: Publikasikan story baru dengan validasi durasi (10s, 25s, 60s)
+// 2. POST: Publikasikan story baru dengan validasi durasi (10s, 25s, 45s, 60s)
 export async function onRequestPost({ request, env }) {
   try {
     const { username, media_url, caption, audio_url, link_url, duration } = await request.json();
@@ -37,9 +43,10 @@ export async function onRequestPost({ request, env }) {
 
     const id = crypto.randomUUID();
     
-    // Validasi durasi: 10s (Free), 25s (PRO Foto), atau 60s (PRO Video)
-    const validDurations = [10, 25, 60];
-    const storyDuration = validDurations.includes(Number(duration)) ? Number(duration) : 10;
+    // Validasi durasi: 10s (Free), 25s / 45s / 60s (PRO)
+    const validDurations = [10, 25, 45, 60];
+    const parsedDuration = Number(duration);
+    const storyDuration = validDurations.includes(parsedDuration) ? parsedDuration : 10;
 
     await env.DB.prepare(
       `INSERT INTO stories (id, username, media_url, caption, audio_url, link_url, duration, expires_at)

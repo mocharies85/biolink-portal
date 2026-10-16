@@ -9,7 +9,7 @@ interface Story {
   caption?: string;
   audio_url?: string;
   link_url?: string;
-  duration?: number;
+  duration?: number | string;
 }
 
 interface StoryModalProps {
@@ -38,6 +38,12 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
   const current = stories[currentIndex];
   const isVideo = isVideoUrl(current?.media_url);
 
+  // Hitung durasi tayang foto secara dinamis (25s / 45s / 60s / 10s)
+  const parsedDuration = Number(current?.duration);
+  const effectivePhotoDuration = !isNaN(parsedDuration) && parsedDuration > 0
+    ? parsedDuration
+    : (isPro ? 25 : 10);
+
   // Reset state tiap kali modal dibuka
   useEffect(() => {
     if (isOpen) {
@@ -53,7 +59,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
     setVideoDuration(0);
   }, [currentIndex]);
 
-  // Kelola audio soundtrack dan pemutaran video
+  // Kelola audio soundtrack dan pemutaran video (Dioptimalkan untuk Mobile & iOS)
   useEffect(() => {
     if (!isOpen || !current) return;
 
@@ -62,8 +68,16 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
       audioRef.current.currentTime = 0;
 
       if (current.audio_url) {
+        if (typeof navigator !== 'undefined' && 'audioSession' in navigator) {
+          try {
+            (navigator as any).audioSession.type = 'playback';
+          } catch {}
+        }
+
         audioRef.current.src = current.audio_url;
         audioRef.current.muted = isMuted;
+        audioRef.current.volume = 1.0;
+        audioRef.current.load(); // Wajib di mobile agar audio buffer siap putar
         audioRef.current.play().catch(() => {});
       }
     }
@@ -117,17 +131,15 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
   const handleVideoLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const vid = e.currentTarget;
     const naturalDur = vid.duration || 10;
-    // Maksimal durasi tayang video adalah 60 detik
     const effectiveDur = Math.min(naturalDur, 60);
     setVideoDuration(effectiveDur);
   };
 
-  // Timer progres dinamis: Mengikuti durasi video asli ATAU timer gambar (25s PRO / 10s Free)
+  // Timer progres dinamis: Mengikuti durasi video asli ATAU durasi foto terpilih
   useEffect(() => {
     if (!isOpen || !current) return;
 
     if (isVideo) {
-      // Progres berbasis posisi putar video asli
       const interval = setInterval(() => {
         if (videoRef.current && videoDuration > 0) {
           const curTime = videoRef.current.currentTime;
@@ -142,9 +154,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
 
       return () => clearInterval(interval);
     } else {
-      // Progres berbasis timer gambar (25 detik PRO, 10 detik Free)
-      const durationSec = current.duration || (isPro ? 25 : 10);
-      const durationMs = durationSec * 1000;
+      const durationMs = effectivePhotoDuration * 1000;
       const intervalTime = 50;
       const step = 100 / (durationMs / intervalTime);
 
@@ -161,13 +171,13 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
 
       return () => clearInterval(timer);
     }
-  }, [isOpen, currentIndex, isVideo, videoDuration, current?.duration, isPro, stories.length]);
+  }, [isOpen, currentIndex, isVideo, videoDuration, effectivePhotoDuration, stories.length]);
 
   if (!isOpen || stories.length === 0 || !current) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 font-sans select-none">
-      <audio ref={audioRef} loop />
+      <audio ref={audioRef} preload="auto" playsInline loop />
 
       <div className="relative w-full max-w-sm h-[600px] bg-black rounded-3xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col justify-between">
         
@@ -185,25 +195,25 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           ))}
         </div>
 
-        {/* Header: Username, Badge Durasi, Tombol Link Atas & Kontrol */}
+        {/* Header: Username, Badge Durasi Dinamis, Tombol Link & Kontrol */}
         <div className="absolute top-7 left-3 right-3 z-30 flex items-center justify-between text-white gap-1.5">
           {/* Sisi Kiri: Username & Badges */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="font-semibold text-xs text-neutral-200">@{username}</span>
 
-            {/* Badge Durasi Dinamis */}
+            {/* Badge Durasi Dinamis (Menampilkan Durasi Asli) */}
             {isVideo ? (
               <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold flex items-center gap-1 border border-amber-500/30">
                 <Sparkles className="w-2.5 h-2.5" />
-                <span>Video {videoDuration > 0 ? `${Math.round(videoDuration)}s` : ''}</span>
+                <span>Video {videoDuration > 0 ? `${Math.round(videoDuration)}s` : '60s'}</span>
               </span>
             ) : (
-              <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium border ${
-                isPro 
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 font-bold' 
+              <span className={`px-1.5 py-0.5 rounded text-[9px] border font-bold ${
+                effectivePhotoDuration > 10 
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
                   : 'bg-neutral-800/80 text-neutral-400 border-neutral-700'
               }`}>
-                {isPro ? 'PRO 25s' : '10s'}
+                {effectivePhotoDuration > 10 ? `PRO ${effectivePhotoDuration}s` : '10s'}
               </span>
             )}
 
@@ -214,7 +224,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
             )}
           </div>
 
-          {/* Sisi Tengah: Stiker Link Tautan (Dipindahkan ke Bar Atas) */}
+          {/* Sisi Tengah: Stiker Link Tautan */}
           {current.link_url && (
             <a
               href={current.link_url}
@@ -260,7 +270,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           </div>
         </div>
 
-        {/* Media Container: Menjaga orientasi gambar & video */}
+        {/* Media Container */}
         <div className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden">
           {isVideo ? (
             <video 
@@ -276,11 +286,11 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
             <img 
               src={current.media_url} 
               alt="Story content" 
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain" 
             />
           )}
           
-          {/* Area Sentuh Kiri / Kanan untuk Navigasi Slide */}
+          {/* Area Sentuh Kiri / Kanan Navigasi */}
           <button 
             type="button" 
             onClick={handlePrev} 
@@ -295,7 +305,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           />
         </div>
 
-        {/* Story Caption Bawah: Sekarang leluasa dan tidak tertutup stiker */}
+        {/* Caption Bawah */}
         {current.caption && (
           <div className="absolute bottom-4 left-4 right-4 z-20 p-3 bg-neutral-950/85 backdrop-blur-md rounded-2xl border border-neutral-800 text-xs text-center text-white leading-relaxed">
             {current.caption}
