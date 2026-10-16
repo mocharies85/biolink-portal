@@ -7,6 +7,8 @@
     "/_next/*",
     "/favicon.ico",
     "/logo.png",
-    "/icon.png"
+    "/icon.png",
+    "/manifest.json",
+    "/sw.js"
   ]
 }
