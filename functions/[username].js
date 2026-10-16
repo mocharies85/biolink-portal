@@ -12,6 +12,8 @@ export async function onRequest({ request, env, params }) {
     'favicon.ico',
     'forgot-password',
     'reset-password',
+    'terms',     
+    'privacy',
   ];
 
   // Jika URL adalah rute sistem atau file statis, sajikan halaman aslinya

@@ -81,6 +81,15 @@ export async function onRequestPost({ request, env }) {
                   Activate My Account
                 </a>
               </div>
+              
+              <!-- Klausul Pengikat Hukum Persetujuan Syarat & Privasi -->
+              <p style="font-size: 11px; color: #737373; margin: 20px 0; line-height: 1.5; border-top: 1px solid #1f1f1f; padding-top: 16px;">
+                <em>By clicking "Activate My Account" above, you confirm your registration and agree to be bound by Curiolot Link's 
+                <a href="https://link.curiolot.com/terms" style="color: #10b981; text-decoration: underline;">Terms of Service</a> 
+                and 
+                <a href="https://link.curiolot.com/privacy" style="color: #10b981; text-decoration: underline;">Privacy Policy</a>.</em>
+              </p>
+
               <p style="color: #737373; font-size: 12px;">
                 Or copy and paste this link into your browser:<br/>
                 <a href="${activationUrl}" style="color: #10b981; word-break: break-all;">${activationUrl}</a>
