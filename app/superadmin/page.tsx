@@ -27,7 +27,8 @@ import {
   Pause,
   Upload,
   Plus,
-  Check
+  Check,
+  Share2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -85,7 +86,7 @@ export default function SuperAdminPage() {
   // Data states
   const [data, setData] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'members' | 'messages' | 'music'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'messages' | 'music' | 'seo'>('members');
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
   // Search & Delete states
@@ -105,6 +106,16 @@ export default function SuperAdminPage() {
   const [deletingTrackId, setDeletingTrackId] = useState<string | null>(null);
   const superadminAudioRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // SEO & Social Card states
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDesc, setSeoDesc] = useState('');
+  const [seoImage, setSeoImage] = useState('');
+  const [savingSeo, setSavingSeo] = useState(false);
+  const [loadingSeo, setLoadingSeo] = useState(false);
+  const [uploadingSeoImage, setUploadingSeoImage] = useState(false);
+  const [seoSuccess, setSeoSuccess] = useState(false);
+  const seoImageInputRef = useRef<HTMLInputElement>(null);
 
   // Periksa sesi PIN yang tersimpan
   useEffect(() => {
@@ -129,6 +140,23 @@ export default function SuperAdminPage() {
     }
   };
 
+  const fetchSeoSettings = async () => {
+    setLoadingSeo(true);
+    try {
+      const res = await fetch('/api/admin/seo');
+      if (res.ok) {
+        const json = await res.json();
+        setSeoTitle(json.seo_title || '');
+        setSeoDesc(json.seo_description || '');
+        setSeoImage(json.seo_image || '');
+      }
+    } catch (err) {
+      console.error('Failed to load SEO settings:', err);
+    } finally {
+      setLoadingSeo(false);
+    }
+  };
+
   const validateAndFetchData = async (pin: string) => {
     setLoading(true);
     setPinError('');
@@ -146,6 +174,7 @@ export default function SuperAdminPage() {
         setIsUnlocked(true);
         sessionStorage.setItem('curiolot_superadmin_pin', cleanPin);
         fetchMusicTracks();
+        fetchSeoSettings();
       } else {
         const errData = await res.json().catch(() => null);
         sessionStorage.removeItem('curiolot_superadmin_pin');
@@ -347,6 +376,66 @@ export default function SuperAdminPage() {
     }
   };
 
+  // Upload Gambar Banner SEO Promo
+  const handleSeoImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingSeoImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('username', 'seo_promo_card');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setSeoImage(result.url);
+      } else {
+        alert('Failed to upload banner image.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while uploading banner image.');
+    } finally {
+      setUploadingSeoImage(false);
+      e.target.value = '';
+    }
+  };
+
+  // Simpan Pengaturan SEO Promo
+  const handleSaveSeo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSeo(true);
+    try {
+      const res = await fetch('/api/admin/seo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seo_title: seoTitle.trim(),
+          seo_description: seoDesc.trim(),
+          seo_image: seoImage.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        setSeoSuccess(true);
+        setTimeout(() => setSeoSuccess(false), 3500);
+      } else {
+        alert('Failed to update SEO card settings.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while saving SEO settings.');
+    } finally {
+      setSavingSeo(false);
+    }
+  };
+
   // Filter pencarian
   const filteredUsers = (data?.users || []).filter((u) =>
     u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -451,7 +540,7 @@ export default function SuperAdminPage() {
                 </span>
               </div>
               <p className="text-xs text-neutral-400 mt-0.5">
-                Overview of user registrations, subscription tiers, and member support tickets
+                Overview of user registrations, subscription tiers, promo cards, and global soundtracks
               </p>
             </div>
           </div>
@@ -461,6 +550,7 @@ export default function SuperAdminPage() {
               onClick={() => {
                 validateAndFetchData(sessionStorage.getItem('curiolot_superadmin_pin') || pinInput.trim());
                 fetchMusicTracks();
+                fetchSeoSettings();
               }}
               disabled={loading}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 hover:text-white hover:border-neutral-700 transition"
@@ -583,6 +673,20 @@ export default function SuperAdminPage() {
             >
               <Disc3 className="w-3.5 h-3.5 text-emerald-400" />
               <span>Music Library ({musicTracks.length})</span>
+            </button>
+
+            {/* TAB BARU: SEO & Promo Card */}
+            <button
+              onClick={() => {
+                setActiveTab('seo');
+                fetchSeoSettings();
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+                activeTab === 'seo' ? 'bg-neutral-800 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <Share2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>Social Card &amp; SEO</span>
             </button>
           </div>
 
@@ -926,6 +1030,137 @@ export default function SuperAdminPage() {
               )}
             </div>
 
+          </div>
+        )}
+
+        {/* TAB 4: Custom Social Share Card & SEO Manager */}
+        {activeTab === 'seo' && (
+          <div className="flex flex-col gap-6">
+            <div>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Share2 className="w-4 h-4 text-amber-400" />
+                <span>Custom Social Share Card &amp; Viral Promo SEO</span>
+              </h2>
+              <p className="text-xs text-neutral-400 mt-1">
+                Customize the real-time preview card that appears when <strong>https://link.curiolot.com</strong> is posted on X (Twitter), WhatsApp, Telegram, or Facebook.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              
+              {/* Form Input Setting */}
+              <form onSubmit={handleSaveSeo} className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
+                <div>
+                  <label className="text-xs font-bold text-neutral-300 block mb-1.5">Promo Card Headline (Title)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Claim Your Rare Vanity Handle — Curiolot Link"
+                    value={seoTitle}
+                    onChange={(e) => setSeoTitle(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                  />
+                  <span className="text-[10px] text-neutral-500 block mt-1">Appears as bold title on social timeline cards.</span>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-neutral-300 block mb-1.5">Promo Pitch &amp; Hook (Description)</label>
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder="e.g. Short handles and 1-word usernames are still free to claim. Showcase your work with 24h stories & soundtracks."
+                    value={seoDesc}
+                    onChange={(e) => setSeoDesc(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition resize-none leading-relaxed"
+                  />
+                  <span className="text-[10px] text-neutral-500 block mt-1">Recommended 100–160 characters for optimal card visibility.</span>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-neutral-300 block mb-1.5">Social Share Banner Image (1200 × 630 px)</label>
+                  <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                    <button
+                      type="button"
+                      disabled={uploadingSeoImage}
+                      onClick={() => seoImageInputRef.current?.click()}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-emerald-400 text-xs font-semibold flex items-center justify-center gap-2 transition shrink-0 disabled:opacity-50"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>{uploadingSeoImage ? 'Uploading...' : 'Upload Banner'}</span>
+                    </button>
+
+                    <input
+                      type="url"
+                      required
+                      placeholder="Or paste direct image URL (https://...)"
+                      value={seoImage}
+                      onChange={(e) => setSeoImage(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                    />
+
+                    <input
+                      type="file"
+                      ref={seoImageInputRef}
+                      accept="image/*"
+                      onChange={handleSeoImageUpload}
+                      className="hidden"
+                    />
+                  </div>
+                  <span className="text-[10px] text-neutral-500 block mt-1">Optimal aspect ratio: 1.91:1 (Landscape).</span>
+                </div>
+
+                {seoSuccess && (
+                  <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-400 flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Promo share card updated! Media bots will now fetch this new card.</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={savingSeo || uploadingSeoImage || !seoTitle || !seoImage}
+                  className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/20 mt-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>{savingSeo ? 'Updating Social Meta...' : 'Save & Publish Live Card'}</span>
+                </button>
+              </form>
+
+              {/* Live Preview Display Card */}
+              <div className="flex flex-col gap-3">
+                <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                  <span>Live Twitter / X Timeline Preview</span>
+                  <span className="px-1.5 py-0.5 rounded bg-neutral-800 text-[10px] text-neutral-400">Large Card</span>
+                </span>
+                
+                <div className="rounded-2xl border border-neutral-800 bg-neutral-900/90 overflow-hidden shadow-2xl max-w-md">
+                  <div className="w-full h-52 bg-neutral-950 overflow-hidden flex items-center justify-center border-b border-neutral-800/80">
+                    {seoImage ? (
+                      <img src={seoImage} alt="Card Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 text-neutral-600 text-xs">
+                        <Upload className="w-6 h-6" />
+                        <span>No banner image uploaded</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3.5 flex flex-col gap-1 bg-neutral-900">
+                    <span className="text-[11px] text-neutral-500 font-medium">link.curiolot.com</span>
+                    <p className="text-xs font-bold text-white truncate leading-tight">
+                      {seoTitle || 'Claim Your Rare Vanity Handle — Curiolot Link'}
+                    </p>
+                    <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed mt-0.5">
+                      {seoDesc || 'Short handles and 1-word usernames are still open. Showcase your work with 24h stories & soundtracks.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-neutral-900/50 border border-neutral-800 text-[11px] text-neutral-400 leading-relaxed">
+                  💡 <strong>Tips:</strong> Setiap kali Anda mengganti teks atau gambar promo di sini, X dan WhatsApp akan otomatis menyajikan banner baru tersebut saat pengguna menempelkan link <code>link.curiolot.com</code>.
+                </div>
+              </div>
+
+            </div>
           </div>
         )}
 
