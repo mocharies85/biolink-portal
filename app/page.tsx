@@ -14,15 +14,21 @@ import {
   BarChart3,
   ExternalLink,
   X,
-  Check
+  CreditCard,
+  ArrowLeft,
+  UserCheck,
+  AlertCircle
 } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
   const [claimUsername, setClaimUsername] = useState('');
   const [showPromo, setShowPromo] = useState(false);
+  
+  // State langkah modal: 'compare' (tabel harga) atau 'tutorial' (panduan aktivasi)
+  const [promoStep, setPromoStep] = useState<'compare' | 'tutorial'>('compare');
 
-  // Munculkan pop-up promo otomatis setelah 3 detik
+  // Munculkan popup promo otomatis setelah 3 detik
   useEffect(() => {
     const timer = setTimeout(() => {
       const seen = sessionStorage.getItem('curiolot_promo_closed');
@@ -36,6 +42,7 @@ export default function HomePage() {
 
   const handleClosePromo = () => {
     setShowPromo(false);
+    setPromoStep('compare');
     sessionStorage.setItem('curiolot_promo_closed', 'true');
   };
 
@@ -138,11 +145,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Feature Highlights Grid (6 Kartu Fitur Lengkap) */}
+        {/* Feature Highlights Grid */}
         <section className="max-w-5xl mx-auto px-6 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             
-            {/* Card 1: 24h Stories */}
             <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-emerald-500/40 transition flex flex-col gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                 <Radio className="w-5 h-5" />
@@ -153,7 +159,6 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Card 2: Spotlight Glow */}
             <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-amber-500/40 transition flex flex-col gap-3">
               <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
                 <Flame className="w-5 h-5" />
@@ -164,7 +169,6 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Card 3: Themes & Wallpaper */}
             <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition flex flex-col gap-3">
               <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
                 <Palette className="w-5 h-5" />
@@ -175,7 +179,6 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Card 4: Social Share Card & SEO */}
             <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition flex flex-col gap-3">
               <div className="w-10 h-10 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
                 <Share2 className="w-5 h-5" />
@@ -186,7 +189,6 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Card 5: Audience Inbox */}
             <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition flex flex-col gap-3">
               <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
                 <MessageSquare className="w-5 h-5" />
@@ -197,7 +199,6 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Card 6: Actionable Analytics */}
             <div className="p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition flex flex-col gap-3">
               <div className="w-10 h-10 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
                 <BarChart3 className="w-5 h-5" />
@@ -258,7 +259,7 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* POPUP BANNER PROMOSI: FREE VS PRO */}
+      {/* POPUP PROMO DUA TAHAP */}
       {showPromo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="w-full max-w-4xl bg-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative max-h-[92vh] overflow-y-auto">
@@ -273,156 +274,260 @@ export default function HomePage() {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Header Modal */}
-            <div className="text-center mb-6">
-              <span className="inline-block px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
-                ⚡ Curiolot Link • Creator Hub
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Supercharge Your Bio Hub: <span className="text-emerald-400">FREE</span> vs{' '}
-                <span className="text-amber-400">PRO</span>
-              </h2>
-              <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-xl mx-auto">
-                One sleek link for all your portfolios, digital store, social channels, and 24h visual updates.
-              </p>
-            </div>
+            {/* TAHAP 1: PERBANDINGAN TIER FREE VS PRO */}
+            {promoStep === 'compare' ? (
+              <>
+                <div className="text-center mb-6">
+                  <span className="inline-block px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+                    ⚡ Curiolot Link • Creator Hub
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                    Supercharge Your Bio Hub: <span className="text-emerald-400">FREE</span> vs{' '}
+                    <span className="text-amber-400">PRO</span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-xl mx-auto">
+                    One sleek link for all your portfolios, digital store, social channels, and 24h visual updates.
+                  </p>
+                </div>
 
-            {/* Dua Kolom Perbandingan: FREE vs PRO */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-2">
-              
-              {/* KARTU KIRI: FREE MEMBER */}
-              <div className="p-6 rounded-2xl bg-neutral-900/80 border border-neutral-800 flex flex-col justify-between shadow-lg">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 text-[11px] font-bold uppercase tracking-wider">
-                      Starter Tier
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold">
-                      FREE FOREVER
-                    </span>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-2">
                   
-                  <h3 className="text-xl font-bold text-white">Free Member</h3>
-                  <div className="flex items-baseline gap-1 mt-1 mb-2">
-                    <span className="text-3xl font-black text-white">$0</span>
-                    <span className="text-xs text-neutral-400">/ free lifetime access</span>
-                  </div>
-                  <p className="text-xs text-neutral-400 leading-relaxed mb-4">
-                    Essential tools for creators to establish a clean and professional online bio presence instantly.
-                  </p>
+                  {/* Kartu Free Member */}
+                  <div className="p-6 rounded-2xl bg-neutral-900/80 border border-neutral-800 flex flex-col justify-between shadow-lg">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 text-[11px] font-bold uppercase tracking-wider">
+                          Starter Tier
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold">
+                          FREE FOREVER
+                        </span>
+                      </div>
+                      
+                      <h3 className="text-xl font-bold text-white">Free Member</h3>
+                      <div className="flex items-baseline gap-1 mt-1 mb-2">
+                        <span className="text-3xl font-black text-white">$0</span>
+                        <span className="text-xs text-neutral-400">/ free lifetime access</span>
+                      </div>
+                      <p className="text-xs text-neutral-400 leading-relaxed mb-4">
+                        Essential tools for creators to establish a clean and professional online bio presence instantly.
+                      </p>
 
-                  <div className="flex flex-col gap-2.5 text-xs text-neutral-300 border-t border-neutral-800/80 pt-4">
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
-                      <span><strong>Free Forever:</strong> No monthly subscriptions, no credit card required.</span>
+                      <div className="flex flex-col gap-2.5 text-xs text-neutral-300 border-t border-neutral-800/80 pt-4">
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
+                          <span><strong>Free Forever:</strong> No monthly subscriptions, no credit card required.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
+                          <span><strong>Up to 3 Custom Links:</strong> Showcase portfolio, store, or primary handles.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
+                          <span><strong>4 Standard Themes:</strong> Minimal Dark, Clean White, Forest Emerald, & Navy.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
+                          <span><strong>24h Photo Stories (10s):</strong> Daily visual status updates expired in 24h.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
+                          <span><strong>Creator Music Library:</strong> Choose official soundtracks for your stories.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
+                          <span><strong>Direct Messaging Inbox:</strong> Receive business inquiries directly to dashboard.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
+                          <span><strong>Instant Profile QR Code:</strong> Share your biolink easily via smartphone scan.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
+                          <span><strong>Profile Views Analytics:</strong> Track total profile page visitors in real-time.</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
-                      <span><strong>Up to 3 Custom Links:</strong> Showcase portfolio, store, or primary handles.</span>
+
+                    {/* Tombol FREE */}
+                    <button
+                      type="button"
+                      onClick={handleClosePromo}
+                      className="mt-6 w-full py-3 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 font-bold text-xs uppercase tracking-wider transition border border-neutral-700"
+                    >
+                      Start Free Forever
+                    </button>
+                  </div>
+
+                  {/* Kartu PRO Creator */}
+                  <div className="p-6 rounded-2xl bg-gradient-to-b from-amber-950/30 via-neutral-900 to-neutral-950 border-2 border-amber-500/60 flex flex-col justify-between shadow-xl shadow-amber-500/10">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> Most Popular
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
+                          CANCEL ANYTIME
+                        </span>
+                      </div>
+
+                      <h3 className="text-xl font-bold text-amber-400">PRO Creator</h3>
+                      <div className="flex items-baseline gap-1 mt-1 mb-2">
+                        <span className="text-3xl font-black text-amber-400">$3</span>
+                        <span className="text-xs text-neutral-400">/ month</span>
+                      </div>
+                      <p className="text-xs text-neutral-400 leading-relaxed mb-4">
+                        Unlock maximum branding power, multiply link conversions, and enjoy unlimited creator features.
+                      </p>
+
+                      <div className="flex flex-col gap-2.5 text-xs text-neutral-300 border-t border-amber-500/20 pt-4">
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                          <span><strong className="text-amber-200">Custom Wallpaper &amp; PRO Themes:</strong> Upload HD backdrops + Cyberpunk &amp; Sunset themes.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                          <span><strong className="text-amber-200">Custom Social Share Card &amp; SEO:</strong> 1200x630 rich banner on WA, Telegram, X.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                          <span><strong className="text-amber-200">Spotlight Glow &amp; 'HOT' Badge:</strong> Animated neon glow on priority links to boost CTR.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                          <span><strong className="text-amber-200">60s Video &amp; 25s/45s/60s Photo:</strong> Streaming video 60s via R2 + custom audio upload.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                          <span><strong className="text-amber-200">Unlimited Links &amp; Content:</strong> Add unlimited portfolio, shop, and media links.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                          <span><strong className="text-amber-200">Deep Real-Time Analytics:</strong> Track CTR, visitor devices, &amp; live traffic referrers.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                          <span><strong className="text-amber-200">Verified Gold PRO Badge:</strong> Gold checkmark badge beside your name for instant trust.</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
-                      <span><strong>4 Standard Themes:</strong> Minimal Dark, Clean White, Forest Emerald, & Navy.</span>
+
+                    {/* Tombol PRO */}
+                    <button
+                      type="button"
+                      onClick={() => setPromoStep('tutorial')}
+                      className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-extrabold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
+                    >
+                      <span>Upgrade to PRO ($3/MO)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                </div>
+              </>
+            ) : (
+              /* TAHAP 2: PANDUAN AKTIVASI PRO (DENGAN SYARAT DAFTAR & VERIFIKASI EMAIL TERLEBIH DAHULU) */
+              <div className="max-w-2xl mx-auto py-2">
+                <div className="text-center mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-3 shadow-lg shadow-amber-500/20">
+                    <CreditCard className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-2xl font-black text-white">How to Activate Curiolot PRO</h2>
+                  <p className="text-xs text-neutral-400 mt-1 max-w-md mx-auto">
+                    Please make sure your account is registered and verified before completing payment on Ko-fi.
+                  </p>
+                </div>
+
+                {/* Banner Peringatan Wajib Daftar Dulu */}
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 mb-5 flex items-start gap-3.5">
+                  <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="text-xs">
+                    <p className="font-bold text-amber-300">New here? Please create your free account first!</p>
+                    <p className="text-neutral-400 mt-1 leading-relaxed">
+                      You must have an active, email-verified Curiolot account so our system knows where to apply your PRO features upon payment.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3.5 mb-6">
+                  {/* Step 1: Wajib Daftar Akun Free & Verifikasi Email */}
+                  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start justify-between gap-3.5">
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-7 h-7 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <span>Register Free &amp; Verify Email</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-extrabold uppercase">Required</span>
+                        </h4>
+                        <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
+                          Sign up for a Free account and click the verification link sent to your inbox.
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
-                      <span><strong>24h Photo Stories (10s):</strong> Daily visual status updates expired in 24h.</span>
+
+                    <Link
+                      href="/register"
+                      onClick={handleClosePromo}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-400 text-xs font-bold shrink-0 transition flex items-center gap-1"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>Register Now</span>
+                    </Link>
+                  </div>
+
+                  {/* Step 2: Gunakan Email / Username yang Sama di Ko-fi */}
+                  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start gap-3.5">
+                    <div className="w-7 h-7 rounded-xl bg-amber-500 text-neutral-950 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                      2
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
-                      <span><strong>Creator Music Library:</strong> Choose official soundtracks for your stories.</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">Enter Account Details on Ko-fi</h4>
+                      <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
+                        On Ko-fi checkout ($3/mo), use the <strong>exact same email</strong> as your registered Curiolot account, or write your <strong>@username</strong> in the message box.
+                      </p>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
-                      <span><strong>Direct Messaging Inbox:</strong> Receive business inquiries directly to dashboard.</span>
+                  </div>
+
+                  {/* Step 3: Aktivasi Instan Otomatis */}
+                  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start gap-3.5">
+                    <div className="w-7 h-7 rounded-xl bg-neutral-800 text-neutral-300 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                      3
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
-                      <span><strong>Instant Profile QR Code:</strong> Share your biolink easily via smartphone scan.</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
-                      <span><strong>Profile Views Analytics:</strong> Track total profile page visitors in real-time.</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">Automatic PRO Activation</h4>
+                      <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
+                        Once Ko-fi confirms your transaction, our webhook immediately unlocks PRO access on your dashboard!
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Tombol FREE */}
-                <button
-                  type="button"
-                  onClick={handleClosePromo}
-                  className="mt-6 w-full py-3 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 font-bold text-xs uppercase tracking-wider transition border border-neutral-700"
-                >
-                  Start Free Forever
-                </button>
-              </div>
+                {/* Tombol Aksi */}
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPromoStep('compare')}
+                    className="w-1/3 py-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-neutral-800"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
 
-              {/* KARTU KANAN: PRO CREATOR */}
-              <div className="p-6 rounded-2xl bg-gradient-to-b from-amber-950/30 via-neutral-900 to-neutral-950 border-2 border-amber-500/60 flex flex-col justify-between shadow-xl shadow-amber-500/10">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> Most Popular
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
-                      CANCEL ANYTIME
-                    </span>
-                  </div>
-
-                  <h3 className="text-xl font-bold text-amber-400">PRO Creator</h3>
-                  <div className="flex items-baseline gap-1 mt-1 mb-2">
-                    <span className="text-3xl font-black text-amber-400">$3</span>
-                    <span className="text-xs text-neutral-400">/ month</span>
-                  </div>
-                  <p className="text-xs text-neutral-400 leading-relaxed mb-4">
-                    Unlock maximum branding power, multiply link conversions, and enjoy unlimited creator features.
-                  </p>
-
-                  <div className="flex flex-col gap-2.5 text-xs text-neutral-300 border-t border-amber-500/20 pt-4">
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                      <span><strong className="text-amber-200">Custom Wallpaper & PRO Themes:</strong> Upload HD backdrops + Cyberpunk & Sunset themes.</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                      <span><strong className="text-amber-200">Custom Social Share Card & SEO:</strong> 1200x630 rich banner on WA, Telegram, X.</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                      <span><strong className="text-amber-200">Spotlight Glow & 'HOT' Badge:</strong> Animated neon glow on priority links to boost CTR.</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                      <span><strong className="text-amber-200">60s Video & 25s/45s/60s Photo:</strong> Streaming video 60s via R2 + custom audio upload.</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                      <span><strong className="text-amber-200">Unlimited Links & Content:</strong> Add unlimited portfolio, shop, and media links.</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                      <span><strong className="text-amber-200">Deep Real-Time Analytics:</strong> Track CTR, visitor devices, & live traffic referrers.</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                      <span><strong className="text-amber-200">Verified Gold PRO Badge:</strong> Gold checkmark badge beside your name for instant trust.</span>
-                    </div>
-                  </div>
+                  <a
+                    href="https://ko-fi.com/cycrack"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleClosePromo}
+                    className="w-2/3 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-extrabold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
+                  >
+                    <span>I'm Registered, Go to Ko-fi</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
                 </div>
-
-                {/* Tombol PRO */}
-                <a
-                  href="https://ko-fi.com/cycrack"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-extrabold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
-                >
-                  <span>Get PRO Access ($3/MO)</span>
-                  <ExternalLink className="w-4 h-4" />
-                </a>
               </div>
-
-            </div>
+            )}
 
           </div>
         </div>
