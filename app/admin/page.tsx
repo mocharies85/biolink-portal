@@ -55,6 +55,10 @@ interface SocialLinks {
   x?: string;
   github?: string;
   whatsapp?: string;
+  facebook?: string;
+  linkedin?: string;
+  discord?: string;
+  twitch?: string;
 }
 
 interface MessageItem {
@@ -1235,6 +1239,7 @@ export default function AdminDashboard() {
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {/* Instagram */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">Instagram (@username)</label>
                       <input
@@ -1249,6 +1254,7 @@ export default function AdminDashboard() {
                       />
                     </div>
 
+                    {/* WhatsApp */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">WhatsApp (Country code + number)</label>
                       <input
@@ -1263,6 +1269,7 @@ export default function AdminDashboard() {
                       />
                     </div>
 
+                    {/* TikTok */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">TikTok (@username)</label>
                       <input
@@ -1277,6 +1284,7 @@ export default function AdminDashboard() {
                       />
                     </div>
 
+                    {/* YouTube */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">YouTube Channel URL</label>
                       <input
@@ -1291,6 +1299,7 @@ export default function AdminDashboard() {
                       />
                     </div>
 
+                    {/* X / Twitter */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">X / Twitter (@username)</label>
                       <input
@@ -1305,6 +1314,7 @@ export default function AdminDashboard() {
                       />
                     </div>
 
+                    {/* GitHub */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">GitHub (username)</label>
                       <input
@@ -1314,6 +1324,66 @@ export default function AdminDashboard() {
                         onChange={(e) => setProfile({
                           ...profile,
                           socials: { ...profile.socials, github: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    {/* Facebook (Tambahan) */}
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">Facebook (Username / Page)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. yourpage"
+                        value={profile.socials?.facebook || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, facebook: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    {/* LinkedIn (Tambahan) */}
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">LinkedIn (Username)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. yourname"
+                        value={profile.socials?.linkedin || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, linkedin: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    {/* Discord (Tambahan) */}
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">Discord (Invite Link)</label>
+                      <input
+                        type="text"
+                        placeholder="https://discord.gg/..."
+                        value={profile.socials?.discord || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, discord: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    {/* Twitch (Tambahan) */}
+                    <div>
+                      <label className="text-[11px] text-neutral-400 block mb-1">Twitch (Channel)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. channelname"
+                        value={profile.socials?.twitch || ''}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          socials: { ...profile.socials, twitch: e.target.value }
                         })}
                         className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500 transition"
                       />
@@ -2355,6 +2425,18 @@ export default function AdminDashboard() {
                 )}
                 {profile.socials.github && (
                   <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">gh</span>
+                )}
+                {profile.socials.facebook && (
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">fb</span>
+                )}
+                {profile.socials.linkedin && (
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">li</span>
+                )}
+                {profile.socials.discord && (
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">dc</span>
+                )}
+                {profile.socials.twitch && (
+                  <span className="w-5 h-5 rounded-md bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 text-[9px]">tw</span>
                 )}
               </div>
             )}
