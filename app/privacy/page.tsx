@@ -2,14 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ShieldCheck, Lock, Eye } from 'lucide-react';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-200 font-sans p-6 sm:p-12">
       <div className="max-w-4xl mx-auto flex flex-col gap-8">
         
-        {/* Top Header */}
+        {/* Header */}
         <div className="flex items-center gap-3 border-b border-neutral-800 pb-5">
           <Link
             href="/"
@@ -26,34 +26,34 @@ export default function PrivacyPage() {
           </div>
         </div>
 
-        {/* Content Section */}
+        {/* Content */}
         <div className="flex flex-col gap-6 text-xs sm:text-sm leading-relaxed text-neutral-300">
           
           <section className="flex flex-col gap-2">
-            <h2 className="text-base font-bold text-white">1. Data yang Kami Kumpulkan</h2>
+            <h2 className="text-base font-bold text-white">1. Information We Collect</h2>
             <p>
-              Kami mengumpulkan data akun dasar berupa alamat email, nama pengguna (username), kata sandi terenkripsi (hash), serta konfigurasi profil publik (bio, link tautan, foto, dan video story).
+              We collect account registration data including your chosen username, email address, securely salted/hashed passwords, and your public profile customization settings (bio text, link titles, URLs, avatars, and story media).
             </p>
           </section>
 
           <section className="flex flex-col gap-2">
-            <h2 className="text-base font-bold text-white">2. Sifat Data Profil Publik</h2>
+            <h2 className="text-base font-bold text-white">2. Public Profile Information</h2>
             <p>
-              Seluruh informasi yang Anda masukkan pada halaman profil bio (termasuk judul link, foto, sosial media) adalah data publik yang dirancang untuk diakses oleh siapa saja di internet. Jangan pernah memasukkan data rahasia perbankan atau kata sandi pribadi ke dalam tautan bio Anda.
+              Any information you enter on your bio hub (including display name, social media handles, custom links, and story videos) is inherently public and accessible worldwide. You should never include confidential credentials, bank account passwords, or sensitive personal data on your public bio link.
             </p>
           </section>
 
           <section className="flex flex-col gap-2">
-            <h2 className="text-base font-bold text-white">3. Akses Pemantauan & Analisis Pengelola</h2>
+            <h2 className="text-base font-bold text-white">3. System Analytics &amp; Admin Audits</h2>
             <p>
-              Untuk memastikan tidak ada tautan yang disalahgunakan untuk kegiatan melanggar hukum (seperti malware atau penipuan), administrator berhak melihat data statistik kunjungan publik, volume pesan masuk, dan memeriksa laporan masyarakat secara berkala. Kami tidak memperjualbelikan data Anda kepada pihak pengiklan pihak ketiga mana pun.
+              To maintain system performance, prevent malware distribution, and detect abuse, administrators may audit visitor volume, referrer logs, and public link performance. We do not sell or monetize personal creator data to third-party ad brokers.
             </p>
           </section>
 
           <section className="flex flex-col gap-2">
-            <h2 className="text-base font-bold text-white">4. Hak Penghapusan Akun</h2>
+            <h2 className="text-base font-bold text-white">4. Account Deletion &amp; Data Erasure</h2>
             <p>
-              Pengguna memiliki hak penuh untuk meminta penghapusan akun dan seluruh berkas terkait kapan saja melalui permohonan ke admin support atau menu dashboard.
+              Creators hold full rights to request complete account deletion and data erasure at any time by contacting administrator support.
             </p>
           </section>
 
@@ -62,10 +62,10 @@ export default function PrivacyPage() {
         {/* Footer Link */}
         <div className="pt-6 border-t border-neutral-800 text-xs text-neutral-500 flex justify-between">
           <Link href="/terms" className="hover:text-emerald-400 transition underline">
-            Baca Ketentuan Layanan
+            Read Terms of Service
           </Link>
           <Link href="/" className="hover:text-white transition">
-            Kembali ke Beranda
+            Back to Home
           </Link>
         </div>
 
