@@ -146,7 +146,7 @@ export default function UserBioClient() {
     name: '',
     tagline: 'Digital Creator',
     bio: '',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces',
+    avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFn1j2rBLlFiBcfGcVJIaDSgFJtkTTyax4OwTrI_sH5Q&s=10',
     socials: {},
     is_pro: 0,
     theme: 'dark',
@@ -420,7 +420,7 @@ export default function UserBioClient() {
               } shadow-xl shadow-emerald-500/10`}
             >
               <img
-                src={profile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces'}
+                src={profile.avatar || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFn1j2rBLlFiBcfGcVJIaDSgFJtkTTyax4OwTrI_sH5Q&s=10'}
                 alt={profile.name || username}
                 className="w-full h-full rounded-full object-cover border-2 border-neutral-950"
               />

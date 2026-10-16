@@ -356,7 +356,7 @@ export default function AdminDashboard() {
     name: 'New Creator',
     tagline: 'Digital Creator',
     bio: '',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFn1j2rBLlFiBcfGcVJIaDSgFJtkTTyax4OwTrI_sH5Q&s=10',
     views: 0,
     socials: {},
     og_title: '',
