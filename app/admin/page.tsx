@@ -538,42 +538,47 @@ export default function AdminDashboard() {
     }
   }, [currentUser]);
 
-  const handleTogglePreview = (track: MusicTrack) => {
+  const handleTogglePreview = async (track: MusicTrack, e?: React.MouseEvent) => {
+    // 1. KUNCI UTAMA: Hentikan rembetan klik (event bubbling) & cegah submit form
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!previewAudioRef.current) return;
+    const audio = previewAudioRef.current;
 
+    // Jika lagu yang sama sedang diputar, pause
     if (previewingTrackId === track.id) {
-      previewAudioRef.current.pause();
+      audio.pause();
       setPreviewingTrackId(null);
-    } else {
-      // 1. Dukungan sesi audio iOS/Safari agar tidak terbendung mode hening
-      if (typeof navigator !== 'undefined' && 'audioSession' in navigator) {
-        try {
-          (navigator as any).audioSession.type = 'playback';
-        } catch {}
-      }
+      return;
+    }
 
-      const audio = previewAudioRef.current;
+    // 2. Aktifkan mode playback untuk iOS / Safari
+    if (typeof navigator !== 'undefined' && 'audioSession' in navigator) {
+      try {
+        (navigator as any).audioSession.type = 'playback';
+      } catch {}
+    }
 
-      // 2. Reset dan muat ulang buffer audio secara eksplisit untuk mobile
+    try {
+      // 3. Muat dan putar audio
       audio.pause();
       audio.currentTime = 0;
       audio.src = track.url;
       audio.volume = 1.0;
-      audio.load(); // Wajib dipanggil di browser ponsel sebelum play()
+      audio.load();
+
+      setPreviewingTrackId(track.id);
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setPreviewingTrackId(track.id);
-          })
-          .catch((err) => {
-            console.error('Audio play blocked or failed on mobile:', err);
-            setPreviewingTrackId(null);
-          });
-      } else {
-        setPreviewingTrackId(track.id);
+        await playPromise;
       }
+    } catch (err) {
+      console.warn('Audio preview playback blocked or interrupted:', err);
+      setPreviewingTrackId(null);
     }
   };
 
@@ -2002,40 +2007,42 @@ export default function AdminDashboard() {
                       <p className="text-[11px] text-neutral-500 p-3 col-span-2 text-center">No soundtracks available in library.</p>
                     ) : (
                       musicTracks.map((track) => (
-                        <div
-                          key={track.id}
-                          className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-between gap-2 hover:border-neutral-700 transition"
-                        >
-                          <div className="truncate flex-1">
-                            <p className="text-xs font-medium text-white truncate">{track.title}</p>
-                            <span className="text-[9px] text-neutral-400 block mt-0.5">{track.category} • {track.duration}</span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePreview(track)}
-                              className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
-                              title={previewingTrackId === track.id ? 'Pause Preview' : 'Play Preview'}
-                            >
-                              {previewingTrackId === track.id ? (
-                                <Pause className="w-3 h-3 text-emerald-400" />
-                              ) : (
-                                <Play className="w-3 h-3 text-neutral-400" />
-                              )}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleSelectTrack(track)}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-[10px] transition"
-                            >
-                              Select
-                            </button>
-                          </div>
+                      <div
+                        key={track.id}
+                        className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-between gap-2 hover:border-neutral-700 transition"
+                      >
+                        <div className="truncate flex-1">
+                          <p className="text-xs font-medium text-white truncate">{track.title}</p>
+                          <span className="text-[9px] text-neutral-400 block mt-0.5">
+                            {track.category} • {track.duration}
+                          </span>
                         </div>
-                      ))
-                    )}
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Tombol Preview Audio (Sudah Anti-Macet di Ponsel) */}
+                          <button
+                            type="button"
+                            onClick={(e) => handleTogglePreview(track, e)}
+                            className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
+                            title={previewingTrackId === track.id ? 'Pause Preview' : 'Play Preview'}
+                          >
+                            {previewingTrackId === track.id ? (
+                              <Pause className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Play className="w-3 h-3 text-neutral-400" />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSelectTrack(track)}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-[10px] transition"
+                          >
+                            Select
+                          </button>
+                        </div>
+                      </div>
+                    ))
 
                     {/* Custom Audio Upload */}
                     <div className="p-2.5 rounded-lg bg-neutral-900/50 border border-dashed border-neutral-700 hover:border-emerald-500/50 flex items-center justify-between gap-2 transition col-span-1 sm:col-span-2">
