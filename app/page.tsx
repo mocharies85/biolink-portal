@@ -252,6 +252,8 @@ export default function HomePage() {
             <span>© {new Date().getFullYear()} — Built for Creators</span>
           </div>
           <div className="flex items-center gap-4 text-neutral-400 text-[11px]">
+            <Link href="/terms" className="hover:text-white transition">Terms</Link>
+            <Link href="/privacy" className="hover:text-white transition">Privacy</Link>
             <Link href="/login" className="hover:text-white transition">Sign In</Link>
             <Link href="/register" className="hover:text-white transition">Claim Username</Link>
             <a href="https://ko-fi.com/cycrack" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Support</a>

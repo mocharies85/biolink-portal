@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { ArrowRight, MailCheck, User, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [agreedTerms, setAgreedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
@@ -14,6 +16,12 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!agreedTerms) {
+      setErrorMsg('You must agree to the Terms of Service and Privacy Policy to continue.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -121,6 +129,29 @@ export default function RegisterPage() {
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                 />
                 <Lock className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              </div>
+
+              {/* Kotak Centang Persetujuan Hukum (Clickwrap Agreement) */}
+              <div className="flex items-start gap-2.5 my-1">
+                <input
+                  type="checkbox"
+                  id="agreeTerms"
+                  required
+                  checked={agreedTerms}
+                  onChange={(e) => setAgreedTerms(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-neutral-700 bg-neutral-950 text-emerald-500 focus:ring-emerald-500 shrink-0 cursor-pointer accent-emerald-500"
+                />
+                <label htmlFor="agreeTerms" className="text-[11px] text-neutral-400 leading-relaxed cursor-pointer select-none">
+                  I have read and agree to the{' '}
+                  <Link href="/terms" target="_blank" className="text-emerald-400 underline hover:text-emerald-300">
+                    Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/privacy" target="_blank" className="text-emerald-400 underline hover:text-emerald-300">
+                    Privacy Policy
+                  </Link>
+                  .
+                </label>
               </div>
 
               {errorMsg && (
