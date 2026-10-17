@@ -79,29 +79,38 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
-    const { 
-      username = 'aries', 
-      title, 
-      url: linkUrl, 
-      description, 
-      is_spotlight,
-      schedule_start,
-      schedule_end,
-      pin_code,
-      is_header = 0
-    } = data;
 
-    // URL hanya wajib diisi jika bukan section header
-    if (!title || (!is_header && !linkUrl)) {
-      return new Response(
-        JSON.stringify({ error: is_header ? 'Section title is required.' : 'Title and URL are required.' }), 
-        {
+    // Verifikasi kode PIN untuk pengunjung halaman publik
+    if (data.action === 'verify_pin') {
+      const { linkId, pin } = data;
+      if (!linkId || !pin) {
+        return new Response(JSON.stringify({ error: 'Kode PIN wajib diisi.' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
-        }
-      );
+        });
+      }
+
+      const item = await env.DB.prepare(
+        'SELECT url, pin_code FROM user_links WHERE id = ?'
+      ).bind(linkId).first();
+
+      if (!item || item.pin_code !== pin.trim()) {
+        return new Response(JSON.stringify({ error: 'Kode PIN salah. Silakan coba lagi.' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Hitung statistik klik saat PIN berhasil terbuka
+      await env.DB.prepare('UPDATE user_links SET clicks = clicks + 1 WHERE id = ?').bind(linkId).run();
+
+      return new Response(JSON.stringify({ success: true, url: item.url }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
+    
     const cleanUsername = username.trim().toLowerCase();
 
     // 1. Cek status is_pro pengguna di database

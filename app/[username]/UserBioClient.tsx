@@ -178,6 +178,47 @@ export default function UserBioClient() {
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [isStoryOpen, setIsStoryOpen] = useState(false);
 
+  // State untuk Pop-up Buka Kunci PIN
+  const [targetPinLink, setTargetPinLink] = useState<LinkItem | null>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+  
+  const handleUnlockPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetPinLink || !pinInput.trim()) return;
+
+    setIsVerifyingPin(true);
+    setPinError('');
+
+    try {
+      const res = await fetch('/api/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify_pin',
+          linkId: targetPinLink.id,
+          pin: pinInput.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setPinError(data.error || 'Kode PIN tidak cocok.');
+        setIsVerifyingPin(false);
+        return;
+      }
+
+      // PIN benar: buka link asli di tab baru dan tutup modal
+      window.open(data.url, '_blank');
+      setPinModalOpen(false);
+      setPinInput('');
+      setTargetPinLink(null);
+    } catch {
+      setPinError('Gagal memverifikasi PIN. Periksa koneksi Anda.');
+    } finally {
+      setIsVerifyingPin(false);
+    }
+  };
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
