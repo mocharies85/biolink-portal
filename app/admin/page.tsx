@@ -2135,6 +2135,17 @@ export default function AdminDashboard() {
                           <span className="text-[8px] text-neutral-500 uppercase tracking-tighter">clicks</span>
                         </div>
 
+                        {/* Tombol Edit Link */}
+                        <button
+                          type="button"
+                          onClick={() => setEditingItem({ ...link })}
+                          className="p-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-neutral-500 hover:text-amber-400 transition"
+                          title="Edit Link"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+
+                        {/* Tombol Hapus Link */}
                         <button
                           type="button"
                           onClick={() => handleDeleteLink(link.id)}
@@ -2692,6 +2703,123 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+        {/* Modal Edit Link & Smart Options */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg rounded-3xl bg-neutral-900 border border-neutral-800 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-800">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <h3 className="text-base font-bold text-white">
+                  {editingItem.is_header ? 'Edit Section Header' : 'Edit Link'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="text-neutral-500 hover:text-white p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-400 mb-1">Title</label>
+                <input
+                  type="text"
+                  required
+                  value={editingItem.title || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-sm text-white focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              {!editingItem.is_header && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-400 mb-1">Destination URL</label>
+                    <input
+                      type="url"
+                      required
+                      value={editingItem.url || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, url: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-sm text-white focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-400 mb-1">Description (Optional)</label>
+                    <input
+                      type="text"
+                      value={editingItem.description || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-sm text-white focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  {/* Smart Options Edit */}
+                  <div className="pt-2 border-t border-neutral-800/80 space-y-3">
+                    <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">Smart Link Options</p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] text-neutral-400 mb-1">Schedule Start</label>
+                        <input
+                          type="datetime-local"
+                          value={editingItem.schedule_start || ''}
+                          onChange={(e) => setEditingItem({ ...editingItem, schedule_start: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-neutral-400 mb-1">Expiry Date</label>
+                        <input
+                          type="datetime-local"
+                          value={editingItem.schedule_end || ''}
+                          onChange={(e) => setEditingItem({ ...editingItem, schedule_end: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] text-neutral-400 mb-1">PIN Protection (Kosongkan jika ingin menghapus PIN)</label>
+                      <input
+                        type="text"
+                        maxLength={12}
+                        placeholder="Contoh: 123456"
+                        value={editingItem.pin_code || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, pin_code: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="flex gap-2 pt-4 border-t border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingLink}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-neutral-950 transition disabled:opacity-50"
+                >
+                  {isUpdatingLink ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       </main>
 
       {/* Right Side Mockup Phone Preview */}
