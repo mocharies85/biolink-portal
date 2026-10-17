@@ -618,14 +618,14 @@ export default function UserBioClient() {
             <h2 className="text-sm font-semibold">{t('messages')}</h2>
           </div>
           <p className={`text-xs mb-4 leading-relaxed ${theme.textSecondary}`}>
-            Have a project collaboration, freelance inquiry, or message? Send a note directly to this inbox.
+            {t('messageDesc')}
           </p>
 
           {isSent ? (
             <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center flex flex-col items-center gap-1.5">
               <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-              <p className="text-xs font-semibold text-emerald-300">Message Delivered!</p>
-              <p className="text-[11px] text-neutral-400">Thank you for reaching out. The creator will receive your note shortly.</p>
+              <p className="text-xs font-semibold text-emerald-300">{t('msgSuccessTitle')}</p>
+              <p className="text-[11px] text-neutral-400">{t('msgSuccessDesc')}</p>
             </div>
           ) : (
             <form onSubmit={handleSendMessage} className="flex flex-col gap-2.5">
@@ -650,7 +650,7 @@ export default function UserBioClient() {
                 className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-semibold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
               >
                 {loading ? (
-                  <span>Sending message...</span>
+                  <span>{t('sendingBtn')}</span>
                 ) : (
                   <>
                     <Send className="w-3.5 h-3.5" />
