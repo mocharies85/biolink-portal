@@ -1,4 +1,5 @@
 // Mengambil link milik username tertentu (?username=aries)
+    const pinRateLimitMap = new Map();
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
@@ -80,34 +81,86 @@ export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
 
-    // Verifikasi kode PIN untuk pengunjung halaman publik
+    // Verifikasi kode PIN untuk pengunjung halaman publik dengan Anti-Brute Force
     if (data.action === 'verify_pin') {
       const { linkId, pin } = data;
-      if (!linkId || !pin) {
-        return new Response(JSON.stringify({ error: 'Kode PIN wajib diisi.' }), {
+      if (!linkId || !pin || !pin.trim()) {
+        return new Response(JSON.stringify({ error: 'PIN code is required.' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
         });
+      }
+
+      const clientIp = request.headers.get('cf-connecting-ip') || 'unknown-client';
+      const rateLimitKey = `${clientIp}_${linkId}`;
+      const now = Date.now();
+      const record = pinRateLimitMap.get(rateLimitKey) || { failedAttempts: 0, lockedUntil: 0 };
+
+      // 1. Cek apakah IP sedang terkunci sementara
+      if (record.lockedUntil > now) {
+        const waitSeconds = Math.ceil((record.lockedUntil - now) / 1000);
+        return new Response(
+          JSON.stringify({
+            error: `Too many failed attempts. Try again in ${waitSeconds}s.`
+          }),
+          { status: 429, headers: { 'Content-Type': 'application/json' } }
+        );
       }
 
       const item = await env.DB.prepare(
         'SELECT url, pin_code FROM user_links WHERE id = ?'
       ).bind(linkId).first();
 
-      if (!item || item.pin_code !== pin.trim()) {
-        return new Response(JSON.stringify({ error: 'Kode PIN salah. Silakan coba lagi.' }), {
-          status: 403,
+      if (!item) {
+        return new Response(JSON.stringify({ error: 'Link not found.' }), {
+          status: 404,
           headers: { 'Content-Type': 'application/json' },
         });
       }
 
-      // Hitung statistik klik saat PIN berhasil terbuka
-      await env.DB.prepare('UPDATE user_links SET clicks = clicks + 1 WHERE id = ?').bind(linkId).run();
+      const storedPin = String(item.pin_code || '').trim();
+      const enteredPin = String(pin).trim();
 
-      return new Response(JSON.stringify({ success: true, url: item.url }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      // 2. Jika PIN Cocok
+      if (storedPin && storedPin === enteredPin) {
+        // Reset riwayat kegagalan
+        pinRateLimitMap.delete(rateLimitKey);
+
+        // Hitung statistik klik saat PIN berhasil terbuka
+        await env.DB.prepare('UPDATE user_links SET clicks = clicks + 1 WHERE id = ?').bind(linkId).run();
+
+        return new Response(JSON.stringify({ success: true, url: item.url }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // 3. Jika PIN Salah -> Tambah counter kegagalan
+      record.failedAttempts += 1;
+
+      // Kunci selama 5 menit jika salah 5 kali berturut-turut
+      if (record.failedAttempts >= 5) {
+        record.lockedUntil = now + 5 * 60 * 1000;
+        record.failedAttempts = 0;
+        pinRateLimitMap.set(rateLimitKey, record);
+
+        return new Response(
+          JSON.stringify({
+            error: 'Too many incorrect attempts. Access locked for 5 minutes.'
+          }),
+          { status: 429, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      pinRateLimitMap.set(rateLimitKey, record);
+      const remainingAttempts = 5 - record.failedAttempts;
+
+      return new Response(
+        JSON.stringify({
+          error: `Invalid PIN code. ${remainingAttempts} attempt(s) remaining.`
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     
