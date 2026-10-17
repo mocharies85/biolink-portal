@@ -1890,6 +1890,22 @@ export default function AdminDashboard() {
                     />
                   </div>
 
+                  {/* Media Embed PRO Alert for Free Tier */}
+                  {!isProUser && (newUrl.includes('spotify.com') || newUrl.includes('youtube.com') || newUrl.includes('youtu.be')) && (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
+                      <span className="flex items-center gap-1.5 text-[11px]">
+                        ⭐ <strong>Media Player Preview:</strong> Inline Spotify & YouTube embeds are exclusive to PRO. This link will display as a standard card button on Free tier.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowUpgradeModal(true)}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500 text-neutral-950 font-bold text-[10px] hover:bg-amber-400 transition shrink-0 ml-2"
+                      >
+                        Upgrade
+                      </button>
+                    </div>
+                  )}
+
                   <div>
                     <input
                       type="text"
@@ -3043,6 +3059,14 @@ export default function AdminDashboard() {
 
             <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-3 text-xs text-neutral-300">
               
+              {/* Interactive Media Embeds */}
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Interactive Media Embeds:</strong> Play Spotify tracks, albums, and watch YouTube videos directly inside your bio page without leaving the profile.
+                </div>
+              </div>
+
               {/* PIN Code Protection */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>

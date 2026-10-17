@@ -691,8 +691,8 @@ export default function UserBioClient() {
                 );
 
                 // Media Embed Detection (Disabled if link has PIN protection)
-                const spotifyEmbed = !hasPin && getSpotifyEmbedUrl(link.url);
-                const youtubeEmbed = !hasPin && getYouTubeEmbedUrl(link.url);
+                const spotifyEmbed = isPro && !hasPin && getSpotifyEmbedUrl(link.url);
+                const youtubeEmbed = isPro && !hasPin && getYouTubeEmbedUrl(link.url);
 
                 if (spotifyEmbed) {
                   return (
