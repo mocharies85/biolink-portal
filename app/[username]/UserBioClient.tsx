@@ -34,6 +34,7 @@ interface LinkItem {
   is_highlighted?: number | boolean;
   highlight?: number | boolean;
   has_pin?: boolean;
+  pin_code?: string | null;
   is_header?: number;
 }
 
@@ -182,7 +183,7 @@ export default function UserBioClient() {
   const [targetPinLink, setTargetPinLink] = useState<LinkItem | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
-  
+
   const handleUnlockPin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetPinLink || !pinInput.trim()) return;
@@ -646,7 +647,7 @@ export default function UserBioClient() {
           </div>
         )}
 
-        {/* Links List with Spotlight */}
+        {/* Links List with Spotlight & PIN Protection */}
         <section className="w-full flex flex-col gap-3.5 mb-8">
           {loadingLinks ? (
             <div className="p-8 text-center text-xs text-neutral-500 animate-pulse">
@@ -670,15 +671,37 @@ export default function UserBioClient() {
                 const isHighlight = Boolean(link.is_highlighted || (link as any).highlight);
                 const isSpotlight = Boolean(link.is_spotlight === 1 || (link as any).is_spotlight === true);
                 const descText = link.description || (link as any).desc;
+                
+                // Deteksi proteksi PIN
+                const hasPin = Boolean(
+                  link.has_pin ||
+                  (link as any).hasPin ||
+                  (link.pin_code && String(link.pin_code).trim().length > 0)
+                );
 
                 return (
                   <a
                     key={link.id}
-                    href={link.url}
-                    target="_blank"
+                    href={hasPin ? '#' : (link.url || '#')}
+                    target={hasPin ? '_self' : '_blank'}
                     rel="noopener noreferrer"
-                    onClick={() => handleLinkClick(link.id)}
-                    className={`relative group w-full p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between shadow-sm hover:scale-[1.015] active:scale-[0.99] backdrop-blur-md ${
+                    onClick={(e) => {
+                      if (hasPin) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setTargetPinLink(link);
+                        setPinInput('');
+                        setPinError('');
+                        setPinModalOpen(true);
+                        return;
+                      }
+                      if (!link.url) {
+                        e.preventDefault();
+                        return;
+                      }
+                      handleLinkClick(link.id);
+                    }}
+                    className={`relative group w-full p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between shadow-sm hover:scale-[1.015] active:scale-[0.99] backdrop-blur-md cursor-pointer ${
                       isSpotlight
                         ? 'bg-gradient-to-r from-amber-500/15 via-neutral-900 to-amber-500/15 border-2 border-amber-400 shadow-lg shadow-amber-500/20 hover:border-amber-300'
                         : isHighlight
@@ -696,6 +719,7 @@ export default function UserBioClient() {
                       <span className={`text-sm font-semibold flex items-center gap-1.5 truncate ${
                         isSpotlight ? 'text-amber-300' : theme.textPrimary
                       }`}>
+                        {hasPin && <Lock className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
                         {link.title}
                         {isHighlight && !isSpotlight && (
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${theme.accentBadge}`}>
@@ -711,7 +735,11 @@ export default function UserBioClient() {
                     <div className={`p-1.5 rounded-xl shrink-0 transition ${
                       isSpotlight ? 'bg-amber-500/20 text-amber-300' : 'text-neutral-400 group-hover:text-white'
                     }`}>
-                      <ExternalLink className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                      {hasPin ? (
+                        <Lock className="w-4 h-4 text-rose-400" />
+                      ) : (
+                        <ExternalLink className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                      )}
                     </div>
                   </a>
                 );
