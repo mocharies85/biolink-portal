@@ -3009,6 +3009,23 @@ export default function AdminDashboard() {
 
             <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-3 text-xs text-neutral-300">
               
+              {/* PIN Code Protection */}
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">PIN Code Protection:</strong> Lock exclusive downloads, paid content, or private communities behind a secure passcode.
+                </div>
+              </div>
+
+              {/* Smart Scheduling */}
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Smart Link Scheduling:</strong> Set exact release dates and automated expiration for limited-time offers and promos.
+                </div>
+              </div>
+
+              {/* Custom Wallpapers */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3016,13 +3033,15 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Social Share Card & SEO */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
-                  <strong className="text-white">Custom Social Share Card &amp; SEO:</strong> Dedicated 1200x630 rich banner thumbnail, custom title, and snippet description on WhatsApp, Telegram, and X.
+                  <strong className="text-white">Custom Social Share Card &amp; SEO:</strong> Dedicated 1200x630 rich banner thumbnail, custom title, and snippet description on WhatsApp, Telegram, X, Facebook, Threads, &amp; LinkedIn.
                 </div>
               </div>
 
+              {/* Spotlight Glow */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3030,6 +3049,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Stories Duration */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3037,6 +3057,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Unlimited Links */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3044,6 +3065,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Analytics */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3051,6 +3073,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Gold Badge */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
