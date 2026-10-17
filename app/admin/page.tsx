@@ -2820,11 +2820,11 @@ export default function AdminDashboard() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-neutral-400 mb-1">PIN Protection (Kosongkan jika ingin menghapus PIN)</label>
+                      <label className="block text-[11px] text-neutral-400 mb-1">PIN Protection (Leave empty to remove PIN)</label>
                       <input
                         type="text"
                         maxLength={12}
-                        placeholder="Contoh: 123456"
+                        placeholder="e.g. 123456"
                         value={editingItem.pin_code || ''}
                         onChange={(e) => setEditingItem({ ...editingItem, pin_code: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-400"
@@ -2840,14 +2840,14 @@ export default function AdminDashboard() {
                   onClick={() => setEditingItem(null)}
                   className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
                 >
-                  Batal
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdatingLink}
                   className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-neutral-950 transition disabled:opacity-50"
                 >
-                  {isUpdatingLink ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  {isUpdatingLink ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
