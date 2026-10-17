@@ -332,6 +332,40 @@ export default function AdminDashboard() {
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Helper Badge Status Jadwal
+  const getScheduleBadge = (link: any) => {
+    if (!link.schedule_start && !link.schedule_end) return null;
+    const now = new Date().getTime();
+
+    if (link.schedule_start) {
+      const startTime = new Date(link.schedule_start).getTime();
+      if (!isNaN(startTime) && now < startTime) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            ⏳ Scheduled
+          </span>
+        );
+      }
+    }
+
+    if (link.schedule_end) {
+      const endTime = new Date(link.schedule_end).getTime();
+      if (!isNaN(endTime) && now > endTime) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+            ⛔ Expired
+          </span>
+        );
+      }
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        🟢 Active Schedule
+      </span>
+    );
+  };
+
   // Initialize stable Audio player instance
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -3176,7 +3210,10 @@ export default function AdminDashboard() {
                       return (
                         <div key={link.id} className="grid grid-cols-12 px-4 py-3 text-xs items-center hover:bg-neutral-900/30 transition">
                           <div className="col-span-7 truncate pr-2">
-                            <p className="font-medium text-white truncate">{link.title}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-white truncate">{link.title}</p>
+                                {getScheduleBadge(link)}
+                            </div>
                             {link.description && (
                               <p className="text-[11px] text-neutral-400 truncate">{link.description}</p>
                             )}
