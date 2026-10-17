@@ -49,8 +49,10 @@ interface LinkItem {
   clicks?: number;
   is_active?: number;
   is_spotlight?: number;
-  has_pin?: boolean;
   is_header?: number;
+  schedule_start?: string | null;
+  schedule_end?: string | null;
+  pin_code?: string | null;
 }
 
 interface SocialLinks {
@@ -2009,11 +2011,34 @@ export default function AdminDashboard() {
                       }`}
                     >
                       <div className="truncate flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center flex-wrap gap-1.5">
                           <p className="text-xs font-bold text-white truncate">{link.title}</p>
+
+                          {/* Badge Spotlight */}
                           {isSpotlight && (
-                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-wider border border-amber-500/30">
-                              Spotlight
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-wider border border-amber-500/30 flex items-center gap-0.5">
+                              <Flame className="w-2.5 h-2.5" /> Spotlight
+                            </span>
+                          )}
+
+                          {/* Badge PIN Protection */}
+                          {Boolean(link.pin_code && link.pin_code.trim().length > 0) && (
+                            <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[9px] font-bold uppercase tracking-wider border border-rose-500/30 flex items-center gap-0.5" title={`PIN: ${link.pin_code}`}>
+                              <Lock className="w-2.5 h-2.5" /> PIN Protected
+                            </span>
+                          )}
+
+                          {/* Badge Penjadwalan */}
+                          {link.schedule_start && new Date(link.schedule_start) > new Date() && (
+                            <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[9px] font-bold uppercase tracking-wider border border-blue-500/30 flex items-center gap-0.5" title={`Starts at: ${link.schedule_start}`}>
+                              <Calendar className="w-2.5 h-2.5" /> Scheduled
+                            </span>
+                          )}
+
+                          {/* Badge Kedaluwarsa */}
+                          {link.schedule_end && new Date(link.schedule_end) < new Date() && (
+                            <span className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 text-[9px] font-bold uppercase tracking-wider border border-neutral-700 flex items-center gap-0.5" title={`Expired at: ${link.schedule_end}`}>
+                              <Calendar className="w-2.5 h-2.5" /> Expired
                             </span>
                           )}
                         </div>
