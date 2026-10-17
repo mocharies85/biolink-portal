@@ -92,10 +92,14 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
                   <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
                   <span><strong>Instant Profile QR Code:</strong> Share your biolink easily via smartphone scan.</span>
                 </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">✓</span>
+                  <span><strong>Profile Views Analytics:</strong> Track total profile page visitors in real-time.</span>
+                </div>
               </div>
             </div>
 
-            {/* FREE Button: Closes Modal */}
+            {/* FREE Button */}
             <button
               type="button"
               onClick={onClose}
@@ -153,7 +157,7 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                  <span><strong className="text-amber-200">60s Video & 25s Photo Stories:</strong> 60s video streaming via R2 + custom MP3 upload.</span>
+                  <span><strong className="text-amber-200">60s Video & 25s/45s/60s Photo:</strong> Streaming video 60s via R2 + custom audio upload.</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
@@ -166,14 +170,14 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
               </div>
             </div>
 
-            {/* PRO Button: Redirects to Ko-fi Checkout */}
+            {/* PRO Button */}
             <a
               href="https://ko-fi.com/cycrack"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-extrabold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
             >
-              <span>Get PRO Access ($3/MO)</span>
+              <span>Upgrade to PRO ($3/MO)</span>
               <ExternalLink className="w-4 h-4" />
             </a>
           </div>
