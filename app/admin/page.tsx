@@ -35,7 +35,8 @@ import {
   QrCode,
   Download,
   Share2,
-  Palette
+  Palette,
+  Calendar,
 } from 'lucide-react';
 
 interface LinkItem {
@@ -375,6 +376,10 @@ export default function AdminDashboard() {
   const [newDesc, setNewDesc] = useState('');
   const [newIsSpotlight, setNewIsSpotlight] = useState(false);
   const [addingLink, setAddingLink] = useState(false);
+  // State untuk Smart Links (PRO)
+  const [scheduleStart, setScheduleStart] = useState('');
+  const [scheduleEnd, setScheduleEnd] = useState('');
+  const [pinCode, setPinCode] = useState('');
 
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
@@ -804,7 +809,10 @@ export default function AdminDashboard() {
           title: newTitle.trim(),
           url: newUrl.trim(),
           description: newDesc.trim(),
-          is_spotlight: isProUser && newIsSpotlight ? 1 : 0
+          is_spotlight: isProUser && newIsSpotlight ? 1 : 0,
+          schedule_start: isProUser && scheduleStart ? scheduleStart : null,
+          schedule_end: isProUser && scheduleEnd ? scheduleEnd : null,
+          pin_code: isProUser && pinCode.trim() ? pinCode.trim() : null,
         }),
       });
 
@@ -813,6 +821,9 @@ export default function AdminDashboard() {
         setNewUrl('');
         setNewDesc('');
         setNewIsSpotlight(false);
+        setScheduleStart('');
+        setScheduleEnd('');
+        setPinCode('');
         fetchLinks();
       } else {
         const errorData = await res.json();
@@ -1784,7 +1795,65 @@ export default function AdminDashboard() {
                   <div className={`w-4 h-4 rounded-full bg-white transition-transform ${newIsSpotlight ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
               </div>
+              {/* Smart Links Section (Fitur Jadwal & PIN untuk Akun PRO) */}
+          <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                Smart Link Options
+              </span>
+              {!isProUser && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
+                  PRO Only
+                </span>
+              )}
+            </div>
 
+            {/* Jadwal Tayang & Kedaluwarsa */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
+                  <Calendar className="w-3 h-3 text-neutral-500" /> Mulai Tayang (Opsional)
+                </label>
+                <input
+                  type="datetime-local"
+                  disabled={!isProUser}
+                  value={scheduleStart}
+                  onChange={(e) => setScheduleStart(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
+                  <Calendar className="w-3 h-3 text-neutral-500" /> Kedaluwarsa (Opsional)
+                </label>
+                <input
+                  type="datetime-local"
+                  disabled={!isProUser}
+                  value={scheduleEnd}
+                  onChange={(e) => setScheduleEnd(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            {/* Proteksi PIN */}
+            <div>
+              <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
+                <Lock className="w-3 h-3 text-neutral-500" /> Proteksi Kunci PIN (Opsional)
+              </label>
+              <input
+                type="text"
+                maxLength={8}
+                disabled={!isProUser}
+                value={pinCode}
+                onChange={(e) => setPinCode(e.target.value)}
+                placeholder={isProUser ? "Contoh: 123456" : "Khusus akun PRO"}
+                className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+              />
+            </div>
+          </div>
               <button
                 type="submit"
                 disabled={addingLink}

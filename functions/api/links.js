@@ -3,6 +3,7 @@ export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
     const username = (url.searchParams.get('username') || 'aries').trim().toLowerCase();
+    const isAdmin = url.searchParams.get('admin') === 'true' || url.searchParams.get('all') === 'true';
 
     // Utamakan link Spotlight di paling atas, lalu urutkan dari yang terbaru
     const { results } = await env.DB.prepare(
@@ -14,10 +15,41 @@ export async function onRequestGet({ request, env }) {
       'SELECT is_pro FROM users WHERE LOWER(username) = ?'
     ).bind(username).first();
 
+    const isPro = user ? user.is_pro === 1 : false;
+    const now = new Date();
+
+    // Saring tautan berdasarkan jadwal dan amankan PIN untuk pengunjung publik
+    const links = (results || []).filter((link) => {
+      // Jika diakses dari dasbor admin, tampilkan semua tanpa penyaringan
+      if (isAdmin) return true;
+
+      // Saring jadwal mulai tampil
+      if (link.schedule_start && new Date(link.schedule_start) > now) {
+        return false;
+      }
+
+      // Saring batas kedaluwarsa link
+      if (link.schedule_end && new Date(link.schedule_end) < now) {
+        return false;
+      }
+
+      return true;
+    }).map((link) => {
+      if (isAdmin) return link;
+
+      const hasPin = Boolean(link.pin_code && link.pin_code.trim().length > 0);
+      return {
+        ...link,
+        has_pin: hasPin,
+        url: hasPin ? '' : link.url, // Sembunyikan URL asli jika link dikunci PIN
+        pin_code: undefined, // Hapus kode PIN asli dari respon JSON publik
+      };
+    });
+
     return new Response(
       JSON.stringify({ 
-        links: results || [], 
-        isPro: user ? user.is_pro === 1 : false 
+        links, 
+        isPro 
       }), 
       {
         status: 200,
@@ -36,7 +68,16 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
-    const { username = 'aries', title, url: linkUrl, description, is_spotlight } = data;
+    const { 
+      username = 'aries', 
+      title, 
+      url: linkUrl, 
+      description, 
+      is_spotlight,
+      schedule_start,
+      schedule_end,
+      pin_code
+    } = data;
 
     if (!title || !linkUrl) {
       return new Response(JSON.stringify({ error: 'Title and URL are required' }), {
@@ -75,13 +116,25 @@ export async function onRequestPost({ request, env }) {
       }
     }
 
-    // Hanya akun PRO yang diizinkan mengaktifkan Spotlight
+    // Fitur Smart Links (Spotlight, Penjadwalan & PIN) eksklusif untuk akun PRO
     const spotlightValue = isPro && is_spotlight ? 1 : 0;
+    const scheduleStartVal = isPro && schedule_start ? schedule_start : null;
+    const scheduleEndVal = isPro && schedule_end ? schedule_end : null;
+    const pinCodeVal = isPro && pin_code ? pin_code.trim() : null;
 
-    // 3. Simpan link baru beserta status is_spotlight
+    // 3. Simpan link baru ke tabel user_links
     await env.DB.prepare(
-      'INSERT INTO user_links (username, title, url, description, is_spotlight, clicks) VALUES (?, ?, ?, ?, ?, 0)'
-    ).bind(cleanUsername, title.trim(), linkUrl.trim(), description?.trim() || '', spotlightValue).run();
+      'INSERT INTO user_links (username, title, url, description, is_spotlight, schedule_start, schedule_end, pin_code, clicks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)'
+    ).bind(
+      cleanUsername, 
+      title.trim(), 
+      linkUrl.trim(), 
+      description?.trim() || '', 
+      spotlightValue,
+      scheduleStartVal,
+      scheduleEndVal,
+      pinCodeVal
+    ).run();
 
     return new Response(JSON.stringify({ success: true }), {
       status: 201,
@@ -95,11 +148,11 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
-// Mengubah status Spotlight link (Khusus Akun PRO)
+// Mengubah status Spotlight link dan atribut Smart Links (Khusus Akun PRO)
 export async function onRequestPatch({ request, env }) {
   try {
     const data = await request.json();
-    const { id, username, is_spotlight } = data;
+    const { id, username, is_spotlight, schedule_start, schedule_end, pin_code } = data;
 
     if (!id || !username) {
       return new Response(JSON.stringify({ error: 'Missing link id or username' }), {
@@ -117,14 +170,27 @@ export async function onRequestPatch({ request, env }) {
 
     if (!user || user.is_pro !== 1) {
       return new Response(
-        JSON.stringify({ error: 'Spotlight link is an exclusive PRO feature.' }),
+        JSON.stringify({ error: 'Fitur Smart Link & Spotlight khusus untuk akun PRO.' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    await env.DB.prepare(
-      'UPDATE user_links SET is_spotlight = ? WHERE id = ? AND LOWER(username) = ?'
-    ).bind(is_spotlight ? 1 : 0, id, cleanUsername).run();
+    await env.DB.prepare(`
+      UPDATE user_links 
+      SET 
+        is_spotlight = COALESCE(?, is_spotlight),
+        schedule_start = COALESCE(?, schedule_start),
+        schedule_end = COALESCE(?, schedule_end),
+        pin_code = COALESCE(?, pin_code)
+      WHERE id = ? AND LOWER(username) = ?
+    `).bind(
+      is_spotlight !== undefined ? (is_spotlight ? 1 : 0) : null,
+      schedule_start !== undefined ? schedule_start : null,
+      schedule_end !== undefined ? schedule_end : null,
+      pin_code !== undefined ? pin_code : null,
+      id,
+      cleanUsername
+    ).run();
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
@@ -152,7 +218,6 @@ export async function onRequestDelete({ request, env }) {
       });
     }
 
-    // Hapus link dengan memverifikasi ID dan username pemilik
     if (username) {
       await env.DB.prepare('DELETE FROM user_links WHERE id = ? AND LOWER(username) = ?').bind(id, username).run();
     } else {

@@ -13,7 +13,9 @@ import {
   Flame,
   QrCode,
   Download,
-  X
+  X,
+  Lock,
+  KeyRound
 } from 'lucide-react';
 import StoryModal from '@/components/StoryModal';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -137,6 +139,14 @@ export default function UserBioClient() {
     return '';
   });
 
+  // --- TEMPELKAN DI SINI (State untuk Protected Smart Link PIN) ---
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [selectedPinLinkId, setSelectedPinLinkId] = useState<number | null>(null);
+  const [inputPin, setInputPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [verifyingPin, setVerifyingPin] = useState(false);
+  // ----------------------------------------------------------------
+
   const [profile, setProfile] = useState<{
     name: string;
     tagline: string;
@@ -225,6 +235,50 @@ export default function UserBioClient() {
 
   const handleLinkClick = (id: number) => {
     fetch(`/api/click?id=${id}`, { method: 'POST' }).catch(() => {});
+  };
+
+  const handleProtectedLinkClick = (e: React.MouseEvent, link: any) => {
+    if (link.has_pin) {
+      e.preventDefault();
+      setSelectedPinLinkId(link.id);
+      setInputPin('');
+      setPinError('');
+      setPinModalOpen(true);
+    } else {
+      handleLinkClick(link.id);
+    }
+  };
+
+  const handleVerifyPinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputPin.trim() || !selectedPinLinkId) return;
+
+    setVerifyingPin(true);
+    setPinError('');
+
+    try {
+      const res = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          linkId: selectedPinLinkId,
+          pin: inputPin.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.targetUrl) {
+        setPinModalOpen(false);
+        handleLinkClick(selectedPinLinkId);
+        window.open(data.targetUrl, '_blank');
+      } else {
+        setPinError(data.error || 'PIN salah. Akses ditolak.');
+      }
+    } catch {
+      setPinError('Gagal memverifikasi PIN.');
+    } finally {
+      setVerifyingPin(false);
+    }
   };
 
   const handleShare = async () => {
