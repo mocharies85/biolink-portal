@@ -35,7 +35,10 @@ interface LinkItem {
   highlight?: number | boolean;
   has_pin?: boolean;
   pin_code?: string | null;
+  schedule_start?: string | null;
+  schedule_end?: string | null;
   is_header?: number;
+ 
 }
 
 interface SocialLinks {
@@ -655,7 +658,34 @@ export default function UserBioClient() {
             </div>
           ) : (
             links
-              .filter((link) => link.is_header === 1 || link.is_active === 1 || link.is_active === undefined || (link as any).active)
+              .filter((link: any) => {
+                // Header pemisah kategori selalu ditampilkan
+                if (link.is_header === 1) return true;
+
+                // Sembunyikan jika dinonaktifkan manual
+                if (link.is_active === 0 || link.active === false) return false;
+
+                // Pengecekan Smart Scheduling (Waktu Sekarang)
+                const now = new Date().getTime();
+
+                // Sembunyikan jika jadwal mulai belum tercapai
+                if (link.schedule_start) {
+                  const startTime = new Date(link.schedule_start).getTime();
+                  if (!isNaN(startTime) && now < startTime) {
+                    return false;
+                  }
+                }
+
+                // Sembunyikan jika jadwal berakhir sudah terlewati
+                if (link.schedule_end) {
+                  const endTime = new Date(link.schedule_end).getTime();
+                  if (!isNaN(endTime) && now > endTime) {
+                    return false;
+                  }
+                }
+
+                return true;
+              })
               .map((link) => {
                 // Render khusus Section Header (Pemisah Kategori)
                 if (link.is_header === 1) {
