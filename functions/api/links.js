@@ -1,17 +1,19 @@
-// Mengambil link milik username tertentu (?username=aries)
-    const pinRateLimitMap = new Map();
+// In-memory rate limiter for PIN brute force protection
+const pinRateLimitMap = new Map();
+
+// GET: Fetch links belonging to a specific username (?username=aries)
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
     const username = (url.searchParams.get('username') || 'aries').trim().toLowerCase();
     const isAdmin = url.searchParams.get('admin') === 'true' || url.searchParams.get('all') === 'true';
 
-    // Urutkan berdasarkan sort_order terkecil ke terbesar, lalu fallback ke id ASC
+    // Order by sort_order ascending, fallback to id ascending
     const { results } = await env.DB.prepare(
       'SELECT * FROM user_links WHERE LOWER(username) = ? ORDER BY sort_order ASC, id ASC'
     ).bind(username).all();
 
-    // Ambil status is_pro pengguna
+    // Fetch user PRO status
     const user = await env.DB.prepare(
       'SELECT is_pro FROM users WHERE LOWER(username) = ?'
     ).bind(username).first();
@@ -19,19 +21,19 @@ export async function onRequestGet({ request, env }) {
     const isPro = user ? user.is_pro === 1 : false;
     const now = new Date();
 
-    // Saring tautan berdasarkan jadwal dan amankan PIN untuk pengunjung publik
+    // Filter links by schedule and protect PIN for public visitors
     const links = (results || []).filter((link) => {
       if (isAdmin) return true;
 
-      // Section header selalu ditampilkan
+      // Section header is always visible
       if (link.is_header === 1) return true;
 
-      // Saring jadwal mulai tampil
+      // Filter schedule start
       if (link.schedule_start && new Date(link.schedule_start) > now) {
         return false;
       }
 
-      // Saring batas kedaluwarsa link
+      // Filter schedule expiration
       if (link.schedule_end && new Date(link.schedule_end) < now) {
         return false;
       }
@@ -76,12 +78,12 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-// Menambah link atau section header baru
+// POST: Add new link/header or verify PIN
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
 
-    // Verifikasi kode PIN untuk pengunjung halaman publik dengan Anti-Brute Force
+    // 1. PIN verification for public profile visitors with anti-brute force
     if (data.action === 'verify_pin') {
       const { linkId, pin } = data;
       if (!linkId || !pin || !pin.trim()) {
@@ -96,7 +98,7 @@ export async function onRequestPost({ request, env }) {
       const now = Date.now();
       const record = pinRateLimitMap.get(rateLimitKey) || { failedAttempts: 0, lockedUntil: 0 };
 
-      // 1. Cek apakah IP sedang terkunci sementara
+      // Check temporary lockout
       if (record.lockedUntil > now) {
         const waitSeconds = Math.ceil((record.lockedUntil - now) / 1000);
         return new Response(
@@ -121,12 +123,8 @@ export async function onRequestPost({ request, env }) {
       const storedPin = String(item.pin_code || '').trim();
       const enteredPin = String(pin).trim();
 
-      // 2. Jika PIN Cocok
       if (storedPin && storedPin === enteredPin) {
-        // Reset riwayat kegagalan
         pinRateLimitMap.delete(rateLimitKey);
-
-        // Hitung statistik klik saat PIN berhasil terbuka
         await env.DB.prepare('UPDATE user_links SET clicks = clicks + 1 WHERE id = ?').bind(linkId).run();
 
         return new Response(JSON.stringify({ success: true, url: item.url }), {
@@ -135,12 +133,9 @@ export async function onRequestPost({ request, env }) {
         });
       }
 
-      // 3. Jika PIN Salah -> Tambah counter kegagalan
       record.failedAttempts += 1;
-
-      // Kunci selama 5 menit jika salah 5 kali berturut-turut
       if (record.failedAttempts >= 5) {
-        record.lockedUntil = now + 5 * 60 * 1000;
+        record.lockedUntil = now + 5 * 60 * 1000; // 5-minute lockout
         record.failedAttempts = 0;
         pinRateLimitMap.set(rateLimitKey, record);
 
@@ -163,17 +158,43 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
-    
+    // 2. Add New Link or Section Header
+    const {
+      username,
+      title,
+      url: linkUrl,
+      description,
+      is_header,
+      is_spotlight,
+      schedule_start,
+      schedule_end,
+      pin_code
+    } = data;
+
+    if (!username || !username.trim()) {
+      return new Response(JSON.stringify({ error: 'Username is required.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!title || !title.trim()) {
+      return new Response(JSON.stringify({ error: 'Title is required.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const cleanUsername = username.trim().toLowerCase();
 
-    // 1. Cek status is_pro pengguna di database
+    // Check user PRO status
     const user = await env.DB.prepare(
       'SELECT is_pro FROM users WHERE LOWER(username) = ?'
     ).bind(cleanUsername).first();
 
     const isPro = user ? user.is_pro === 1 : false;
 
-    // 2. Batasi pengguna non-PRO maksimal 3 link (Section header tidak memotong kuota link)
+    // Free tier limitation (max 3 links, headers excluded)
     if (!isPro && !is_header) {
       const countResult = await env.DB.prepare(
         'SELECT COUNT(*) as total FROM user_links WHERE LOWER(username) = ? AND is_header = 0'
@@ -194,20 +215,20 @@ export async function onRequestPost({ request, env }) {
       }
     }
 
-    // 3. Tentukan nilai urutan berikutnya agar item baru otomatis ditaruh di paling bawah
+    // Determine next order
     const maxOrderRow = await env.DB.prepare(
       'SELECT MAX(sort_order) as max_order FROM user_links WHERE LOWER(username) = ?'
     ).bind(cleanUsername).first();
 
     const nextOrder = maxOrderRow && maxOrderRow.max_order !== null ? maxOrderRow.max_order + 1 : 0;
 
-    // Fitur Smart Links eksklusif untuk akun PRO dan link standar
+    // PRO-exclusive features
     const spotlightValue = !is_header && isPro && is_spotlight ? 1 : 0;
     const scheduleStartVal = !is_header && isPro && schedule_start ? schedule_start : null;
     const scheduleEndVal = !is_header && isPro && schedule_end ? schedule_end : null;
     const pinCodeVal = !is_header && isPro && pin_code ? pin_code.trim() : null;
 
-    // 4. Simpan ke tabel user_links
+    // Insert into user_links table
     await env.DB.prepare(
       `INSERT INTO user_links (
         username, title, url, description, is_spotlight, schedule_start, schedule_end, pin_code, is_header, sort_order, clicks
@@ -215,7 +236,7 @@ export async function onRequestPost({ request, env }) {
     ).bind(
       cleanUsername, 
       title.trim(), 
-      is_header ? '' : linkUrl.trim(), 
+      is_header ? '' : (linkUrl ? linkUrl.trim() : ''), 
       is_header ? '' : (description?.trim() || ''), 
       spotlightValue,
       scheduleStartVal,
@@ -237,7 +258,7 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
-// Menyimpan susunan urutan link & header baru
+// PUT: Save reordered links & headers
 export async function onRequestPut({ request, env }) {
   try {
     const { username, orderedIds } = await request.json();
@@ -251,7 +272,6 @@ export async function onRequestPut({ request, env }) {
 
     const cleanUsername = username.trim().toLowerCase();
 
-    // Buat statement batch untuk memperbarui sort_order tiap ID
     const statements = orderedIds.map((id, index) =>
       env.DB.prepare(
         'UPDATE user_links SET sort_order = ? WHERE id = ? AND LOWER(username) = ?'
@@ -272,7 +292,7 @@ export async function onRequestPut({ request, env }) {
   }
 }
 
-// Mengubah status Spotlight link dan atribut Smart Links (Khusus Akun PRO)
+// PATCH: Edit link attributes, spotlight, and PRO features
 export async function onRequestPatch({ request, env }) {
   try {
     const data = await request.json();
@@ -287,30 +307,28 @@ export async function onRequestPatch({ request, env }) {
 
     const cleanUsername = username.trim().toLowerCase();
 
-    // 1. Cek data existing
+    // Check existing link
     const existing = await env.DB.prepare(
       'SELECT * FROM user_links WHERE id = ? AND LOWER(username) = ?'
     ).bind(id, cleanUsername).first();
 
     if (!existing) {
-      return new Response(JSON.stringify({ error: 'Link tidak ditemukan.' }), {
+      return new Response(JSON.stringify({ error: 'Link not found.' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // 2. Cek status akun PRO
+    // Check user PRO status
     const user = await env.DB.prepare(
       'SELECT is_pro FROM users WHERE LOWER(username) = ?'
     ).bind(cleanUsername).first();
     const isPro = user ? user.is_pro === 1 : false;
 
-    // Siapkan nilai baru (fallback ke data lama jika tidak diubah)
     const newTitle = title !== undefined ? title.trim() : existing.title;
     const newUrl = existing.is_header ? '' : (linkUrl !== undefined ? linkUrl.trim() : existing.url);
     const newDesc = existing.is_header ? '' : (description !== undefined ? description.trim() : existing.description);
     
-    // Fitur PRO: Spotlight, Jadwal, dan PIN
     const newSpotlight = isPro && is_spotlight !== undefined ? (is_spotlight ? 1 : 0) : existing.is_spotlight;
     const newStart = isPro && schedule_start !== undefined ? (schedule_start || null) : existing.schedule_start;
     const newEnd = isPro && schedule_end !== undefined ? (schedule_end || null) : existing.schedule_end;
@@ -351,7 +369,7 @@ export async function onRequestPatch({ request, env }) {
   }
 }
 
-// Menghapus link dengan validasi kepemilikan username
+// DELETE: Delete link with username ownership verification
 export async function onRequestDelete({ request, env }) {
   try {
     const url = new URL(request.url);
