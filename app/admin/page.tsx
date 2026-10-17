@@ -325,7 +325,7 @@ export default function AdminDashboard() {
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Inisialisasi satu instance Audio player stabil (anti re-render)
+  // Initialize stable Audio player instance
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const audio = new Audio();
@@ -376,7 +376,7 @@ export default function AdminDashboard() {
   const [newDesc, setNewDesc] = useState('');
   const [newIsSpotlight, setNewIsSpotlight] = useState(false);
   const [addingLink, setAddingLink] = useState(false);
-  // State untuk Smart Links (PRO)
+  // Smart Links state (PRO)
   const [scheduleStart, setScheduleStart] = useState('');
   const [scheduleEnd, setScheduleEnd] = useState('');
   const [pinCode, setPinCode] = useState('');
@@ -486,7 +486,7 @@ export default function AdminDashboard() {
     if (!activeUsername) return;
     setLoadingLinks(true);
     try {
-      const res = await fetch(`/api/links?username=${activeUsername}`);
+      const res = await fetch(`/api/links?username=${activeUsername}&admin=true`);
       if (res.ok) {
         const data = await res.json();
         setLinks(data.links || []);
@@ -580,14 +580,12 @@ export default function AdminDashboard() {
     if (!previewAudioRef.current) return;
     const audio = previewAudioRef.current;
 
-    // Jika lagu yang sama sedang aktif, matikan (Pause)
     if (previewingTrackId === track.id) {
       audio.pause();
       setPreviewingTrackId(null);
       return;
     }
 
-    // Dukungan audio mode untuk iOS Safari
     if (typeof navigator !== 'undefined' && 'audioSession' in navigator) {
       try {
         (navigator as any).audioSession.type = 'playback';
@@ -595,21 +593,13 @@ export default function AdminDashboard() {
     }
 
     try {
-      // Hentikan lagu sebelumnya
       audio.pause();
       audio.currentTime = 0;
-
-      // Set URL lagu baru
       audio.src = track.url;
-
-      // Nyalakan status UI preview
       setPreviewingTrackId(track.id);
-
-      // Jalankan pemutaran
       await audio.play();
     } catch (err: any) {
       console.warn('Audio play interrupted or failed:', err);
-      // Abaikan jika hanya AbortError karena pergantian cepat antar lagu
       if (err.name !== 'AbortError') {
         setPreviewingTrackId(null);
       }
@@ -634,7 +624,6 @@ export default function AdminDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Otomatis mengikuti opsi durasi yang dipilih (10s, 25s, 45s, atau 60s)
     const maxAllowedDuration = plannedDuration;
     setProcessingAudio(true);
 
@@ -1008,24 +997,26 @@ export default function AdminDashboard() {
       window.open(qrImageUrl, '_blank');
     }
   };
+
   const handleExportCsv = () => {
     if (!isProUser) {
-      alert('Fitur ini khusus untuk akun PRO.');
+      alert('Exporting messages is an exclusive PRO feature.');
       return;
     }
     window.open(`/api/export-messages?username=${encodeURIComponent(activeUsername || '')}`, '_blank');
   };
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row font-sans">
       <audio 
-  ref={previewAudioRef} 
-  preload="auto"
-  playsInline
-  crossOrigin="anonymous"
-  onEnded={() => setPreviewingTrackId(null)} 
-/>
+        ref={previewAudioRef} 
+        preload="auto"
+        playsInline
+        crossOrigin="anonymous"
+        onEnded={() => setPreviewingTrackId(null)} 
+      />
 
-      {/* Sidebar Navigation (Clean: No Music Manager) */}
+      {/* Sidebar Navigation */}
       <aside className="w-full md:w-64 bg-neutral-900 border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0">
         <div>
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800 mb-6">
@@ -1075,7 +1066,6 @@ export default function AdminDashboard() {
               </span>
             </button>
 
-            {/* Tab Themes & Styling */}
             <button
               onClick={() => setActiveTab('themes')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
@@ -1270,7 +1260,7 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* Social Media Icons Input */}
+                {/* Social Media Icons Bar */}
                 <div className="pt-4 border-t border-neutral-800">
                   <label className="text-xs font-bold text-white block mb-1 flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-emerald-400" />
@@ -1281,7 +1271,6 @@ export default function AdminDashboard() {
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    {/* Instagram */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">Instagram (@username)</label>
                       <input
@@ -1296,7 +1285,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* WhatsApp */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">WhatsApp (Country code + number)</label>
                       <input
@@ -1311,7 +1299,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* TikTok */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">TikTok (@username)</label>
                       <input
@@ -1326,7 +1313,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* YouTube */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">YouTube Channel URL</label>
                       <input
@@ -1341,7 +1327,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* X / Twitter */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">X / Twitter (@username)</label>
                       <input
@@ -1356,7 +1341,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* GitHub */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">GitHub (username)</label>
                       <input
@@ -1371,7 +1355,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* Facebook (Tambahan) */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">Facebook (Username / Page)</label>
                       <input
@@ -1386,7 +1369,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* LinkedIn (Tambahan) */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">LinkedIn (Username)</label>
                       <input
@@ -1401,7 +1383,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* Discord (Tambahan) */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">Discord (Invite Link)</label>
                       <input
@@ -1416,7 +1397,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* Twitch (Tambahan) */}
                     <div>
                       <label className="text-[11px] text-neutral-400 block mb-1">Twitch (Channel)</label>
                       <input
@@ -1795,65 +1775,67 @@ export default function AdminDashboard() {
                   <div className={`w-4 h-4 rounded-full bg-white transition-transform ${newIsSpotlight ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
               </div>
-              {/* Smart Links Section (Fitur Jadwal & PIN untuk Akun PRO) */}
-          <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Smart Link Options
-              </span>
-              {!isProUser && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
-                  PRO Only
-                </span>
-              )}
-            </div>
 
-            {/* Jadwal Tayang & Kedaluwarsa */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              <div>
-                <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
-                  <Calendar className="w-3 h-3 text-neutral-500" /> Mulai Tayang (Opsional)
-                </label>
-                <input
-                  type="datetime-local"
-                  disabled={!isProUser}
-                  value={scheduleStart}
-                  onChange={(e) => setScheduleStart(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
-                />
+              {/* Smart Links Section (PRO Features) */}
+              <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    Smart Link Options
+                  </span>
+                  {!isProUser && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
+                      PRO Only
+                    </span>
+                  )}
+                </div>
+
+                {/* Schedule Start & Expiry */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
+                      <Calendar className="w-3 h-3 text-neutral-500" /> Schedule Start (Optional)
+                    </label>
+                    <input
+                      type="datetime-local"
+                      disabled={!isProUser}
+                      value={scheduleStart}
+                      onChange={(e) => setScheduleStart(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
+                      <Calendar className="w-3 h-3 text-neutral-500" /> Expiry Date (Optional)
+                    </label>
+                    <input
+                      type="datetime-local"
+                      disabled={!isProUser}
+                      value={scheduleEnd}
+                      onChange={(e) => setScheduleEnd(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                {/* PIN Protection */}
+                <div>
+                  <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
+                    <Lock className="w-3 h-3 text-neutral-500" /> PIN Protection (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={8}
+                    disabled={!isProUser}
+                    value={pinCode}
+                    onChange={(e) => setPinCode(e.target.value)}
+                    placeholder={isProUser ? "e.g. 123456" : "PRO accounts only"}
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
-                  <Calendar className="w-3 h-3 text-neutral-500" /> Kedaluwarsa (Opsional)
-                </label>
-                <input
-                  type="datetime-local"
-                  disabled={!isProUser}
-                  value={scheduleEnd}
-                  onChange={(e) => setScheduleEnd(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            {/* Proteksi PIN */}
-            <div>
-              <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
-                <Lock className="w-3 h-3 text-neutral-500" /> Proteksi Kunci PIN (Opsional)
-              </label>
-              <input
-                type="text"
-                maxLength={8}
-                disabled={!isProUser}
-                value={pinCode}
-                onChange={(e) => setPinCode(e.target.value)}
-                placeholder={isProUser ? "Contoh: 123456" : "Khusus akun PRO"}
-                className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
-              />
-            </div>
-          </div>
               <button
                 type="submit"
                 disabled={addingLink}
@@ -2009,7 +1991,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* FITUR BARU: TOMBOL PILIHAN WAKTU TAYANG FOTO (25s, 45s, 60s) */}
+              {/* Photo Display Duration Selection */}
               {storyMediaType === 'image' && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800">
                   <div className="flex flex-col">
@@ -2143,7 +2125,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Dynamic Soundtracks from Superadmin Database */}
+              {/* Dynamic Soundtracks */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] text-neutral-300 font-semibold flex items-center gap-1.5">
@@ -2177,42 +2159,41 @@ export default function AdminDashboard() {
                       <p className="text-[11px] text-neutral-500 p-3 col-span-2 text-center">No soundtracks available in library.</p>
                     ) : (
                       musicTracks.map((track) => (
-                      <div
-                        key={track.id}
-                        className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-between gap-2 hover:border-neutral-700 transition"
-                      >
-                        <div className="truncate flex-1">
-                          <p className="text-xs font-medium text-white truncate">{track.title}</p>
-                          <span className="text-[9px] text-neutral-400 block mt-0.5">
-                            {track.category} • {track.duration}
-                          </span>
-                        </div>
+                        <div
+                          key={track.id}
+                          className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-between gap-2 hover:border-neutral-700 transition"
+                        >
+                          <div className="truncate flex-1">
+                            <p className="text-xs font-medium text-white truncate">{track.title}</p>
+                            <span className="text-[9px] text-neutral-400 block mt-0.5">
+                              {track.category} • {track.duration}
+                            </span>
+                          </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Tombol Preview Audio (Sudah Anti-Macet di Ponsel) */}
-                          <button
-                            type="button"
-                            onClick={(e) => handleTogglePreview(track, e)}
-                            className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
-                            title={previewingTrackId === track.id ? 'Pause Preview' : 'Play Preview'}
-                          >
-                            {previewingTrackId === track.id ? (
-                              <Pause className="w-3 h-3 text-emerald-400" />
-                            ) : (
-                              <Play className="w-3 h-3 text-neutral-400" />
-                            )}
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => handleTogglePreview(track, e)}
+                              className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
+                              title={previewingTrackId === track.id ? 'Pause Preview' : 'Play Preview'}
+                            >
+                              {previewingTrackId === track.id ? (
+                                <Pause className="w-3 h-3 text-emerald-400" />
+                              ) : (
+                                <Play className="w-3 h-3 text-neutral-400" />
+                              )}
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleSelectTrack(track)}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-[10px] transition"
-                          >
-                            Select
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectTrack(track)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-[10px] transition"
+                            >
+                              Select
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ))
                     )}
 
                     {/* Custom Audio Upload */}
@@ -2331,7 +2312,7 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* Header Inbox & Tombol Export CSV */}
+            {/* Inbox Header & Export CSV Button */}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">Direct Messages</h3>
 
@@ -2346,7 +2327,7 @@ export default function AdminDashboard() {
                 </button>
               ) : (
                 <div 
-                  title="Fitur Khusus Akun PRO"
+                  title="Exclusive PRO Feature"
                   className="px-3 py-1.5 rounded-xl bg-neutral-800 text-neutral-500 border border-neutral-700/60 text-xs font-medium flex items-center gap-1.5 cursor-not-allowed opacity-75"
                 >
                   <Sparkles className="w-3 h-3 text-amber-400" />
@@ -2355,7 +2336,6 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Kode lama Anda: */}
             <div className="flex flex-col gap-3">
               {loadingMessages ? (
                 <p className="text-xs text-neutral-500 py-6 text-center">Loading messages...</p>
@@ -2642,7 +2622,6 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
             
-            {/* Header Modal */}
             <div className="text-center">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 flex items-center justify-center text-neutral-950 font-bold text-xl mx-auto shadow-lg shadow-amber-500/25">
                 ⭐
@@ -2662,7 +2641,6 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* List Fasilitas Unggulan PRO */}
             <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-3 text-xs text-neutral-300">
               
               <div className="flex items-start gap-2.5">
@@ -2716,12 +2694,10 @@ export default function AdminDashboard() {
 
             </div>
 
-            {/* Kotak Info Aktivasi Instan */}
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-5">
               💡 <strong>Instant Activation:</strong> When subscribing via Ko-fi, please keep your account email (<strong>{currentUser?.email}</strong>) or write <strong>@{activeUsername}</strong> in the message box. Your PRO features will unlock automatically!
             </div>
 
-            {/* Tombol Aksi */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
