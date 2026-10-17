@@ -997,7 +997,13 @@ export default function AdminDashboard() {
       window.open(qrImageUrl, '_blank');
     }
   };
-
+  const handleExportCsv = () => {
+    if (!isProUser) {
+      alert('Fitur ini khusus untuk akun PRO.');
+      return;
+    }
+    window.open(`/api/export-messages?username=${encodeURIComponent(activeUsername || '')}`, '_blank');
+  };
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row font-sans">
       <audio 
@@ -2256,6 +2262,31 @@ export default function AdminDashboard() {
               </p>
             </div>
 
+            {/* Header Inbox & Tombol Export CSV */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white">Direct Messages</h3>
+
+              {isProUser ? (
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export to CSV</span>
+                </button>
+              ) : (
+                <div 
+                  title="Fitur Khusus Akun PRO"
+                  className="px-3 py-1.5 rounded-xl bg-neutral-800 text-neutral-500 border border-neutral-700/60 text-xs font-medium flex items-center gap-1.5 cursor-not-allowed opacity-75"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <span>Export to CSV (PRO Only)</span>
+                </div>
+              )}
+            </div>
+
+            {/* Kode lama Anda: */}
             <div className="flex flex-col gap-3">
               {loadingMessages ? (
                 <p className="text-xs text-neutral-500 py-6 text-center">Loading messages...</p>
