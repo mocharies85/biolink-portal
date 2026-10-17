@@ -385,11 +385,19 @@ export default function HomePage() {
                       <div className="flex flex-col gap-2.5 text-xs text-neutral-300 border-t border-amber-500/20 pt-4">
                         <div className="flex items-start gap-2">
                           <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                          <span><strong className="text-amber-200">PIN Code Protection:</strong> Lock exclusive downloads, paid content, or private communities behind a passcode.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                          <span><strong className="text-amber-200">Smart Scheduling &amp; Expiry:</strong> Schedule exact start dates and automated expiration for limited-time offers.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
                           <span><strong className="text-amber-200">Custom Wallpaper &amp; PRO Themes:</strong> Upload HD backdrops + Cyberpunk &amp; Sunset themes.</span>
                         </div>
                         <div className="flex items-start gap-2">
                           <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                          <span><strong className="text-amber-200">Custom Social Share Card &amp; SEO:</strong> 1200x630 rich banner on WA, Telegram, X.</span>
+                          <span><strong className="text-amber-200">Custom Social Share Card &amp; SEO:</strong> 1200x630 rich banner on WhatsApp, Telegram, X, Facebook, Threads, &amp; LinkedIn.</span>
                         </div>
                         <div className="flex items-start gap-2">
                           <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
