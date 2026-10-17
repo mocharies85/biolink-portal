@@ -153,7 +153,7 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                  <span><strong className="text-amber-200">Custom Social Share Card & SEO:</strong> 1200x630 rich banner on WhatsApp, Telegram, and X.</span>
+                  <span><strong className="text-amber-200">Custom Social Share Card & SEO:</strong> 1200x630 rich banner on WhatsApp, Telegram, X, Facebook, Threads, & LinkedIn.</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
