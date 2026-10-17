@@ -212,8 +212,11 @@ export default function UserBioClient() {
         return;
       }
 
-      // PIN benar: buka link asli di tab baru dan tutup modal
-      window.open(data.url, '_blank');
+      // 1. Catat klik ke analitik database
+      handleLinkClick(targetPinLink.id);
+
+      // 2. PIN benar: buka link asli di tab baru dan tutup modal
+      window.open(data.url, '_blank', 'noopener,noreferrer');
       setPinModalOpen(false);
       setPinInput('');
       setTargetPinLink(null);
