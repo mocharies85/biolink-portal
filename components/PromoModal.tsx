@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Check, Sparkles, ExternalLink } from 'lucide-react';
+import { X, Sparkles, ExternalLink } from 'lucide-react';
 
 interface PromoModalProps {
   isOpen: boolean;
@@ -15,7 +15,7 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300">
       <div className="w-full max-w-4xl bg-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative max-h-[92vh] overflow-y-auto">
         
-        {/* Tombol Close X */}
+        {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
@@ -39,10 +39,10 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
           </p>
         </div>
 
-        {/* Dua Kolom Perbandingan: FREE vs PRO */}
+        {/* Comparison Grid: FREE vs PRO */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
           
-          {/* KARTU KIRI: FREE MEMBER */}
+          {/* LEFT CARD: FREE MEMBER */}
           <div className="p-6 rounded-2xl bg-neutral-900/80 border border-neutral-800 flex flex-col justify-between shadow-lg">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -95,7 +95,7 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
               </div>
             </div>
 
-            {/* Tombol FREE: Menutup Modal */}
+            {/* FREE Button: Closes Modal */}
             <button
               type="button"
               onClick={onClose}
@@ -105,7 +105,7 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
             </button>
           </div>
 
-          {/* KARTU KANAN: PRO CREATOR */}
+          {/* RIGHT CARD: PRO CREATOR */}
           <div className="p-6 rounded-2xl bg-gradient-to-b from-amber-950/30 via-neutral-900 to-neutral-950 border-2 border-amber-500/60 flex flex-col justify-between shadow-xl shadow-amber-500/10">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -129,11 +129,11 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
               <div className="flex flex-col gap-2.5 text-xs text-neutral-300 border-t border-amber-500/20 pt-4">
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                  <span><strong className="text-amber-200">Custom Wallpaper & PRO Themes:</strong> Upload HD backdrops + Cyberpunk & Sunset themes.</span>
+                  <span><strong className="text-amber-200">PIN Code Protection:</strong> Lock exclusive downloads, paid content, or private communities behind a passcode.</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                  <span><strong className="text-amber-200">Custom Social Share Card & SEO:</strong> 1200x630 rich banner on WA, Telegram, X.</span>
+                  <span><strong className="text-amber-200">Smart Scheduling & Expiry:</strong> Schedule exact start dates and automated expiration for limited-time offers.</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
@@ -141,11 +141,19 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                  <span><strong className="text-amber-200">60s Video & 25s Photo Stories:</strong> 60s video streaming via R2 + custom MP3 upload.</span>
+                  <span><strong className="text-amber-200">Unlimited Links & Section Headers:</strong> Organize your bio into structured categories without link limits.</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
-                  <span><strong className="text-amber-200">Unlimited Links & Content:</strong> Add unlimited portfolio, shop, and media links.</span>
+                  <span><strong className="text-amber-200">Custom Wallpaper & PRO Themes:</strong> Upload HD backdrops + Cyberpunk & Sunset themes.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                  <span><strong className="text-amber-200">Custom Social Share Card & SEO:</strong> 1200x630 rich banner on WhatsApp, Telegram, and X.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
+                  <span><strong className="text-amber-200">60s Video & 25s Photo Stories:</strong> 60s video streaming via R2 + custom MP3 upload.</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">★</span>
@@ -158,7 +166,7 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
               </div>
             </div>
 
-            {/* Tombol PRO: Dialihkan ke Halaman Pembayaran Ko-fi */}
+            {/* PRO Button: Redirects to Ko-fi Checkout */}
             <a
               href="https://ko-fi.com/cycrack"
               target="_blank"
