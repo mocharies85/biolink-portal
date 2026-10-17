@@ -51,7 +51,7 @@ export async function onRequestGet({ request, env }) {
         };
       }
 
-      const hasPin = Boolean(link.pin_code && link.pin_code.trim().length > 0);
+      const hasPin = Boolean(link.pin_code && String(link.pin_code).trim().length > 0);
       return {
         ...link,
         has_pin: hasPin,
@@ -71,7 +71,7 @@ export async function onRequestGet({ request, env }) {
       }
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -86,7 +86,7 @@ export async function onRequestPost({ request, env }) {
     // 1. PIN verification for public profile visitors with anti-brute force
     if (data.action === 'verify_pin') {
       const { linkId, pin } = data;
-      if (!linkId || !pin || !pin.trim()) {
+      if (!linkId || pin === undefined || pin === null || !String(pin).trim()) {
         return new Response(JSON.stringify({ error: 'PIN code is required.' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
@@ -171,21 +171,21 @@ export async function onRequestPost({ request, env }) {
       pin_code
     } = data;
 
-    if (!username || !username.trim()) {
+    if (!username || !String(username).trim()) {
       return new Response(JSON.stringify({ error: 'Username is required.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    if (!title || !title.trim()) {
+    if (!title || !String(title).trim()) {
       return new Response(JSON.stringify({ error: 'Title is required.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const cleanUsername = username.trim().toLowerCase();
+    const cleanUsername = String(username).trim().toLowerCase();
 
     // Check user PRO status
     const user = await env.DB.prepare(
@@ -226,7 +226,7 @@ export async function onRequestPost({ request, env }) {
     const spotlightValue = !is_header && isPro && is_spotlight ? 1 : 0;
     const scheduleStartVal = !is_header && isPro && schedule_start ? schedule_start : null;
     const scheduleEndVal = !is_header && isPro && schedule_end ? schedule_end : null;
-    const pinCodeVal = !is_header && isPro && pin_code ? pin_code.trim() : null;
+    const pinCodeVal = !is_header && isPro && pin_code && String(pin_code).trim() ? String(pin_code).trim() : null;
 
     // Insert into user_links table
     await env.DB.prepare(
@@ -235,9 +235,9 @@ export async function onRequestPost({ request, env }) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
     ).bind(
       cleanUsername, 
-      title.trim(), 
-      is_header ? '' : (linkUrl ? linkUrl.trim() : ''), 
-      is_header ? '' : (description?.trim() || ''), 
+      String(title).trim(), 
+      is_header ? '' : (linkUrl ? String(linkUrl).trim() : ''), 
+      is_header ? '' : (description ? String(description).trim() : ''), 
       spotlightValue,
       scheduleStartVal,
       scheduleEndVal,
@@ -251,7 +251,7 @@ export async function onRequestPost({ request, env }) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -270,7 +270,7 @@ export async function onRequestPut({ request, env }) {
       });
     }
 
-    const cleanUsername = username.trim().toLowerCase();
+    const cleanUsername = String(username).trim().toLowerCase();
 
     const statements = orderedIds.map((id, index) =>
       env.DB.prepare(
@@ -285,7 +285,7 @@ export async function onRequestPut({ request, env }) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -305,7 +305,7 @@ export async function onRequestPatch({ request, env }) {
       });
     }
 
-    const cleanUsername = username.trim().toLowerCase();
+    const cleanUsername = String(username).trim().toLowerCase();
 
     // Check existing link
     const existing = await env.DB.prepare(
@@ -325,14 +325,20 @@ export async function onRequestPatch({ request, env }) {
     ).bind(cleanUsername).first();
     const isPro = user ? user.is_pro === 1 : false;
 
-    const newTitle = title !== undefined ? title.trim() : existing.title;
-    const newUrl = existing.is_header ? '' : (linkUrl !== undefined ? linkUrl.trim() : existing.url);
-    const newDesc = existing.is_header ? '' : (description !== undefined ? description.trim() : existing.description);
-    
+    // Nilai teks aman dari null / undefined
+    const newTitle = title !== undefined && title !== null ? String(title).trim() : existing.title;
+    const newUrl = existing.is_header ? '' : (linkUrl !== undefined && linkUrl !== null ? String(linkUrl).trim() : (existing.url || ''));
+    const newDesc = existing.is_header ? '' : (description !== undefined && description !== null ? String(description).trim() : (existing.description || ''));
+
+    // PRO attributes
     const newSpotlight = isPro && is_spotlight !== undefined ? (is_spotlight ? 1 : 0) : existing.is_spotlight;
     const newStart = isPro && schedule_start !== undefined ? (schedule_start || null) : existing.schedule_start;
     const newEnd = isPro && schedule_end !== undefined ? (schedule_end || null) : existing.schedule_end;
-    const newPin = isPro && pin_code !== undefined ? (pin_code.trim() || null) : existing.pin_code;
+
+    // PIN aman: jika string kosong atau null, simpan sebagai null di database
+    const newPin = isPro && pin_code !== undefined
+      ? (pin_code && String(pin_code).trim() ? String(pin_code).trim() : null)
+      : existing.pin_code;
 
     await env.DB.prepare(`
       UPDATE user_links 
@@ -362,7 +368,7 @@ export async function onRequestPatch({ request, env }) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -394,7 +400,7 @@ export async function onRequestDelete({ request, env }) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
