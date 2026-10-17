@@ -37,6 +37,8 @@ import {
   Share2,
   Palette,
   Calendar,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 
 interface LinkItem {
@@ -932,7 +934,33 @@ export default function AdminDashboard() {
       setDeletingStoryId(null);
     }
   };
+  const handleMoveOrder = async (currentIndex: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= links.length) return;
 
+    // Geser urutan di state terlebih dahulu agar UI responsif seketika
+    const newLinks = [...links];
+    const [movedItem] = newLinks.splice(currentIndex, 1);
+    newLinks.splice(targetIndex, 0, movedItem);
+    setLinks(newLinks);
+
+    try {
+      const res = await fetch('/api/links', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: activeUsername,
+          orderedIds: newLinks.map((item) => item.id),
+        }),
+      });
+
+      if (!res.ok) {
+        fetchLinks(); // Kembalikan ke susunan awal jika gagal simpan
+      }
+    } catch {
+      fetchLinks();
+    }
+  };
   const handleDeleteLink = async (id: number) => {
     if (!confirm('Are you sure you want to remove this link?')) return;
 
@@ -1918,12 +1946,13 @@ export default function AdminDashboard() {
                   <p className="text-xs text-neutral-400">No links added yet. Create your first link above.</p>
                 </div>
               ) : (
-                links.map((link) => {
+                links.map((link, index) => {
+                  // Render Khusus Section Header
                   if (link.is_header === 1) {
                     return (
                       <div
                         key={link.id}
-                        className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-850 flex items-center justify-between gap-3"
+                        className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3"
                       >
                         <div className="flex items-center gap-2.5 truncate">
                           <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-400 text-[10px] font-bold uppercase tracking-wider">
@@ -1933,23 +1962,47 @@ export default function AdminDashboard() {
                             {link.title}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteLink(link.id)}
-                          className="p-2 rounded-xl bg-neutral-900 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition"
-                          title="Delete Section Header"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+
+                        {/* Tombol Navigasi Panah & Hapus Header */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => handleMoveOrder(index, 'up')}
+                            className="p-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white transition disabled:opacity-20 disabled:cursor-not-allowed"
+                            title="Move Up"
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === links.length - 1}
+                            onClick={() => handleMoveOrder(index, 'down')}
+                            className="p-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white transition disabled:opacity-20 disabled:cursor-not-allowed"
+                            title="Move Down"
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLink(link.id)}
+                            className="p-1.5 rounded-lg bg-neutral-900 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition ml-1"
+                            title="Delete Section Header"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     );
                   }
+
                   const isSpotlight = link.is_spotlight === 1;
 
+                  // Render Link Standar
                   return (
                     <div
                       key={link.id}
-                      className={`p-4 rounded-2xl bg-neutral-900 border flex items-center justify-between gap-4 transition ${
+                      className={`p-4 rounded-2xl bg-neutral-900 border transition-all flex items-center justify-between gap-3 ${
                         isSpotlight
                           ? 'border-amber-500/60 shadow-lg shadow-amber-500/10'
                           : 'border-neutral-800 hover:border-neutral-700'
@@ -1959,39 +2012,60 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2">
                           <p className="text-xs font-bold text-white truncate">{link.title}</p>
                           {isSpotlight && (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold flex items-center gap-1">
-                              <Flame className="w-2.5 h-2.5" /> SPOTLIGHT
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-wider border border-amber-500/30">
+                              Spotlight
                             </span>
                           )}
                         </div>
-                        {link.description && (
-                          <p className="text-[11px] text-neutral-400 truncate mt-0.5">{link.description}</p>
-                        )}
-                        <p className="text-[10px] text-neutral-500 truncate mt-0.5">{link.url}</p>
+                        <p className="text-[11px] text-neutral-500 truncate mt-0.5">{link.url}</p>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
+                      {/* Tombol Navigasi Panah, Spotlight, Analitik, dan Hapus */}
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
-                          onClick={() => handleToggleSpotlight(link)}
-                          title={isSpotlight ? 'Disable Spotlight effect' : 'Enable Spotlight Glow effect (PRO)'}
-                          className={`p-2 rounded-xl transition ${
+                          disabled={index === 0}
+                          onClick={() => handleMoveOrder(index, 'up')}
+                          className="p-1.5 rounded-lg bg-neutral-950 hover:bg-neutral-800 text-neutral-400 hover:text-white transition disabled:opacity-20 disabled:cursor-not-allowed"
+                          title="Move Up"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === links.length - 1}
+                          onClick={() => handleMoveOrder(index, 'down')}
+                          className="p-1.5 rounded-lg bg-neutral-950 hover:bg-neutral-800 text-neutral-400 hover:text-white transition disabled:opacity-20 disabled:cursor-not-allowed"
+                          title="Move Down"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSpotlight(link as any)}
+                          className={`p-2 rounded-xl transition ml-1 ${
                             isSpotlight
-                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
-                              : 'bg-neutral-800 text-neutral-500 hover:text-amber-400'
+                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              : 'bg-neutral-950 text-neutral-500 hover:text-neutral-300'
                           }`}
+                          title="Toggle Spotlight"
                         >
                           <Flame className="w-4 h-4" />
                         </button>
 
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-emerald-400 block">{link.clicks || 0}</span>
-                          <span className="text-[10px] text-neutral-500">clicks</span>
+                        <div className="px-2 py-1 rounded-xl bg-neutral-950 border border-neutral-800 text-center min-w-[38px]">
+                          <span className="text-[10px] font-bold text-emerald-400 block leading-none">
+                            {link.clicks || 0}
+                          </span>
+                          <span className="text-[8px] text-neutral-500 uppercase tracking-tighter">clicks</span>
                         </div>
 
                         <button
+                          type="button"
                           onClick={() => handleDeleteLink(link.id)}
-                          className="p-2 rounded-xl bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-400 transition"
+                          className="p-2 rounded-xl bg-neutral-950 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 transition"
+                          title="Delete Link"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -2003,6 +2077,8 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* TAB 4: Stories */}
 
         {/* TAB 4: Stories */}
         {activeTab === 'stories' && (

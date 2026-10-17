@@ -5,9 +5,9 @@ export async function onRequestGet({ request, env }) {
     const username = (url.searchParams.get('username') || 'aries').trim().toLowerCase();
     const isAdmin = url.searchParams.get('admin') === 'true' || url.searchParams.get('all') === 'true';
 
-    // Utamakan link Spotlight di paling atas, lalu urutkan dari yang terbaru
+    // Urutkan berdasarkan sort_order terkecil ke terbesar, lalu fallback ke id ASC
     const { results } = await env.DB.prepare(
-      'SELECT * FROM user_links WHERE LOWER(username) = ? ORDER BY is_spotlight DESC, id DESC'
+      'SELECT * FROM user_links WHERE LOWER(username) = ? ORDER BY sort_order ASC, id ASC'
     ).bind(username).all();
 
     // Ambil status is_pro pengguna
@@ -132,15 +132,24 @@ export async function onRequestPost({ request, env }) {
       }
     }
 
+    // 3. Tentukan nilai urutan berikutnya agar item baru otomatis ditaruh di paling bawah
+    const maxOrderRow = await env.DB.prepare(
+      'SELECT MAX(sort_order) as max_order FROM user_links WHERE LOWER(username) = ?'
+    ).bind(cleanUsername).first();
+
+    const nextOrder = maxOrderRow && maxOrderRow.max_order !== null ? maxOrderRow.max_order + 1 : 0;
+
     // Fitur Smart Links eksklusif untuk akun PRO dan link standar
     const spotlightValue = !is_header && isPro && is_spotlight ? 1 : 0;
     const scheduleStartVal = !is_header && isPro && schedule_start ? schedule_start : null;
     const scheduleEndVal = !is_header && isPro && schedule_end ? schedule_end : null;
     const pinCodeVal = !is_header && isPro && pin_code ? pin_code.trim() : null;
 
-    // 3. Simpan ke tabel user_links
+    // 4. Simpan ke tabel user_links
     await env.DB.prepare(
-      'INSERT INTO user_links (username, title, url, description, is_spotlight, schedule_start, schedule_end, pin_code, is_header, clicks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)'
+      `INSERT INTO user_links (
+        username, title, url, description, is_spotlight, schedule_start, schedule_end, pin_code, is_header, sort_order, clicks
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
     ).bind(
       cleanUsername, 
       title.trim(), 
@@ -150,11 +159,47 @@ export async function onRequestPost({ request, env }) {
       scheduleStartVal,
       scheduleEndVal,
       pinCodeVal,
-      is_header ? 1 : 0
+      is_header ? 1 : 0,
+      nextOrder
     ).run();
 
     return new Response(JSON.stringify({ success: true }), {
       status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+// Menyimpan susunan urutan link & header baru
+export async function onRequestPut({ request, env }) {
+  try {
+    const { username, orderedIds } = await request.json();
+
+    if (!username || !Array.isArray(orderedIds)) {
+      return new Response(JSON.stringify({ error: 'Invalid payload.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const cleanUsername = username.trim().toLowerCase();
+
+    // Buat statement batch untuk memperbarui sort_order tiap ID
+    const statements = orderedIds.map((id, index) =>
+      env.DB.prepare(
+        'UPDATE user_links SET sort_order = ? WHERE id = ? AND LOWER(username) = ?'
+      ).bind(index, id, cleanUsername)
+    );
+
+    await env.DB.batch(statements);
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
