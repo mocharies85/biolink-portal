@@ -223,7 +223,7 @@ export async function onRequestPut({ request, env }) {
 export async function onRequestPatch({ request, env }) {
   try {
     const data = await request.json();
-    const { id, username, is_spotlight, schedule_start, schedule_end, pin_code } = data;
+    const { id, username, title, url: linkUrl, description, is_spotlight, schedule_start, schedule_end, pin_code } = data;
 
     if (!id || !username) {
       return new Response(JSON.stringify({ error: 'Missing link ID or username.' }), {
@@ -234,31 +234,54 @@ export async function onRequestPatch({ request, env }) {
 
     const cleanUsername = username.trim().toLowerCase();
 
-    // Validasi hak akses akun PRO
+    // 1. Cek data existing
+    const existing = await env.DB.prepare(
+      'SELECT * FROM user_links WHERE id = ? AND LOWER(username) = ?'
+    ).bind(id, cleanUsername).first();
+
+    if (!existing) {
+      return new Response(JSON.stringify({ error: 'Link tidak ditemukan.' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 2. Cek status akun PRO
     const user = await env.DB.prepare(
       'SELECT is_pro FROM users WHERE LOWER(username) = ?'
     ).bind(cleanUsername).first();
+    const isPro = user ? user.is_pro === 1 : false;
 
-    if (!user || user.is_pro !== 1) {
-      return new Response(
-        JSON.stringify({ error: 'Smart Links and Spotlight features are exclusive to PRO accounts.' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    // Siapkan nilai baru (fallback ke data lama jika tidak diubah)
+    const newTitle = title !== undefined ? title.trim() : existing.title;
+    const newUrl = existing.is_header ? '' : (linkUrl !== undefined ? linkUrl.trim() : existing.url);
+    const newDesc = existing.is_header ? '' : (description !== undefined ? description.trim() : existing.description);
+    
+    // Fitur PRO: Spotlight, Jadwal, dan PIN
+    const newSpotlight = isPro && is_spotlight !== undefined ? (is_spotlight ? 1 : 0) : existing.is_spotlight;
+    const newStart = isPro && schedule_start !== undefined ? (schedule_start || null) : existing.schedule_start;
+    const newEnd = isPro && schedule_end !== undefined ? (schedule_end || null) : existing.schedule_end;
+    const newPin = isPro && pin_code !== undefined ? (pin_code.trim() || null) : existing.pin_code;
 
     await env.DB.prepare(`
       UPDATE user_links 
       SET 
-        is_spotlight = COALESCE(?, is_spotlight),
-        schedule_start = COALESCE(?, schedule_start),
-        schedule_end = COALESCE(?, schedule_end),
-        pin_code = COALESCE(?, pin_code)
+        title = ?, 
+        url = ?, 
+        description = ?, 
+        is_spotlight = ?, 
+        schedule_start = ?, 
+        schedule_end = ?, 
+        pin_code = ?
       WHERE id = ? AND LOWER(username) = ?
     `).bind(
-      is_spotlight !== undefined ? (is_spotlight ? 1 : 0) : null,
-      schedule_start !== undefined ? schedule_start : null,
-      schedule_end !== undefined ? schedule_end : null,
-      pin_code !== undefined ? pin_code : null,
+      newTitle,
+      newUrl,
+      newDesc,
+      newSpotlight,
+      newStart,
+      newEnd,
+      newPin,
       id,
       cleanUsername
     ).run();

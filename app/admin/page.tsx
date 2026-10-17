@@ -37,6 +37,7 @@ import {
   Share2,
   Palette,
   Calendar,
+  Pencil,
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
@@ -354,6 +355,46 @@ export default function AdminDashboard() {
       };
     }
   }, []);
+
+  // State untuk Modal Edit Link & Header
+  const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [isUpdatingLink, setIsUpdatingLink] = useState(false);
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    setIsUpdatingLink(true);
+    try {
+      const res = await fetch('/api/links', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingItem.id,
+          username: activeUsername,
+          title: editingItem.title,
+          url: editingItem.url,
+          description: editingItem.description,
+          is_spotlight: editingItem.is_spotlight,
+          schedule_start: editingItem.schedule_start,
+          schedule_end: editingItem.schedule_end,
+          pin_code: editingItem.pin_code,
+        }),
+      });
+
+      if (res.ok) {
+        setEditingItem(null);
+        fetchLinks();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Gagal menyimpan perubahan.');
+      }
+    } catch {
+      alert('Terjadi kesalahan koneksi.');
+    } finally {
+      setIsUpdatingLink(false);
+    }
+  };
   const customAudioInputRef = useRef<HTMLInputElement>(null);
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -1965,7 +2006,7 @@ export default function AdminDashboard() {
                           </p>
                         </div>
 
-                        {/* Tombol Navigasi Panah & Hapus Header */}
+                        {/* Tombol Navigasi Panah, Edit & Hapus Header */}
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
@@ -1987,8 +2028,16 @@ export default function AdminDashboard() {
                           </button>
                           <button
                             type="button"
+                            onClick={() => setEditingItem({ ...link })}
+                            className="p-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400 transition"
+                            title="Edit Section Header"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleDeleteLink(link.id)}
-                            className="p-1.5 rounded-lg bg-neutral-900 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition ml-1"
+                            className="p-1.5 rounded-lg bg-neutral-900 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition"
                             title="Delete Section Header"
                           >
                             <Trash2 className="w-4 h-4" />
