@@ -421,10 +421,10 @@ export default function AdminDashboard() {
         fetchLinks();
       } else {
         const data = await res.json();
-        alert(data.error || 'Gagal menyimpan perubahan.');
+        alert(data.error || 'Failed to save changes.');
       }
     } catch {
-      alert('Terjadi kesalahan koneksi.');
+      alert('Network error while updating link.');
     } finally {
       setIsUpdatingLink(false);
     }
