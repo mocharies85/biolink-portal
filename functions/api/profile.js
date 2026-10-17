@@ -24,6 +24,10 @@ export async function onRequestGet({ request, env }) {
         og_image: '',
         theme: 'dark',
         bg_image: '',
+        featured_video_url: '',
+        show_featured_video: 0,
+        featured_video_autoplay: 1,
+        featured_video_title: '',
       };
     }
 
@@ -53,7 +57,11 @@ export async function onRequestPost({ request, env }) {
       og_description,
       og_image,
       theme = 'dark',
-      bg_image = ''
+      bg_image = '',
+      featured_video_url = '',
+      show_featured_video = 0,
+      featured_video_autoplay = 1,
+      featured_video_title = ''
     } = data;
 
     if (!username) {
@@ -66,9 +74,11 @@ export async function onRequestPost({ request, env }) {
     await env.DB.prepare(`
       INSERT INTO user_profiles (
         username, name, tagline, bio, avatar, socials, 
-        og_title, og_description, og_image, theme, bg_image, updated_at
+        og_title, og_description, og_image, theme, bg_image,
+        featured_video_url, show_featured_video, featured_video_autoplay, featured_video_title,
+        updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(username) DO UPDATE SET
         name = excluded.name,
         tagline = excluded.tagline,
@@ -80,6 +90,10 @@ export async function onRequestPost({ request, env }) {
         og_image = excluded.og_image,
         theme = excluded.theme,
         bg_image = excluded.bg_image,
+        featured_video_url = excluded.featured_video_url,
+        show_featured_video = excluded.show_featured_video,
+        featured_video_autoplay = excluded.featured_video_autoplay,
+        featured_video_title = excluded.featured_video_title,
         updated_at = CURRENT_TIMESTAMP
     `).bind(
       cleanUsername,
@@ -92,7 +106,11 @@ export async function onRequestPost({ request, env }) {
       og_description?.trim() || '',
       og_image?.trim() || '',
       theme || 'dark',
-      bg_image?.trim() || ''
+      bg_image?.trim() || '',
+      featured_video_url?.trim() || '',
+      show_featured_video ? 1 : 0,
+      featured_video_autoplay ? 1 : 0,
+      featured_video_title?.trim() || ''
     ).run();
 
     return new Response(JSON.stringify({ success: true }), {

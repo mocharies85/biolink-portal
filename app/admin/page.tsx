@@ -100,6 +100,10 @@ interface ProfileData {
   og_image?: string;
   theme?: string;
   bg_image?: string;
+  featured_video_url?: string;
+  show_featured_video?: number;
+  featured_video_autoplay?: number;
+  featured_video_title?: string;
 }
 
 interface CurrentUser {
@@ -331,6 +335,8 @@ export default function AdminDashboard() {
   const bgFileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const showcaseVideoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingShowcaseVideo, setUploadingShowcaseVideo] = useState(false);
 
   // Helper badge for schedule status
   const getScheduleBadge = (link: any) => {
@@ -445,7 +451,11 @@ export default function AdminDashboard() {
     og_description: '',
     og_image: '',
     theme: 'dark',
-    bg_image: ''
+    bg_image: '',
+    featured_video_url: '',
+    show_featured_video: 0,
+    featured_video_autoplay: 1,
+    featured_video_title: ''
   });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSavedSuccess, setProfileSavedSuccess] = useState(false);
@@ -555,7 +565,11 @@ export default function AdminDashboard() {
             og_description: data.profile.og_description || '',
             og_image: data.profile.og_image || '',
             theme: data.profile.theme || 'dark',
-            bg_image: data.profile.bg_image || ''
+            bg_image: data.profile.bg_image || '',
+            featured_video_url: data.profile.featured_video_url || '',
+            show_featured_video: data.profile.show_featured_video || 0,
+            featured_video_autoplay: data.profile.featured_video_autoplay ?? 1,
+            featured_video_title: data.profile.featured_video_title || ''
           });
         }
       }
@@ -830,6 +844,52 @@ export default function AdminDashboard() {
       }
     }
     e.target.value = '';
+  };
+
+  const handleShowcaseVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Video file is too large. Please select an MP4 video under 50MB.');
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingShowcaseVideo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('username', activeUsername);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setProfile((prev) => ({
+          ...prev,
+          featured_video_url: data.url,
+          show_featured_video: 1,
+        }));
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Failed to upload showcase video.');
+      }
+    } catch {
+      alert('Network error while uploading video.');
+    } finally {
+      setUploadingShowcaseVideo(false);
+      e.target.value = '';
+    }
   };
 
   const handleSaveProfile = async (e?: React.FormEvent) => {
@@ -1818,6 +1878,144 @@ export default function AdminDashboard() {
                   >
                     Upgrade
                   </button>
+                </div>
+              )}
+            </div>
+
+            {/* ======================================================== */}
+            {/* PRODUCT SHOWCASE VIDEO CONTROLS (PRO ONLY)               */}
+            {/* ======================================================== */}
+            <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <VideoIcon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                      Product Showcase Video
+                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                        PRO
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-neutral-400">
+                      Pin a presentation video directly at the top of your public bio profile.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Toggle Switch On/Off */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isProUser) {
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+                    setProfile((prev) => ({
+                      ...prev,
+                      show_featured_video: prev.show_featured_video === 1 ? 0 : 1,
+                    }));
+                  }}
+                  className={`w-11 h-6 rounded-full transition-colors p-1 relative flex items-center shrink-0 ${
+                    profile.show_featured_video === 1 ? 'bg-emerald-500' : 'bg-neutral-800'
+                  }`}
+                  title={profile.show_featured_video === 1 ? 'Disable Video' : 'Enable Video'}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      profile.show_featured_video === 1 ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {profile.show_featured_video === 1 && (
+                <div className="space-y-3 pt-2 border-t border-neutral-800/80">
+                  <div>
+                    <label className="block text-[11px] text-neutral-400 mb-1">Video Headline (Optional)</label>
+                    <input
+                      type="text"
+                      disabled={!isProUser}
+                      placeholder="e.g. Watch Product Presentation"
+                      value={profile.featured_video_title || ''}
+                      onChange={(e) => setProfile({ ...profile, featured_video_title: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 rounded-xl bg-neutral-950 border border-neutral-800">
+                    <div className="w-32 h-20 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden shrink-0">
+                      {profile.featured_video_url ? (
+                        <video src={profile.featured_video_url} className="w-full h-full object-cover" muted playsInline />
+                      ) : (
+                        <VideoIcon className="w-6 h-6 text-neutral-600" />
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 flex-1 w-full text-center sm:text-left">
+                      <p className="text-xs font-semibold text-white">Upload Native MP4 Video</p>
+                      <p className="text-[10px] text-neutral-400">
+                        Ad-free native streaming hosted on Cloudflare R2 (Max 50MB).
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          type="button"
+                          disabled={uploadingShowcaseVideo}
+                          onClick={() => {
+                            if (!isProUser) {
+                              setShowUpgradeModal(true);
+                              return;
+                            }
+                            showcaseVideoInputRef.current?.click();
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-xs font-semibold text-neutral-200 flex items-center gap-1.5 transition disabled:opacity-50"
+                        >
+                          <Upload className="w-3 h-3 text-amber-400" />
+                          <span>{uploadingShowcaseVideo ? 'Uploading...' : profile.featured_video_url ? 'Replace Video' : 'Choose Video'}</span>
+                        </button>
+                        {profile.featured_video_url && (
+                          <button
+                            type="button"
+                            onClick={() => setProfile((prev) => ({ ...prev, featured_video_url: '' }))}
+                            className="text-[11px] text-rose-400 hover:underline px-2"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        ref={showcaseVideoInputRef}
+                        accept="video/mp4,video/webm,video/quicktime"
+                        onChange={handleShowcaseVideoUpload}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Autoplay Checkbox */}
+                  <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={profile.featured_video_autoplay === 1}
+                      onChange={(e) => setProfile({ ...profile, featured_video_autoplay: e.target.checked ? 1 : 0 })}
+                      className="w-4 h-4 rounded bg-neutral-950 border-neutral-800 text-emerald-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span>Autoplay video automatically when profile is opened (starts muted per browser rules)</span>
+                  </label>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveProfile()}
+                      disabled={savingProfile}
+                      className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{savingProfile ? 'Saving...' : 'Save Video Settings'}</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

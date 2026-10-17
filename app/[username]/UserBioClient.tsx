@@ -191,6 +191,10 @@ export default function UserBioClient() {
     is_pro?: number;
     theme?: string;
     bg_image?: string;
+    featured_video_url?: string;
+    show_featured_video?: number;
+    featured_video_autoplay?: number;
+    featured_video_title?: string;
   }>({
     name: '',
     tagline: 'Digital Creator',
@@ -635,6 +639,30 @@ export default function UserBioClient() {
               </a>
             )}
           </div>
+        )}
+
+        {/* Product Showcase Video (PRO Hero Spotlight) */}
+        {Boolean(isPro && profile.show_featured_video === 1 && profile.featured_video_url) && (
+          <section className="w-full mb-6">
+            <div className={`w-full rounded-2xl overflow-hidden border p-3 shadow-lg transition-all ${theme.cardBg} ${theme.cardBorder}`}>
+              {profile.featured_video_title && (
+                <p className={`text-xs font-bold mb-2.5 px-1 truncate ${theme.textPrimary}`}>
+                  {profile.featured_video_title}
+                </p>
+              )}
+              <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black shadow-inner">
+                <video
+                  src={profile.featured_video_url}
+                  controls
+                  autoPlay={profile.featured_video_autoplay === 1}
+                  muted={profile.featured_video_autoplay === 1}
+                  loop={profile.featured_video_autoplay === 1}
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Links List with Spotlight, Media Embed & PIN Protection */}
