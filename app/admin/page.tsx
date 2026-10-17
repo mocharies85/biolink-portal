@@ -47,6 +47,8 @@ interface LinkItem {
   clicks?: number;
   is_active?: number;
   is_spotlight?: number;
+  has_pin?: boolean;
+  is_header?: number;
 }
 
 interface SocialLinks {
@@ -380,6 +382,7 @@ export default function AdminDashboard() {
   const [scheduleStart, setScheduleStart] = useState('');
   const [scheduleEnd, setScheduleEnd] = useState('');
   const [pinCode, setPinCode] = useState('');
+  const [isHeaderMode, setIsHeaderMode] = useState(false);
 
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
@@ -781,9 +784,11 @@ export default function AdminDashboard() {
 
   const handleAddLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newUrl.trim()) return;
+    if (!newTitle.trim()) return;
+    if (!isHeaderMode && !newUrl.trim()) return;
 
-    if (!isProUser && links.length >= 3) {
+    // Header tidak memotong kuota 3 link gratis
+    if (!isHeaderMode && !isProUser && links.filter(l => l.is_header !== 1).length >= 3) {
       setShowUpgradeModal(true);
       return;
     }
@@ -796,12 +801,13 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           username: activeUsername,
           title: newTitle.trim(),
-          url: newUrl.trim(),
-          description: newDesc.trim(),
-          is_spotlight: isProUser && newIsSpotlight ? 1 : 0,
-          schedule_start: isProUser && scheduleStart ? scheduleStart : null,
-          schedule_end: isProUser && scheduleEnd ? scheduleEnd : null,
-          pin_code: isProUser && pinCode.trim() ? pinCode.trim() : null,
+          url: isHeaderMode ? '' : newUrl.trim(),
+          description: isHeaderMode ? '' : newDesc.trim(),
+          is_spotlight: !isHeaderMode && isProUser && newIsSpotlight ? 1 : 0,
+          schedule_start: !isHeaderMode && isProUser && scheduleStart ? scheduleStart : null,
+          schedule_end: !isHeaderMode && isProUser && scheduleEnd ? scheduleEnd : null,
+          pin_code: !isHeaderMode && isProUser && pinCode.trim() ? pinCode.trim() : null,
+          is_header: isHeaderMode ? 1 : 0,
         }),
       });
 
@@ -813,13 +819,14 @@ export default function AdminDashboard() {
         setScheduleStart('');
         setScheduleEnd('');
         setPinCode('');
+        setIsHeaderMode(false);
         fetchLinks();
       } else {
         const errorData = await res.json();
-        alert(errorData.error || 'Failed to add link.');
+        alert(errorData.error || 'Failed to add item.');
       }
     } catch {
-      alert('Network error while adding link.');
+      alert('Network error while adding item.');
     } finally {
       setAddingLink(false);
     }
@@ -1709,132 +1716,182 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleAddLink} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">Add New Link</h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  required
-                  placeholder="Link Title (e.g. My Portfolio)"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
-                />
-                <input
-                  type="url"
-                  required
-                  placeholder="https://yourlink.com"
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
-                />
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                  {isHeaderMode ? 'Add Section Header' : 'Add New Link'}
+                </h3>
+
+                {/* Tab Selector: Standard Link vs Section Header */}
+                <div className="flex items-center p-1 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setIsHeaderMode(false)}
+                    className={`px-3 py-1 rounded-lg transition font-medium ${
+                      !isHeaderMode
+                        ? 'bg-neutral-800 text-white font-bold'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    Standard Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsHeaderMode(true)}
+                    className={`px-3 py-1 rounded-lg transition font-medium ${
+                      isHeaderMode
+                        ? 'bg-neutral-800 text-white font-bold'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    Section Header
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <input
-                  type="text"
-                  placeholder="Description or subtitle (optional, e.g. Free tools for digital creators)"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
-                />
-              </div>
-
-              {/* Spotlight Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-800">
-                <div className="flex items-center gap-2">
-                  <Flame className={`w-4 h-4 ${newIsSpotlight ? 'text-amber-400' : 'text-neutral-500'}`} />
-                  <div>
-                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      Spotlight Glow Animation
-                      {!isProUser && (
-                        <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
-                          PRO
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-[10px] text-neutral-400 block">
-                      Highlight this link with an animated gold neon glow and HOT badge to boost clicks.
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isProUser) {
-                      setShowUpgradeModal(true);
-                      return;
-                    }
-                    setNewIsSpotlight(!newIsSpotlight);
-                  }}
-                  className={`w-11 h-6 rounded-full transition-colors p-1 relative flex items-center ${
-                    newIsSpotlight ? 'bg-amber-500' : 'bg-neutral-800'
-                  }`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${newIsSpotlight ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
-              {/* Smart Links Section (PRO Features) */}
-              <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    Smart Link Options
-                  </span>
-                  {!isProUser && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
-                      PRO Only
-                    </span>
-                  )}
-                </div>
-
-                {/* Schedule Start & Expiry */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
-                      <Calendar className="w-3 h-3 text-neutral-500" /> Schedule Start (Optional)
-                    </label>
-                    <input
-                      type="datetime-local"
-                      disabled={!isProUser}
-                      value={scheduleStart}
-                      onChange={(e) => setScheduleStart(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
-                      <Calendar className="w-3 h-3 text-neutral-500" /> Expiry Date (Optional)
-                    </label>
-                    <input
-                      type="datetime-local"
-                      disabled={!isProUser}
-                      value={scheduleEnd}
-                      onChange={(e) => setScheduleEnd(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-
-                {/* PIN Protection */}
+              {isHeaderMode ? (
+                /* Input Khusus Section Header */
                 <div>
-                  <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
-                    <Lock className="w-3 h-3 text-neutral-500" /> PIN Protection (Optional)
-                  </label>
                   <input
                     type="text"
-                    maxLength={8}
-                    disabled={!isProUser}
-                    value={pinCode}
-                    onChange={(e) => setPinCode(e.target.value)}
-                    placeholder={isProUser ? "e.g. 123456" : "PRO accounts only"}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                    required
+                    placeholder="Section Title (e.g. Featured Projects, Social Channels, Merchandise)"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
                   />
+                  <p className="text-[10px] text-neutral-500 mt-1.5">
+                    Section headers act as visual category dividers to group your links.
+                  </p>
                 </div>
-              </div>
+              ) : (
+                /* Input Link Standar */
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      required
+                      placeholder="Link Title (e.g. My Portfolio)"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                    />
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://yourlink.com"
+                      value={newUrl}
+                      onChange={(e) => setNewUrl(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                    />
+                  </div>
+
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Description or subtitle (optional, e.g. Free tools for digital creators)"
+                      value={newDesc}
+                      onChange={(e) => setNewDesc(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                    />
+                  </div>
+
+                  {/* Spotlight Toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-800">
+                    <div className="flex items-center gap-2">
+                      <Flame className={`w-4 h-4 ${newIsSpotlight ? 'text-amber-400' : 'text-neutral-500'}`} />
+                      <div>
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          Spotlight Glow Animation
+                          {!isProUser && (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                              PRO
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 block">
+                          Highlight this link with an animated gold neon glow and HOT badge to boost clicks.
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isProUser) {
+                          setShowUpgradeModal(true);
+                          return;
+                        }
+                        setNewIsSpotlight(!newIsSpotlight);
+                      }}
+                      className={`w-11 h-6 rounded-full transition-colors p-1 relative flex items-center ${
+                        newIsSpotlight ? 'bg-amber-500' : 'bg-neutral-800'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${newIsSpotlight ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  {/* Smart Links Section (PRO Features) */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        Smart Link Options
+                      </span>
+                      {!isProUser && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
+                          PRO Only
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Schedule Start & Expiry */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
+                          <Calendar className="w-3 h-3 text-neutral-500" /> Schedule Start (Optional)
+                        </label>
+                        <input
+                          type="datetime-local"
+                          disabled={!isProUser}
+                          value={scheduleStart}
+                          onChange={(e) => setScheduleStart(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
+                          <Calendar className="w-3 h-3 text-neutral-500" /> Expiry Date (Optional)
+                        </label>
+                        <input
+                          type="datetime-local"
+                          disabled={!isProUser}
+                          value={scheduleEnd}
+                          onChange={(e) => setScheduleEnd(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+
+                    {/* PIN Protection */}
+                    <div>
+                      <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
+                        <Lock className="w-3 h-3 text-neutral-500" /> PIN Protection (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={8}
+                        disabled={!isProUser}
+                        value={pinCode}
+                        onChange={(e) => setPinCode(e.target.value)}
+                        placeholder={isProUser ? "e.g. 123456" : "PRO accounts only"}
+                        className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-neutral-200 focus:outline-none focus:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <button
                 type="submit"
@@ -1842,7 +1899,13 @@ export default function AdminDashboard() {
                 className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 mt-1 shadow-md shadow-emerald-500/20"
               >
                 <Plus className="w-4 h-4" />
-                <span>{addingLink ? 'Adding...' : 'Add Link to Bio'}</span>
+                <span>
+                  {addingLink
+                    ? 'Adding...'
+                    : isHeaderMode
+                    ? 'Add Section Header'
+                    : 'Add Link to Bio'}
+                </span>
               </button>
             </form>
 
@@ -1856,6 +1919,31 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 links.map((link) => {
+                  if (link.is_header === 1) {
+                    return (
+                      <div
+                        key={link.id}
+                        className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-850 flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-400 text-[10px] font-bold uppercase tracking-wider">
+                            Header
+                          </span>
+                          <p className="text-xs font-bold text-white uppercase tracking-wider truncate">
+                            {link.title}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLink(link.id)}
+                          className="p-2 rounded-xl bg-neutral-900 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition"
+                          title="Delete Section Header"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  }
                   const isSpotlight = link.is_spotlight === 1;
 
                   return (

@@ -27,12 +27,14 @@ interface LinkItem {
   url: string;
   description?: string;
   desc?: string;
-  is_active?: number | boolean;
-  active?: boolean;
-  is_highlighted?: number | boolean;
-  highlight?: boolean;
-  is_spotlight?: number | boolean;
   clicks?: number;
+  is_active?: number;
+  active?: number | boolean;
+  is_spotlight?: number;
+  is_highlighted?: number | boolean;
+  highlight?: number | boolean;
+  has_pin?: boolean;
+  is_header?: number;
 }
 
 interface SocialLinks {
@@ -611,11 +613,22 @@ export default function UserBioClient() {
             </div>
           ) : (
             links
-              .filter((link) => link.is_active === 1 || link.is_active === undefined || link.active)
+              .filter((link) => link.is_header === 1 || link.is_active === 1 || link.is_active === undefined || (link as any).active)
               .map((link) => {
-                const isHighlight = Boolean(link.is_highlighted || link.highlight);
-                const isSpotlight = Boolean(link.is_spotlight === 1 || link.is_spotlight === true);
-                const descText = link.description || link.desc;
+                // Render khusus Section Header (Pemisah Kategori)
+                if (link.is_header === 1) {
+                  return (
+                    <div key={link.id} className="w-full pt-5 pb-1 text-center">
+                      <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest px-2">
+                        {link.title}
+                      </h3>
+                    </div>
+                  );
+                }
+
+                const isHighlight = Boolean(link.is_highlighted || (link as any).highlight);
+                const isSpotlight = Boolean(link.is_spotlight === 1 || (link as any).is_spotlight === true);
+                const descText = link.description || (link as any).desc;
 
                 return (
                   <a

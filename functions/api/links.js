@@ -20,8 +20,10 @@ export async function onRequestGet({ request, env }) {
 
     // Saring tautan berdasarkan jadwal dan amankan PIN untuk pengunjung publik
     const links = (results || []).filter((link) => {
-      // Jika diakses dari dasbor admin, tampilkan semua tanpa penyaringan
       if (isAdmin) return true;
+
+      // Section header selalu ditampilkan
+      if (link.is_header === 1) return true;
 
       // Saring jadwal mulai tampil
       if (link.schedule_start && new Date(link.schedule_start) > now) {
@@ -37,12 +39,21 @@ export async function onRequestGet({ request, env }) {
     }).map((link) => {
       if (isAdmin) return link;
 
+      if (link.is_header === 1) {
+        return {
+          ...link,
+          has_pin: false,
+          url: '',
+          pin_code: undefined,
+        };
+      }
+
       const hasPin = Boolean(link.pin_code && link.pin_code.trim().length > 0);
       return {
         ...link,
         has_pin: hasPin,
-        url: hasPin ? '' : link.url, // Sembunyikan URL asli jika link dikunci PIN
-        pin_code: undefined, // Hapus kode PIN asli dari respon JSON publik
+        url: hasPin ? '' : link.url,
+        pin_code: undefined,
       };
     });
 
@@ -64,7 +75,7 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-// Menambah link baru untuk user tertentu (Maksimal 3 link jika bukan Pro)
+// Menambah link atau section header baru
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
@@ -76,14 +87,19 @@ export async function onRequestPost({ request, env }) {
       is_spotlight,
       schedule_start,
       schedule_end,
-      pin_code
+      pin_code,
+      is_header = 0
     } = data;
 
-    if (!title || !linkUrl) {
-      return new Response(JSON.stringify({ error: 'Title and URL are required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    // URL hanya wajib diisi jika bukan section header
+    if (!title || (!is_header && !linkUrl)) {
+      return new Response(
+        JSON.stringify({ error: is_header ? 'Section title is required.' : 'Title and URL are required.' }), 
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const cleanUsername = username.trim().toLowerCase();
@@ -95,10 +111,10 @@ export async function onRequestPost({ request, env }) {
 
     const isPro = user ? user.is_pro === 1 : false;
 
-    // 2. Batasi pengguna non-PRO maksimal 3 link
-    if (!isPro) {
+    // 2. Batasi pengguna non-PRO maksimal 3 link (Section header tidak memotong kuota link)
+    if (!isPro && !is_header) {
       const countResult = await env.DB.prepare(
-        'SELECT COUNT(*) as total FROM user_links WHERE LOWER(username) = ?'
+        'SELECT COUNT(*) as total FROM user_links WHERE LOWER(username) = ? AND is_header = 0'
       ).bind(cleanUsername).first();
 
       const totalLinks = countResult ? countResult.total : 0;
@@ -106,7 +122,7 @@ export async function onRequestPost({ request, env }) {
       if (totalLinks >= 3) {
         return new Response(
           JSON.stringify({ 
-            error: 'Free tier limit reached (max 3 links). Upgrade to Pro for unlimited links!' 
+            error: 'Free tier limit reached (max 3 links). Upgrade to PRO for unlimited links!' 
           }), 
           {
             status: 403,
@@ -116,24 +132,25 @@ export async function onRequestPost({ request, env }) {
       }
     }
 
-    // Fitur Smart Links (Spotlight, Penjadwalan & PIN) eksklusif untuk akun PRO
-    const spotlightValue = isPro && is_spotlight ? 1 : 0;
-    const scheduleStartVal = isPro && schedule_start ? schedule_start : null;
-    const scheduleEndVal = isPro && schedule_end ? schedule_end : null;
-    const pinCodeVal = isPro && pin_code ? pin_code.trim() : null;
+    // Fitur Smart Links eksklusif untuk akun PRO dan link standar
+    const spotlightValue = !is_header && isPro && is_spotlight ? 1 : 0;
+    const scheduleStartVal = !is_header && isPro && schedule_start ? schedule_start : null;
+    const scheduleEndVal = !is_header && isPro && schedule_end ? schedule_end : null;
+    const pinCodeVal = !is_header && isPro && pin_code ? pin_code.trim() : null;
 
-    // 3. Simpan link baru ke tabel user_links
+    // 3. Simpan ke tabel user_links
     await env.DB.prepare(
-      'INSERT INTO user_links (username, title, url, description, is_spotlight, schedule_start, schedule_end, pin_code, clicks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)'
+      'INSERT INTO user_links (username, title, url, description, is_spotlight, schedule_start, schedule_end, pin_code, is_header, clicks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)'
     ).bind(
       cleanUsername, 
       title.trim(), 
-      linkUrl.trim(), 
-      description?.trim() || '', 
+      is_header ? '' : linkUrl.trim(), 
+      is_header ? '' : (description?.trim() || ''), 
       spotlightValue,
       scheduleStartVal,
       scheduleEndVal,
-      pinCodeVal
+      pinCodeVal,
+      is_header ? 1 : 0
     ).run();
 
     return new Response(JSON.stringify({ success: true }), {
@@ -155,7 +172,7 @@ export async function onRequestPatch({ request, env }) {
     const { id, username, is_spotlight, schedule_start, schedule_end, pin_code } = data;
 
     if (!id || !username) {
-      return new Response(JSON.stringify({ error: 'Missing link id or username' }), {
+      return new Response(JSON.stringify({ error: 'Missing link ID or username.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -170,7 +187,7 @@ export async function onRequestPatch({ request, env }) {
 
     if (!user || user.is_pro !== 1) {
       return new Response(
-        JSON.stringify({ error: 'Fitur Smart Link & Spotlight khusus untuk akun PRO.' }),
+        JSON.stringify({ error: 'Smart Links and Spotlight features are exclusive to PRO accounts.' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -212,7 +229,7 @@ export async function onRequestDelete({ request, env }) {
     const username = (url.searchParams.get('username') || '').trim().toLowerCase();
 
     if (!id) {
-      return new Response(JSON.stringify({ error: 'Missing link id' }), {
+      return new Response(JSON.stringify({ error: 'Missing link ID.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
