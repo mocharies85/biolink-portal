@@ -14,8 +14,7 @@ import {
   QrCode,
   Download,
   X,
-  Lock,
-  KeyRound
+  Lock
 } from 'lucide-react';
 import StoryModal from '@/components/StoryModal';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -38,7 +37,6 @@ interface LinkItem {
   schedule_start?: string | null;
   schedule_end?: string | null;
   is_header?: number;
- 
 }
 
 interface SocialLinks {
@@ -59,7 +57,7 @@ interface StoryItem {
   duration?: number;
 }
 
-// Konfigurasi Gaya Preset Tema
+// Preset Theme Configurations
 const THEMES: Record<string, {
   pageBg: string;
   cardBg: string;
@@ -132,6 +130,45 @@ const THEMES: Record<string, {
   }
 };
 
+// Spotify Embed Extractor
+const getSpotifyEmbedUrl = (url: string): string | null => {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.includes('spotify.com')) return null;
+
+    const match = parsed.pathname.match(/\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/);
+    if (match) {
+      const [, type, id] = match;
+      return `https://open.spotify.com/embed/${type}/${id}?utm_source=generator&theme=0`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
+// YouTube Embed Extractor
+const getYouTubeEmbedUrl = (url: string): string | null => {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'youtu.be') {
+      const id = parsed.pathname.slice(1).split(/[?&]/)[0];
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (parsed.hostname.includes('youtube.com')) {
+      if (parsed.pathname.startsWith('/shorts/')) {
+        const id = parsed.pathname.split('/shorts/')[1]?.split(/[?&]/)[0];
+        return id ? `https://www.youtube.com/embed/${id}` : null;
+      }
+      const id = parsed.searchParams.get('v');
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
 export default function UserBioClient() {
   const { t } = useLanguage();
 
@@ -144,14 +181,6 @@ export default function UserBioClient() {
     }
     return '';
   });
-
-  // --- TEMPELKAN DI SINI (State untuk Protected Smart Link PIN) ---
-  const [pinModalOpen, setPinModalOpen] = useState(false);
-  const [selectedPinLinkId, setSelectedPinLinkId] = useState<number | null>(null);
-  const [inputPin, setInputPin] = useState('');
-  const [pinError, setPinError] = useState('');
-  const [verifyingPin, setVerifyingPin] = useState(false);
-  // ----------------------------------------------------------------
 
   const [profile, setProfile] = useState<{
     name: string;
@@ -182,10 +211,16 @@ export default function UserBioClient() {
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [isStoryOpen, setIsStoryOpen] = useState(false);
 
-  // State untuk Pop-up Buka Kunci PIN
+  // PIN Unlock State
+  const [pinModalOpen, setPinModalOpen] = useState(false);
   const [targetPinLink, setTargetPinLink] = useState<LinkItem | null>(null);
   const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+
+  const handleLinkClick = (id: number) => {
+    fetch(`/api/click?id=${id}`, { method: 'POST' }).catch(() => {});
+  };
 
   const handleUnlockPin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,25 +242,26 @@ export default function UserBioClient() {
 
       const data = await res.json();
       if (!res.ok) {
-        setPinError(data.error || 'Kode PIN tidak cocok.');
+        setPinError(data.error || 'Invalid PIN code.');
         setIsVerifyingPin(false);
         return;
       }
 
-      // 1. Catat klik ke analitik database
+      // 1. Record analytics click
       handleLinkClick(targetPinLink.id);
 
-      // 2. PIN benar: buka link asli di tab baru dan tutup modal
+      // 2. Open destination URL in new tab
       window.open(data.url, '_blank', 'noopener,noreferrer');
       setPinModalOpen(false);
       setPinInput('');
       setTargetPinLink(null);
     } catch {
-      setPinError('Gagal memverifikasi PIN. Periksa koneksi Anda.');
+      setPinError('Failed to verify PIN. Please check your connection.');
     } finally {
       setIsVerifyingPin(false);
     }
   };
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
@@ -282,54 +318,6 @@ export default function UserBioClient() {
       isCurrent = false;
     };
   }, [username]);
-
-  const handleLinkClick = (id: number) => {
-    fetch(`/api/click?id=${id}`, { method: 'POST' }).catch(() => {});
-  };
-
-  const handleProtectedLinkClick = (e: React.MouseEvent, link: any) => {
-    if (link.has_pin) {
-      e.preventDefault();
-      setSelectedPinLinkId(link.id);
-      setInputPin('');
-      setPinError('');
-      setPinModalOpen(true);
-    } else {
-      handleLinkClick(link.id);
-    }
-  };
-
-  const handleVerifyPinSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputPin.trim() || !selectedPinLinkId) return;
-
-    setVerifyingPin(true);
-    setPinError('');
-
-    try {
-      const res = await fetch('/api/verify-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          linkId: selectedPinLinkId,
-          pin: inputPin.trim(),
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.targetUrl) {
-        setPinModalOpen(false);
-        handleLinkClick(selectedPinLinkId);
-        window.open(data.targetUrl, '_blank');
-      } else {
-        setPinError(data.error || 'PIN salah. Akses ditolak.');
-      }
-    } catch {
-      setPinError('Gagal memverifikasi PIN.');
-    } finally {
-      setVerifyingPin(false);
-    }
-  };
 
   const handleShare = async () => {
     const currentUrl = typeof window !== 'undefined' ? window.location.href : `https://link.curiolot.com/${username}`;
@@ -435,12 +423,9 @@ export default function UserBioClient() {
     parsedSocials = profile.socials;
   }
 
-  // Hak akses PRO & Aturan Wallpaper
   const isPro = isProUser || profile.is_pro === 1;
   const currentThemeKey = profile.theme && THEMES[profile.theme] ? profile.theme : 'dark';
   const theme = THEMES[currentThemeKey];
-
-  // Wallpaper HANYA aktif jika akun berstatus PRO
   const hasActiveWallpaper = Boolean(isPro && profile.bg_image);
 
   return (
@@ -477,7 +462,6 @@ export default function UserBioClient() {
           </a>
 
           <div className="flex items-center gap-2">
-            {/* Pemilih Bahasa Otomatis */}
             <LanguageSwitcher />
 
             <a
@@ -653,7 +637,7 @@ export default function UserBioClient() {
           </div>
         )}
 
-        {/* Links List with Spotlight & PIN Protection */}
+        {/* Links List with Spotlight, Media Embed & PIN Protection */}
         <section className="w-full flex flex-col gap-3.5 mb-8">
           {loadingLinks ? (
             <div className="p-8 text-center text-xs text-neutral-500 animate-pulse">
@@ -662,16 +646,11 @@ export default function UserBioClient() {
           ) : (
             links
               .filter((link: any) => {
-                // Header pemisah kategori selalu ditampilkan
                 if (link.is_header === 1) return true;
-
-                // Sembunyikan jika dinonaktifkan manual
                 if (link.is_active === 0 || link.active === false) return false;
 
-                // Pengecekan Smart Scheduling (Waktu Sekarang)
                 const now = new Date().getTime();
 
-                // Sembunyikan jika jadwal mulai belum tercapai
                 if (link.schedule_start) {
                   const startTime = new Date(link.schedule_start).getTime();
                   if (!isNaN(startTime) && now < startTime) {
@@ -679,7 +658,6 @@ export default function UserBioClient() {
                   }
                 }
 
-                // Sembunyikan jika jadwal berakhir sudah terlewati
                 if (link.schedule_end) {
                   const endTime = new Date(link.schedule_end).getTime();
                   if (!isNaN(endTime) && now > endTime) {
@@ -690,7 +668,7 @@ export default function UserBioClient() {
                 return true;
               })
               .map((link) => {
-                // Render khusus Section Header (Pemisah Kategori)
+                // Category Section Header
                 if (link.is_header === 1) {
                   return (
                     <div key={link.id} className="w-full pt-5 pb-1 text-center">
@@ -705,13 +683,67 @@ export default function UserBioClient() {
                 const isSpotlight = Boolean(link.is_spotlight === 1 || (link as any).is_spotlight === true);
                 const descText = link.description || (link as any).desc;
                 
-                // Deteksi proteksi PIN
+                // PIN Protection Detection
                 const hasPin = Boolean(
                   link.has_pin ||
                   (link as any).hasPin ||
                   (link.pin_code && String(link.pin_code).trim().length > 0)
                 );
 
+                // Media Embed Detection (Disabled if link has PIN protection)
+                const spotifyEmbed = !hasPin && getSpotifyEmbedUrl(link.url);
+                const youtubeEmbed = !hasPin && getYouTubeEmbedUrl(link.url);
+
+                if (spotifyEmbed) {
+                  return (
+                    <div
+                      key={link.id}
+                      className={`w-full rounded-2xl overflow-hidden border p-3 transition-all duration-300 shadow-sm ${theme.cardBg} ${theme.cardBorder}`}
+                    >
+                      {link.title && (
+                        <p className={`text-xs font-semibold mb-2.5 px-1 truncate ${theme.textPrimary}`}>
+                          {link.title}
+                        </p>
+                      )}
+                      <iframe
+                        src={spotifyEmbed}
+                        width="100%"
+                        height="152"
+                        frameBorder="0"
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"
+                        className="w-full rounded-xl"
+                      />
+                    </div>
+                  );
+                }
+
+                if (youtubeEmbed) {
+                  return (
+                    <div
+                      key={link.id}
+                      className={`w-full rounded-2xl overflow-hidden border p-3 transition-all duration-300 shadow-sm ${theme.cardBg} ${theme.cardBorder}`}
+                    >
+                      {link.title && (
+                        <p className={`text-xs font-semibold mb-2.5 px-1 truncate ${theme.textPrimary}`}>
+                          {link.title}
+                        </p>
+                      )}
+                      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/60 shadow-inner">
+                        <iframe
+                          src={youtubeEmbed}
+                          title={link.title || 'YouTube Video Player'}
+                          className="absolute inset-0 w-full h-full border-0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Standard Link Button
                 return (
                   <a
                     key={link.id}
@@ -840,7 +872,7 @@ export default function UserBioClient() {
 
       </div>
 
-      {/* QR Code Modal for Visitors */}
+      {/* QR Code Modal */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative flex flex-col items-center text-center">
@@ -883,74 +915,74 @@ export default function UserBioClient() {
 
       {/* Story Modal Viewer */}
       <StoryModal
-          stories={stories}
-          isOpen={isStoryOpen}
-          onClose={() => setIsStoryOpen(false)}
-          username={username}
-          isPro={isPro}
-        />
+        stories={stories}
+        isOpen={isStoryOpen}
+        onClose={() => setIsStoryOpen(false)}
+        username={username}
+        isPro={isPro}
+      />
 
-        {/* Modal Buka Kunci PIN */}
-        {pinModalOpen && targetPinLink && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className="relative w-full max-w-sm rounded-3xl bg-neutral-900 border border-neutral-800 p-6 shadow-2xl">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-3">
-                  <Lock className="w-6 h-6" />
-                </div>
-
-                <h4 className="text-base font-bold text-white">Protected Link</h4>
-                <p className="text-xs text-neutral-400 mt-1 line-clamp-1">
-                  {targetPinLink.title}
-                </p>
-                <p className="text-[11px] text-neutral-500 mt-0.5">
-                  Masukkan kode PIN akses untuk membuka tautan ini.
-                </p>
+      {/* PIN Unlock Modal */}
+      {pinModalOpen && targetPinLink && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-sm rounded-3xl bg-neutral-900 border border-neutral-800 p-6 shadow-2xl">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-3">
+                <Lock className="w-6 h-6" />
               </div>
 
-              <form onSubmit={handleUnlockPin} className="mt-5 space-y-3">
-                <div>
-                  <input
-                    type="password"
-                    maxLength={12}
-                    autoFocus
-                    placeholder="Ketik PIN..."
-                    value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value)}
-                    className="w-full text-center tracking-widest text-lg font-bold py-2.5 px-4 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-rose-500 transition"
-                  />
-                  {pinError && (
-                    <p className="text-xs text-rose-400 mt-1.5 text-center font-medium">
-                      {pinError}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPinModalOpen(false);
-                      setPinInput('');
-                      setPinError('');
-                      setTargetPinLink(null);
-                    }}
-                    className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isVerifyingPin || !pinInput.trim()}
-                    className="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-xs font-bold text-white transition disabled:opacity-50"
-                  >
-                    {isVerifyingPin ? 'Membuka...' : 'Buka Link'}
-                  </button>
-                </div>
-              </form>
+              <h4 className="text-base font-bold text-white">Protected Link</h4>
+              <p className="text-xs text-neutral-400 mt-1 line-clamp-1">
+                {targetPinLink.title}
+              </p>
+              <p className="text-[11px] text-neutral-500 mt-0.5">
+                Enter the access PIN code to unlock this link.
+              </p>
             </div>
+
+            <form onSubmit={handleUnlockPin} className="mt-5 space-y-3">
+              <div>
+                <input
+                  type="password"
+                  maxLength={12}
+                  autoFocus
+                  placeholder="Enter PIN..."
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  className="w-full text-center tracking-widest text-lg font-bold py-2.5 px-4 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-rose-500 transition"
+                />
+                {pinError && (
+                  <p className="text-xs text-rose-400 mt-1.5 text-center font-medium">
+                    {pinError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPinModalOpen(false);
+                    setPinInput('');
+                    setPinError('');
+                    setTargetPinLink(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVerifyingPin || !pinInput.trim()}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-xs font-bold text-white transition disabled:opacity-50"
+                >
+                  {isVerifyingPin ? 'Unlocking...' : 'Unlock Link'}
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </main>
-    );
-  }
+        </div>
+      )}
+    </main>
+  );
+}
