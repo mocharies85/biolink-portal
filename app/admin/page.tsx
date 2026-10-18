@@ -3477,7 +3477,7 @@ export default function AdminDashboard() {
                 Cancel
               </button>
               <a
-                href="https://ko-fi.com/cycrack"
+                href="https://ko-fi.com/curiolot"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowUpgradeModal(false)}

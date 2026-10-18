@@ -256,7 +256,7 @@ export default function HomePage() {
             <Link href="/privacy" className="hover:text-white transition">Privacy</Link>
             <Link href="/login" className="hover:text-white transition">Sign In</Link>
             <Link href="/register" className="hover:text-white transition">Claim Username</Link>
-            <a href="https://ko-fi.com/cycrack" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Support</a>
+            <a href="https://ko-fi.com/curiolot" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Support</a>
           </div>
         </div>
       </footer>
@@ -526,7 +526,7 @@ export default function HomePage() {
                   </button>
 
                   <a
-                    href="https://ko-fi.com/cycrack"
+                    href="https://ko-fi.com/curiolot"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={handleClosePromo}
