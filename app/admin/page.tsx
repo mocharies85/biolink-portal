@@ -857,6 +857,7 @@ export default function AdminDashboard() {
     }
     e.target.value = '';
   };
+
   const handleMultiStoryImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -869,7 +870,7 @@ export default function AdminDashboard() {
 
     setProcessingMultiImages(true);
     try {
-      const fileArray = Array.from(files).slice(0, 10); // Batas maksimal 10 gambar
+      const fileArray = Array.from(files).slice(0, 10); // Max 10 images
       const compressedList: string[] = [];
 
       for (const file of fileArray) {
@@ -882,20 +883,21 @@ export default function AdminDashboard() {
       if (compressedList.length > 0) {
         setStoryMediaUrls(compressedList);
         setStoryMediaType('image');
-        setStoryMediaUrl(compressedList[0]); // Gambar pertama untuk thumbnail preview
+        setStoryMediaUrl(compressedList[0]); // First image for preview thumbnail
         
-        // Menghitung durasi otomatis berdasarkan jumlah gambar
+        // Calculate duration tier based on image count
         const autoDuration = getStoryTierDuration(compressedList.length);
         setStoryTotalDuration(autoDuration);
       }
     } catch (err) {
       console.error('Error processing multi images:', err);
-      alert('Gagal memproses gambar. Pastikan file berformat JPG atau PNG.');
+      alert('Failed to process images. Please ensure the files are in JPG or PNG format.');
     } finally {
       setProcessingMultiImages(false);
       e.target.value = '';
     }
   };
+
   const handleShowcaseVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -2650,14 +2652,14 @@ export default function AdminDashboard() {
                   </span>
                   <span className="text-[11px] text-amber-400 font-medium">
                     {storyMediaUrls.length > 0
-                      ? `${storyMediaUrls.length} Gambar terpilih (${storyTotalDuration} detik)`
-                      : 'Maks. 10 Gambar'}
+                      ? `${storyMediaUrls.length} images selected (${storyTotalDuration}s total)`
+                      : 'Max 10 Images'}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <label className="px-3.5 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-neutral-200 cursor-pointer transition flex items-center gap-2">
-                    <span>{processingMultiImages ? 'Memproses...' : '📁 Pilih Banyak Gambar'}</span>
+                    <span>{processingMultiImages ? 'Processing...' : '📁 Select Multiple Images'}</span>
                     <input
                       type="file"
                       multiple
@@ -2676,15 +2678,15 @@ export default function AdminDashboard() {
                       }}
                       className="text-xs text-rose-400 hover:text-rose-300 hover:underline transition"
                     >
-                      Reset Gambar
+                      Reset Images
                     </button>
                   )}
                 </div>
 
-                {/* Pilihan Gaya Animasi Transisi */}
+                {/* Transition Effect Options */}
                 {storyMediaUrls.length > 1 && (
                   <div className="pt-3 border-t border-neutral-800 flex flex-col sm:flex-row sm:items-center gap-2.5">
-                    <span className="text-xs text-neutral-400">Efek Transisi Slide:</span>
+                    <span className="text-xs text-neutral-400">Transition Effect:</span>
                     <div className="flex gap-1.5">
                       {(['slide', 'fade', 'zoom'] as const).map((style) => (
                         <button
