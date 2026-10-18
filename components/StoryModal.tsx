@@ -57,9 +57,10 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
   const isVideo = !isMultiImage && isVideoUrl(current?.media_url);
 
   // Hitung total durasi tayang story (25s / 45s / 60s / 10s)
-  const effectiveTotalDuration = Number(current?.total_duration) || 
-    Number(current?.duration) || 
-    (isPro ? 25 : 10);
+  // SESUDAH: Kunci durasi ke 10 detik jika bukan akun PRO
+  const effectiveTotalDuration = isPro
+    ? (Number(current?.total_duration) || Number(current?.duration) || 25)
+    : 10;
 
   const durationPerSlide = effectiveTotalDuration / Math.max(1, currentImages.length);
   const animationStyle = current?.animation_style || 'slide';

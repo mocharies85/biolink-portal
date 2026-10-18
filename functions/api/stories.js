@@ -60,7 +60,11 @@ export async function onRequestPost({ request, env }) {
     const validDurations = [10, 25, 45, 60];
     const parsedDuration = Number(duration);
     const storyDuration = validDurations.includes(parsedDuration) ? parsedDuration : 10;
-    const finalTotalDuration = total_duration ? Number(total_duration) : storyDuration;
+    
+    // Jika durasi dasarnya 10s (Free) dan tidak ada multi-gambar, kunci total_duration ke 10
+    const finalTotalDuration = (storyDuration === 10 && !media_urls)
+      ? 10
+      : (total_duration ? Number(total_duration) : storyDuration);
 
     await env.DB.prepare(
       `INSERT INTO stories (

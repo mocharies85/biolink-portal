@@ -1081,7 +1081,7 @@ export default function AdminDashboard() {
           duration: plannedDuration,
           media_urls: storyMediaUrls.length > 0 ? JSON.stringify(storyMediaUrls) : null,
           animation_style: storyAnimationStyle,
-          total_duration: storyTotalDuration,
+          total_duration: isProUser ? storyTotalDuration : 10,
         }),
       });
 
