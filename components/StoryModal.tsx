@@ -6,10 +6,13 @@ import { X, Volume2, VolumeX, ExternalLink, Link as LinkIcon, Sparkles } from 'l
 interface Story {
   id: string;
   media_url: string;
+  media_urls?: string | null;
   caption?: string;
   audio_url?: string;
   link_url?: string;
   duration?: number | string;
+  total_duration?: number;
+  animation_style?: 'slide' | 'fade' | 'zoom';
 }
 
 interface StoryModalProps {
@@ -26,8 +29,21 @@ const isVideoUrl = (url?: string): boolean => {
   return url.startsWith('data:video') || /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
 };
 
+// Helper: Ekstraksi daftar gambar (dukungan single & multi-gambar)
+const getStoryImages = (story?: Story): string[] => {
+  if (!story) return [];
+  if (story.media_urls) {
+    try {
+      const parsed = JSON.parse(story.media_urls);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+  }
+  return story.media_url ? [story.media_url] : [];
+};
+
 export default function StoryModal({ stories, isOpen, onClose, username, isPro }: StoryModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentSubIndex, setCurrentSubIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [videoDuration, setVideoDuration] = useState<number>(0);
@@ -36,30 +52,36 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const current = stories[currentIndex];
-  const isVideo = isVideoUrl(current?.media_url);
+  const currentImages = getStoryImages(current);
+  const isMultiImage = currentImages.length > 1;
+  const isVideo = !isMultiImage && isVideoUrl(current?.media_url);
 
-  // Hitung durasi tayang foto secara dinamis (25s / 45s / 60s / 10s)
-  const parsedDuration = Number(current?.duration);
-  const effectivePhotoDuration = !isNaN(parsedDuration) && parsedDuration > 0
-    ? parsedDuration
-    : (isPro ? 25 : 10);
+  // Hitung total durasi tayang story (25s / 45s / 60s / 10s)
+  const effectiveTotalDuration = Number(current?.total_duration) || 
+    Number(current?.duration) || 
+    (isPro ? 25 : 10);
 
-  // Reset state tiap kali modal dibuka
+  const durationPerSlide = effectiveTotalDuration / Math.max(1, currentImages.length);
+  const animationStyle = current?.animation_style || 'slide';
+
+  // Reset saat modal pertama kali dibuka
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(0);
+      setCurrentSubIndex(0);
       setProgress(0);
       setVideoDuration(0);
     }
   }, [isOpen]);
 
-  // Reset progress & durasi video saat berpindah slide
+  // Reset sub-slide & durasi video saat berpindah story utama
   useEffect(() => {
+    setCurrentSubIndex(0);
     setProgress(0);
     setVideoDuration(0);
   }, [currentIndex]);
 
-  // Kelola audio soundtrack dan pemutaran video (Dioptimalkan untuk Mobile & iOS)
+  // Kelola pemutaran audio soundtrack (Lagu terus berjalan mulus antar multi-gambar)
   useEffect(() => {
     if (!isOpen || !current) return;
 
@@ -77,7 +99,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
         audioRef.current.src = current.audio_url;
         audioRef.current.muted = isMuted;
         audioRef.current.volume = 1.0;
-        audioRef.current.load(); // Wajib di mobile agar audio buffer siap putar
+        audioRef.current.load();
         audioRef.current.play().catch(() => {});
       }
     }
@@ -87,7 +109,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
       videoRef.current.muted = Boolean(current.audio_url) || isMuted;
       videoRef.current.play().catch(() => {});
     }
-  }, [isOpen, currentIndex, current?.audio_url, current?.media_url, isVideo]);
+  }, [isOpen, currentIndex, current?.audio_url, isVideo]);
 
   // Sinkronisasi status audio Mute / Unmute
   useEffect(() => {
@@ -99,20 +121,26 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
     }
   }, [isMuted, current?.audio_url]);
 
-  // Navigasi ke slide selanjutnya
+  // Navigasi maju: Pindah antar slide gambar dulu, baru ke story berikutnya
   const handleNext = () => {
-    if (currentIndex < stories.length - 1) {
+    if (isMultiImage && currentSubIndex < currentImages.length - 1) {
+      setCurrentSubIndex((prev) => prev + 1);
+    } else if (currentIndex < stories.length - 1) {
       setCurrentIndex((idx) => idx + 1);
+      setCurrentSubIndex(0);
       setProgress(0);
     } else {
       handleClose();
     }
   };
 
-  // Navigasi ke slide sebelumnya
+  // Navigasi mundur: Mundur slide gambar dulu, baru ke story sebelumnya
   const handlePrev = () => {
-    if (currentIndex > 0) {
+    if (isMultiImage && currentSubIndex > 0) {
+      setCurrentSubIndex((prev) => prev - 1);
+    } else if (currentIndex > 0) {
       setCurrentIndex((idx) => idx - 1);
+      setCurrentSubIndex(0);
       setProgress(0);
     }
   };
@@ -127,15 +155,14 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
     onClose();
   };
 
-  // Baca metadata durasi video otomatis (maksimal cap 60 detik)
+  // Metadata durasi video
   const handleVideoLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const vid = e.currentTarget;
     const naturalDur = vid.duration || 10;
-    const effectiveDur = Math.min(naturalDur, 60);
-    setVideoDuration(effectiveDur);
+    setVideoDuration(Math.min(naturalDur, 60));
   };
 
-  // Timer progres dinamis: Mengikuti durasi video asli ATAU durasi foto terpilih
+  // Timer progres bar & pergantian slide otomatis
   useEffect(() => {
     if (!isOpen || !current) return;
 
@@ -154,24 +181,33 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
 
       return () => clearInterval(interval);
     } else {
-      const durationMs = effectivePhotoDuration * 1000;
-      const intervalTime = 50;
-      const step = 100 / (durationMs / intervalTime);
+      const intervalMs = 50;
+      let elapsedMs = currentSubIndex * durationPerSlide * 1000;
+      const totalMs = effectiveTotalDuration * 1000;
 
       const timer = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(timer);
-            handleNext();
-            return 100;
-          }
-          return prev + step;
-        });
-      }, intervalTime);
+        elapsedMs += intervalMs;
+        const currentProgress = Math.min((elapsedMs / totalMs) * 100, 100);
+        setProgress(currentProgress);
+
+        // Update indeks gambar aktif sesuai waktu berjalan
+        const expectedSubIndex = Math.min(
+          Math.floor((elapsedMs / totalMs) * currentImages.length),
+          currentImages.length - 1
+        );
+        if (expectedSubIndex !== currentSubIndex) {
+          setCurrentSubIndex(expectedSubIndex);
+        }
+
+        if (elapsedMs >= totalMs) {
+          clearInterval(timer);
+          handleNext();
+        }
+      }, intervalMs);
 
       return () => clearInterval(timer);
     }
-  }, [isOpen, currentIndex, isVideo, videoDuration, effectivePhotoDuration, stories.length]);
+  }, [isOpen, currentIndex, currentSubIndex, isVideo, videoDuration, effectiveTotalDuration, currentImages.length, durationPerSlide]);
 
   if (!isOpen || stories.length === 0 || !current) return null;
 
@@ -195,25 +231,27 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           ))}
         </div>
 
-        {/* Header: Username, Badge Durasi Dinamis, Tombol Link & Kontrol */}
+        {/* Header: Username, Badge Durasi, Tombol Link & Kontrol */}
         <div className="absolute top-7 left-3 right-3 z-30 flex items-center justify-between text-white gap-1.5">
-          {/* Sisi Kiri: Username & Badges */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="font-semibold text-xs text-neutral-200">@{username}</span>
 
-            {/* Badge Durasi Dinamis (Menampilkan Durasi Asli) */}
+            {/* Badge Durasi & Indikator Carousel */}
             {isVideo ? (
               <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold flex items-center gap-1 border border-amber-500/30">
                 <Sparkles className="w-2.5 h-2.5" />
                 <span>Video {videoDuration > 0 ? `${Math.round(videoDuration)}s` : '60s'}</span>
               </span>
             ) : (
-              <span className={`px-1.5 py-0.5 rounded text-[9px] border font-bold ${
-                effectivePhotoDuration > 10 
+              <span className={`px-1.5 py-0.5 rounded text-[9px] border font-bold flex items-center gap-1 ${
+                effectiveTotalDuration > 10 
                   ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
                   : 'bg-neutral-800/80 text-neutral-400 border-neutral-700'
               }`}>
-                {effectivePhotoDuration > 10 ? `PRO ${effectivePhotoDuration}s` : '10s'}
+                {isMultiImage && (
+                  <span>{currentSubIndex + 1}/{currentImages.length} •</span>
+                )}
+                <span>{effectiveTotalDuration > 10 ? `PRO ${effectiveTotalDuration}s` : '10s'}</span>
               </span>
             )}
 
@@ -224,7 +262,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
             )}
           </div>
 
-          {/* Sisi Tengah: Stiker Link Tautan */}
+          {/* Stiker Link Tautan */}
           {current.link_url && (
             <a
               href={current.link_url}
@@ -242,7 +280,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
             </a>
           )}
 
-          {/* Sisi Kanan: Audio & Tutup */}
+          {/* Kontrol Audio & Tutup */}
           <div className="flex items-center gap-1.5 shrink-0">
             {(current.audio_url || isVideo) && (
               <button 
@@ -270,7 +308,7 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
           </div>
         </div>
 
-        {/* Media Container */}
+        {/* Kontainer Media dengan Animasi Slide */}
         <div className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden">
           {isVideo ? (
             <video 
@@ -284,24 +322,45 @@ export default function StoryModal({ stories, isOpen, onClose, username, isPro }
             />
           ) : (
             <img 
-              src={current.media_url} 
-              alt="Story content" 
-              className="w-full h-full object-contain" 
+              key={`${current.id}-${currentSubIndex}`}
+              src={currentImages[currentSubIndex]} 
+              alt={`Slide ${currentSubIndex + 1}`} 
+              className={`w-full h-full object-contain ${
+                animationStyle === 'fade'
+                  ? 'animate-fade-in'
+                  : animationStyle === 'zoom'
+                  ? 'animate-zoom-in'
+                  : 'animate-slide-left'
+              }`} 
             />
           )}
+
+          {/* Indikator Titik Carousel (Khusus Multi-Gambar) */}
+          {isMultiImage && (
+            <div className="absolute bottom-16 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+              {currentImages.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    idx === currentSubIndex ? 'w-4 bg-emerald-400' : 'w-1.5 bg-white/40'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
           
-          {/* Area Sentuh Kiri / Kanan Navigasi */}
+          {/* Navigasi Sentuh Kiri / Kanan */}
           <button 
             type="button" 
             onClick={handlePrev} 
             className="absolute left-0 top-0 bottom-0 w-1/3 z-10" 
-            aria-label="Previous story"
+            aria-label="Previous slide"
           />
           <button 
             type="button" 
             onClick={handleNext} 
             className="absolute right-0 top-0 bottom-0 w-1/3 z-10" 
-            aria-label="Next story"
+            aria-label="Next slide"
           />
         </div>
 

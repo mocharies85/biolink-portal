@@ -1,6 +1,6 @@
 // functions/api/stories.js
 
-// 1. GET: Ambil story aktif dalam 24 jam terakhir
+// 1. GET: Ambil story aktif dalam 24 jam terakhir beserta atribut multi-gambar
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
@@ -11,16 +11,19 @@ export async function onRequestGet({ request, env }) {
     }
 
     const { results } = await env.DB.prepare(
-      `SELECT id, media_url, caption, audio_url, link_url, duration, created_at 
+      `SELECT id, media_url, caption, audio_url, link_url, duration, media_urls, animation_style, total_duration, created_at 
        FROM stories 
        WHERE LOWER(username) = LOWER(?) AND expires_at > datetime('now') 
        ORDER BY created_at ASC`
     ).bind(username).all();
 
-    // Pastikan duration selalu berupa angka (default 10 jika null)
+    // Format nilai default jika ada data null
     const formattedStories = (results || []).map((s) => ({
       ...s,
       duration: s.duration ? Number(s.duration) : 10,
+      total_duration: s.total_duration ? Number(s.total_duration) : (s.duration ? Number(s.duration) : 25),
+      animation_style: s.animation_style || 'slide',
+      media_urls: s.media_urls || null,
     }));
 
     return new Response(JSON.stringify({ stories: formattedStories }), {
@@ -32,36 +35,58 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-// 2. POST: Publikasikan story baru dengan validasi durasi (10s, 25s, 45s, 60s)
+// 2. POST: Publikasikan story baru (single / multi-gambar PRO)
 export async function onRequestPost({ request, env }) {
   try {
-    const { username, media_url, caption, audio_url, link_url, duration } = await request.json();
+    const {
+      username,
+      media_url,
+      caption,
+      audio_url,
+      link_url,
+      duration,
+      media_urls,
+      animation_style,
+      total_duration,
+    } = await request.json();
 
-    if (!username || !media_url) {
+    if (!username || (!media_url && !media_urls)) {
       return new Response(JSON.stringify({ error: 'Username and media_url are required' }), { status: 400 });
     }
 
     const id = crypto.randomUUID();
     
-    // Validasi durasi: 10s (Free), 25s / 45s / 60s (PRO)
+    // Validasi durasi fallback: 10s, 25s, 45s, 60s
     const validDurations = [10, 25, 45, 60];
     const parsedDuration = Number(duration);
     const storyDuration = validDurations.includes(parsedDuration) ? parsedDuration : 10;
+    const finalTotalDuration = total_duration ? Number(total_duration) : storyDuration;
 
     await env.DB.prepare(
-      `INSERT INTO stories (id, username, media_url, caption, audio_url, link_url, duration, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+1 day'))`
+      `INSERT INTO stories (
+        id, username, media_url, caption, audio_url, link_url, 
+        duration, media_urls, animation_style, total_duration, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+1 day'))`
     ).bind(
       id, 
       username.toLowerCase(), 
-      media_url, 
+      media_url || null, 
       caption || '', 
       audio_url || null, 
       link_url || null,
-      storyDuration
+      storyDuration,
+      media_urls || null,
+      animation_style || 'slide',
+      finalTotalDuration
     ).run();
 
-    return new Response(JSON.stringify({ success: true, id, duration: storyDuration }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      id, 
+      duration: storyDuration,
+      total_duration: finalTotalDuration,
+      animation_style: animation_style || 'slide'
+    }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
     });

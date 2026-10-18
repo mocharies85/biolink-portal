@@ -202,7 +202,16 @@ const THEME_STYLES: Record<string, {
     accent: 'text-amber-400',
   },
 };
-
+// Helper untuk menentukan total durasi story berdasarkan jumlah gambar
+const getStoryTierDuration = (imageCount: number): number => {
+  if (imageCount <= 3) {
+    return 25; // 1-3 gambar: 25 unit durasi
+  } else if (imageCount <= 6) {
+    return 45; // 4-6 gambar: 45 unit durasi
+  } else {
+    return 60; // > 6 gambar: 60 unit durasi
+  }
+};
 const compressImage = (
   file: File, 
   maxWidth = 1080, 
@@ -485,7 +494,10 @@ export default function AdminDashboard() {
   const [storySuccess, setStorySuccess] = useState(false);
   const [compressingStory, setCompressingStory] = useState(false);
   const [deletingStoryId, setDeletingStoryId] = useState<string | null>(null);
-
+  const [storyMediaUrls, setStoryMediaUrls] = useState<string[]>([]);
+  const [storyAnimationStyle, setStoryAnimationStyle] = useState<'slide' | 'fade' | 'zoom'>('slide');
+  const [storyTotalDuration, setStoryTotalDuration] = useState<number>(25);
+  const [processingMultiImages, setProcessingMultiImages] = useState(false);
   // Dynamic Music Library (Read-only for creators, managed via /superadmin)
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
   const [loadingMusic, setLoadingMusic] = useState(true);
@@ -845,7 +857,45 @@ export default function AdminDashboard() {
     }
     e.target.value = '';
   };
+  const handleMultiStoryImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      e.target.value = '';
+      return;
+    }
+
+    setProcessingMultiImages(true);
+    try {
+      const fileArray = Array.from(files).slice(0, 10); // Batas maksimal 10 gambar
+      const compressedList: string[] = [];
+
+      for (const file of fileArray) {
+        if (file.type.startsWith('image/')) {
+          const compressed = await compressImage(file, 1080, 1920, 0.75);
+          compressedList.push(compressed);
+        }
+      }
+
+      if (compressedList.length > 0) {
+        setStoryMediaUrls(compressedList);
+        setStoryMediaType('image');
+        setStoryMediaUrl(compressedList[0]); // Gambar pertama untuk thumbnail preview
+        
+        // Menghitung durasi otomatis berdasarkan jumlah gambar
+        const autoDuration = getStoryTierDuration(compressedList.length);
+        setStoryTotalDuration(autoDuration);
+      }
+    } catch (err) {
+      console.error('Error processing multi images:', err);
+      alert('Gagal memproses gambar. Pastikan file berformat JPG atau PNG.');
+    } finally {
+      setProcessingMultiImages(false);
+      e.target.value = '';
+    }
+  };
   const handleShowcaseVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1027,6 +1077,9 @@ export default function AdminDashboard() {
           audio_url: storyAudioUrl.trim() || null,
           link_url: storyLinkUrl.trim() || null,
           duration: plannedDuration,
+          media_urls: storyMediaUrls.length > 0 ? JSON.stringify(storyMediaUrls) : null,
+          animation_style: storyAnimationStyle,
+          total_duration: storyTotalDuration,
         }),
       });
 
@@ -1037,6 +1090,9 @@ export default function AdminDashboard() {
         setStoryAudioUrl('');
         setStoryLinkUrl('');
         setSelectedTrackTitle('');
+        setStoryMediaUrls([]);
+        setStoryAnimationStyle('slide');
+        setStoryTotalDuration(25);
         fetchStories();
         setTimeout(() => setStorySuccess(false), 3500);
       } else {
@@ -2582,6 +2638,73 @@ export default function AdminDashboard() {
                   />
                 </div>
               </div>
+              {/* Multi-Image Carousel Options (PRO) */}
+            {isProUser && (
+              <div className="p-4 rounded-xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-3 mt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                    Multi-Image Carousel
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                      PRO
+                    </span>
+                  </span>
+                  <span className="text-[11px] text-amber-400 font-medium">
+                    {storyMediaUrls.length > 0
+                      ? `${storyMediaUrls.length} Gambar terpilih (${storyTotalDuration} detik)`
+                      : 'Maks. 10 Gambar'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <label className="px-3.5 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-neutral-200 cursor-pointer transition flex items-center gap-2">
+                    <span>{processingMultiImages ? 'Memproses...' : '📁 Pilih Banyak Gambar'}</span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      disabled={processingMultiImages}
+                      onChange={handleMultiStoryImagesUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  {storyMediaUrls.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStoryMediaUrls([]);
+                        setStoryTotalDuration(25);
+                      }}
+                      className="text-xs text-rose-400 hover:text-rose-300 hover:underline transition"
+                    >
+                      Reset Gambar
+                    </button>
+                  )}
+                </div>
+
+                {/* Pilihan Gaya Animasi Transisi */}
+                {storyMediaUrls.length > 1 && (
+                  <div className="pt-3 border-t border-neutral-800 flex flex-col sm:flex-row sm:items-center gap-2.5">
+                    <span className="text-xs text-neutral-400">Efek Transisi Slide:</span>
+                    <div className="flex gap-1.5">
+                      {(['slide', 'fade', 'zoom'] as const).map((style) => (
+                        <button
+                          key={style}
+                          type="button"
+                          onClick={() => setStoryAnimationStyle(style)}
+                          className={`px-3 py-1 text-xs rounded-lg border capitalize transition font-medium ${
+                            storyAnimationStyle === style
+                              ? 'border-amber-400 text-amber-400 bg-amber-400/10'
+                              : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                          }`}
+                        >
+                          {style}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}          
 
               <div>
                 <label className="text-[11px] text-neutral-400 block mb-1">

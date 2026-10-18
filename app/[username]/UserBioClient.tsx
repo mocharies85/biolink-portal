@@ -51,10 +51,14 @@ interface SocialLinks {
 interface StoryItem {
   id: string;
   media_url: string;
+  media_urls?: string | null;
   caption?: string;
   audio_url?: string;
   link_url?: string;
   duration?: number;
+  total_duration?: number;
+  animation_style?: 'slide' | 'fade' | 'zoom';
+  created_at: number;
 }
 
 // Preset Theme Configurations
