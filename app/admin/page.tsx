@@ -40,6 +40,8 @@ import {
   Pencil,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface LinkItem {
@@ -895,6 +897,33 @@ export default function AdminDashboard() {
     } finally {
       setProcessingMultiImages(false);
       e.target.value = '';
+    }
+  };
+
+  // Geser posisi urutan gambar (kiri / kanan)
+  const handleMoveStoryImage = (index: number, direction: 'left' | 'right') => {
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= storyMediaUrls.length) return;
+
+    const updated = [...storyMediaUrls];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+
+    setStoryMediaUrls(updated);
+    setStoryMediaUrl(updated[0]); // Gambar pertama otomatis menjadi cover utama
+  };
+
+  // Hapus salah satu gambar dari daftar carousel
+  const handleRemoveStoryImage = (index: number) => {
+    const updated = storyMediaUrls.filter((_, i) => i !== index);
+    setStoryMediaUrls(updated);
+
+    if (updated.length > 0) {
+      setStoryMediaUrl(updated[0]);
+      setStoryTotalDuration(getStoryTierDuration(updated.length));
+    } else {
+      setStoryMediaUrl('');
+      setStoryTotalDuration(25);
     }
   };
 
@@ -2674,14 +2703,76 @@ export default function AdminDashboard() {
                       type="button"
                       onClick={() => {
                         setStoryMediaUrls([]);
+                        setStoryMediaUrl('');
                         setStoryTotalDuration(25);
                       }}
                       className="text-xs text-rose-400 hover:text-rose-300 hover:underline transition"
                     >
-                      Reset Images
+                      Reset All
                     </button>
                   )}
                 </div>
+
+                {/* Pratinjau & Pengaturan Urutan Gambar */}
+                {storyMediaUrls.length > 0 && (
+                  <div className="flex flex-col gap-2 pt-2">
+                    <span className="text-[11px] text-neutral-400">
+                      Drag or use arrows to order slides (Left = First, Right = Last):
+                    </span>
+                    <div className="flex gap-2.5 overflow-x-auto pb-2 pt-1">
+                      {storyMediaUrls.map((url, idx) => (
+                        <div
+                          key={idx}
+                          className="relative group shrink-0 w-24 h-32 rounded-xl border border-neutral-700 overflow-hidden bg-neutral-950 flex flex-col justify-between p-1.5 shadow-md"
+                        >
+                          <img
+                            src={url}
+                            alt={`Slide ${idx + 1}`}
+                            className="absolute inset-0 w-full h-full object-cover -z-0 opacity-80 group-hover:opacity-100 transition"
+                          />
+
+                          {/* Badge Urutan & Tombol Hapus */}
+                          <div className="relative z-10 flex items-center justify-between">
+                            <span className="px-1.5 py-0.5 rounded-md bg-black/80 backdrop-blur-md text-[10px] font-extrabold text-amber-400 border border-white/10">
+                              #{idx + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveStoryImage(idx)}
+                              className="p-1 rounded-md bg-black/70 hover:bg-rose-500/80 text-white transition"
+                              title="Remove this image"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          {/* Tombol Geser Posisi */}
+                          <div className="relative z-10 flex items-center justify-between gap-1 mt-auto bg-black/60 backdrop-blur-md rounded-lg p-0.5 border border-white/10">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => handleMoveStoryImage(idx, 'left')}
+                              className="flex-1 py-1 flex items-center justify-center text-white hover:text-amber-400 disabled:opacity-20 disabled:hover:text-white transition"
+                              title="Move Left (Earlier)"
+                            >
+                              <ChevronLeft className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="text-[9px] text-neutral-400 font-bold select-none">•</span>
+                            <button
+                              type="button"
+                              disabled={idx === storyMediaUrls.length - 1}
+                              onClick={() => handleMoveStoryImage(idx, 'right')}
+                              className="flex-1 py-1 flex items-center justify-center text-white hover:text-amber-400 disabled:opacity-20 disabled:hover:text-white transition"
+                              title="Move Right (Later)"
+                            >
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Transition Effect Options */}
                 {storyMediaUrls.length > 1 && (
