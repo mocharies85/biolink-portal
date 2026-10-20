@@ -926,7 +926,51 @@ export default function AdminDashboard() {
       setStoryTotalDuration(25);
     }
   };
+  // Tambah foto baru ke daftar yang sudah ada (maksimal 10 foto)
+  const handleAddStoryImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      e.target.value = '';
+      return;
+    }
+
+    const remainingSlots = 10 - storyMediaUrls.length;
+    if (remainingSlots <= 0) {
+      alert('Maximum limit reached. You can only add up to 10 images.');
+      e.target.value = '';
+      return;
+    }
+
+    setProcessingMultiImages(true);
+    try {
+      const fileArray = Array.from(files).slice(0, remainingSlots);
+      const newCompressedList: string[] = [];
+
+      for (const file of fileArray) {
+        if (file.type.startsWith('image/')) {
+          const compressed = await compressImage(file, 1080, 1920, 0.75);
+          newCompressedList.push(compressed);
+        }
+      }
+
+      if (newCompressedList.length > 0) {
+        const combined = [...storyMediaUrls, ...newCompressedList];
+        setStoryMediaUrls(combined);
+        setStoryMediaType('image');
+        if (!storyMediaUrl) setStoryMediaUrl(combined[0]);
+        setStoryTotalDuration(getStoryTierDuration(combined.length));
+      }
+    } catch (err) {
+      console.error('Error adding story images:', err);
+      alert('Failed to process images. Please ensure the files are in JPG or PNG format.');
+    } finally {
+      setProcessingMultiImages(false);
+      e.target.value = '';
+    }
+  };
   const handleShowcaseVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -2770,6 +2814,27 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       ))}
+
+                      {/* Tombol Tambah Foto Baru */}
+                      {storyMediaUrls.length < 10 && (
+                        <label className="shrink-0 w-24 h-32 rounded-xl border border-dashed border-neutral-700 hover:border-amber-400 bg-neutral-950/60 hover:bg-neutral-900 flex flex-col items-center justify-center gap-1.5 cursor-pointer text-neutral-400 hover:text-amber-400 transition group shadow-sm">
+                          <div className="w-7 h-7 rounded-full bg-neutral-800 group-hover:bg-amber-400/20 border border-neutral-700 group-hover:border-amber-400/40 flex items-center justify-center transition">
+                            <Plus className="w-4 h-4 text-neutral-300 group-hover:text-amber-400" />
+                          </div>
+                          <span className="text-[10px] font-bold">Add Photo</span>
+                          <span className="text-[8px] text-neutral-500">
+                            ({10 - storyMediaUrls.length} left)
+                          </span>
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            disabled={processingMultiImages}
+                            onChange={handleAddStoryImages}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
                     </div>
                   </div>
                 )}
