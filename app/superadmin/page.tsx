@@ -79,6 +79,41 @@ interface AdminData {
   messages: MessageRecord[];
 }
 
+// Fungsi pembantu penghitung mundur sisa masa aktif PRO
+function formatCountdown(expiresAt: string | null | undefined, proType?: string): { text: string; color: string; isUrgent: boolean } {
+  if (!expiresAt) {
+    return { text: 'Lifetime / Forever', color: 'text-neutral-400', isUrgent: false };
+  }
+
+  const target = new Date(expiresAt).getTime();
+  const now = Date.now();
+  const diff = target - now;
+
+  if (diff <= 0) {
+    return { text: 'Expired', color: 'text-rose-400 font-semibold', isUrgent: true };
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+  let durationText = '';
+  if (days > 0) {
+    durationText = `${days}d ${hours}h left`;
+  } else {
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    durationText = `${hours}h ${mins}m left`;
+  }
+
+  const prefix = proType === 'paid' ? 'Renews: ' : 'Expires: ';
+  const isUrgent = days <= 3; // Peringatan jika sisa waktu <= 3 hari
+
+  return {
+    text: `${prefix}${durationText}`,
+    color: isUrgent ? 'text-amber-400 font-semibold' : 'text-neutral-400',
+    isUrgent,
+  };
+}
+
 export default function SuperAdminPage() {
   const router = useRouter();
 
@@ -658,14 +693,15 @@ export default function SuperAdminPage() {
             <p className="text-2xl font-bold text-emerald-400 mt-2">{data?.stats.free ?? 0}</p>
           </div>
 
+          {/* Kartu Est. Revenue / Mo dengan Prediksi Perpanjangan */}
           <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
             <div className="flex items-center justify-between text-neutral-400 text-xs">
               <span>Est. Revenue / Mo</span>
               <DollarSign className="w-4 h-4 text-emerald-500" />
             </div>
             <p className="text-2xl font-bold text-white mt-2">${data?.stats.estimatedRevenue ?? 0}</p>
-            <p className="text-[10px] text-neutral-500 mt-1">
-              Excludes test &amp; gift accounts
+            <p className="text-[10px] text-emerald-400/90 mt-1">
+              ${paidProCount * 3} projected active renewal
             </p>
           </div>
         </div>
@@ -814,27 +850,36 @@ export default function SuperAdminPage() {
                         <p className="text-[11px] text-neutral-500 truncate mt-0.5">{u.email}</p>
                       </div>
 
-                      {/* Plan Status */}
+                      {/* Plan Status dengan Countdown Timer */}
                       <div className="col-span-2">
                         {u.is_pro === 1 ? (
-                          u.pro_type === 'gift' ? (
-                            <div className="flex flex-col gap-0.5">
+                          <div className="flex flex-col gap-1">
+                            {u.pro_type === 'gift' ? (
                               <span className="px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/30 text-purple-400 text-[10px] font-bold inline-flex items-center gap-1 w-fit">
                                 <Gift className="w-2.5 h-2.5" /> PRO Gift
                               </span>
-                              <span className="text-[9px] text-neutral-400">
-                                {u.pro_expires_at
-                                  ? `Exp: ${new Date(u.pro_expires_at).toLocaleDateString()}`
-                                  : 'Lifetime'}
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold inline-flex items-center gap-1 w-fit">
+                                ★ PRO Paid
                               </span>
-                            </div>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold inline-flex items-center gap-1">
-                              ★ PRO Member
-                            </span>
-                          )
+                            )}
+
+                            {/* Real-time Countdown Timer Badge */}
+                            {(() => {
+                              const countdown = formatCountdown(u.pro_expires_at, u.pro_type);
+                              return (
+                                <span
+                                  className={`text-[9px] flex items-center gap-1 ${countdown.color}`}
+                                  title={u.pro_expires_at ? `Scheduled: ${new Date(u.pro_expires_at).toLocaleString()}` : 'No expiration date'}
+                                >
+                                  <Clock className="w-2.5 h-2.5 shrink-0" />
+                                  <span>{countdown.text}</span>
+                                </span>
+                              );
+                            })()}
+                          </div>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-400 text-[10px] border border-neutral-700">
+                          <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-400 text-[10px] border border-neutral-700 w-fit inline-block">
                             Free Tier
                           </span>
                         )}
@@ -1243,7 +1288,7 @@ export default function SuperAdminPage() {
                       {seoTitle || 'Claim Your Rare Vanity Handle — Curiolot Link'}
                     </p>
                     <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed mt-0.5">
-                      {seoDesc || 'Short handles and 1-word usernames are still open. Showcase your work with 24h stories & soundtracks.'}
+                      {seoDesc || 'Short handles and 1-word usernames are still free to claim. Showcase your work with 24h stories & soundtracks.'}
                     </p>
                   </div>
                 </div>
