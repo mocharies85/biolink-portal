@@ -28,7 +28,9 @@ import {
   Upload,
   Plus,
   Check,
-  Share2
+  Share2,
+  Gift,
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -38,6 +40,8 @@ interface UserRecord {
   email: string;
   role?: string;
   is_pro?: number;
+  pro_type?: 'free' | 'paid' | 'gift';
+  pro_expires_at?: string | null;
   created_at?: number | string;
   total_views?: number;
   total_links?: number;
@@ -66,6 +70,8 @@ interface AdminData {
   stats: {
     total: number;
     pro: number;
+    paid_pro?: number;
+    gift_pro?: number;
     free: number;
     estimatedRevenue: number;
   };
@@ -94,6 +100,11 @@ export default function SuperAdminPage() {
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
 
+  // Gift PRO Modal states
+  const [giftTargetUser, setGiftTargetUser] = useState<UserRecord | null>(null);
+  const [giftDurationDays, setGiftDurationDays] = useState<number | null>(30);
+  const [grantingGift, setGrantingGift] = useState(false);
+
   // Music Manager states
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
   const [loadingMusic, setLoadingMusic] = useState(false);
@@ -117,7 +128,7 @@ export default function SuperAdminPage() {
   const [seoSuccess, setSeoSuccess] = useState(false);
   const seoImageInputRef = useRef<HTMLInputElement>(null);
 
-  // Periksa sesi PIN yang tersimpan
+  // Validate saved PIN session
   useEffect(() => {
     const savedPin = sessionStorage.getItem('curiolot_superadmin_pin');
     if (savedPin) {
@@ -213,8 +224,10 @@ export default function SuperAdminPage() {
     setPreviewingTrackId(null);
   };
 
-  // Toggle status PRO
-  const toggleProStatus = async (userId: number, username: string, currentStatus: number | undefined) => {
+  // Revoke PRO status
+  const handleRevokePro = async (userId: number, username: string) => {
+    if (!confirm(`Are you sure you want to revoke PRO status for @${username}?`)) return;
+
     const savedPin = sessionStorage.getItem('curiolot_superadmin_pin') || pinInput.trim();
     setActionLoadingId(userId);
 
@@ -225,22 +238,65 @@ export default function SuperAdminPage() {
           'Content-Type': 'application/json',
           'x-admin-pin': savedPin,
         },
-        body: JSON.stringify({ userId, username, is_pro: currentStatus === 1 ? 0 : 1 }),
+        body: JSON.stringify({
+          userId,
+          username,
+          action: 'revoke',
+          is_pro: 0,
+          pro_type: 'free',
+        }),
       });
 
       if (res.ok) {
         await validateAndFetchData(savedPin);
       } else {
-        alert('Failed to update PRO status.');
+        alert('Failed to revoke PRO status.');
       }
     } catch {
-      alert('Network error while toggling PRO status.');
+      alert('Network error while revoking PRO status.');
     } finally {
       setActionLoadingId(null);
     }
   };
 
-  // Hapus akun pengguna
+  // Grant Gift PRO with selected duration
+  const handleGrantGift = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!giftTargetUser) return;
+
+    const savedPin = sessionStorage.getItem('curiolot_superadmin_pin') || pinInput.trim();
+    setGrantingGift(true);
+
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-pin': savedPin,
+        },
+        body: JSON.stringify({
+          userId: giftTargetUser.id,
+          username: giftTargetUser.username,
+          action: 'grant_gift',
+          pro_type: 'gift',
+          duration_days: giftDurationDays,
+        }),
+      });
+
+      if (res.ok) {
+        setGiftTargetUser(null);
+        await validateAndFetchData(savedPin);
+      } else {
+        alert('Failed to grant Gift PRO status.');
+      }
+    } catch {
+      alert('Network error while granting Gift PRO status.');
+    } finally {
+      setGrantingGift(false);
+    }
+  };
+
+  // Delete user account
   const handleDeleteUser = async () => {
     if (!deleteTarget) return;
     const savedPin = sessionStorage.getItem('curiolot_superadmin_pin') || pinInput.trim();
@@ -282,7 +338,7 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Upload MP3 ke Storage via API
+  // Upload MP3 to Storage via API
   const handleSuperadminAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -317,7 +373,7 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Tambah Lagu ke Database
+  // Add Track to Database
   const handleAddTrack = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTrackTitle.trim() || !newTrackUrl.trim()) {
@@ -355,7 +411,7 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Hapus Lagu dari Database
+  // Delete Track from Database
   const handleDeleteTrack = async (id: string) => {
     if (!confirm('Are you sure you want to remove this soundtrack from the global library?')) return;
 
@@ -376,7 +432,7 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Upload Gambar Banner SEO Promo
+  // Upload Social Card Banner Image
   const handleSeoImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -407,7 +463,7 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Simpan Pengaturan SEO Promo
+  // Save Social Card Settings
   const handleSaveSeo = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingSeo(true);
@@ -436,18 +492,22 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Filter pencarian
+  // Filter users by search
   const filteredUsers = (data?.users || []).filter((u) =>
     u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Temukan kreator paling aktif
+  // Derive counts for display
+  const paidProCount = data?.stats.paid_pro ?? (data?.users || []).filter((u) => u.is_pro === 1 && u.pro_type === 'paid').length;
+  const giftProCount = data?.stats.gift_pro ?? (data?.users || []).filter((u) => u.is_pro === 1 && u.pro_type === 'gift').length;
+
+  // Find top active creator
   const topCreator = [...(data?.users || [])].sort(
     (a, b) => ((b.total_views || 0) + (b.total_clicks || 0) * 2) - ((a.total_views || 0) + (a.total_clicks || 0) * 2)
   )[0];
 
-  // 1. TAMPILAN TERKUNCI (PIN LOCK SCREEN)
+  // 1. PIN LOCK SCREEN
   if (!isUnlocked) {
     return (
       <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-4 font-sans relative overflow-hidden">
@@ -514,7 +574,7 @@ export default function SuperAdminPage() {
     );
   }
 
-  // 2. TAMPILAN TERBUKA (SUPERADMIN CONTROL HUB)
+  // 2. UNLOCKED VIEW (SUPERADMIN CONTROL HUB)
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100 p-6 md:p-8 font-sans">
       <audio ref={previewAudioRef} onEnded={() => setPreviewingTrackId(null)} />
@@ -585,6 +645,9 @@ export default function SuperAdminPage() {
               <Sparkles className="w-4 h-4 text-amber-400" />
             </div>
             <p className="text-2xl font-bold text-amber-400 mt-2">{data?.stats.pro ?? 0}</p>
+            <p className="text-[10px] text-neutral-400 mt-1">
+              <span className="text-amber-300 font-semibold">{paidProCount} Paid</span> • <span className="text-purple-400 font-semibold">{giftProCount} Gift</span>
+            </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
@@ -601,6 +664,9 @@ export default function SuperAdminPage() {
               <DollarSign className="w-4 h-4 text-emerald-500" />
             </div>
             <p className="text-2xl font-bold text-white mt-2">${data?.stats.estimatedRevenue ?? 0}</p>
+            <p className="text-[10px] text-neutral-500 mt-1">
+              Excludes test &amp; gift accounts
+            </p>
           </div>
         </div>
 
@@ -633,10 +699,14 @@ export default function SuperAdminPage() {
               {topCreator.is_pro === 0 && (
                 <button
                   type="button"
-                  onClick={() => toggleProStatus(topCreator.id, topCreator.username, 0)}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs transition shadow-md shadow-amber-500/20"
+                  onClick={() => {
+                    setGiftTargetUser(topCreator);
+                    setGiftDurationDays(30);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-bold text-xs transition shadow-md shadow-purple-500/20 flex items-center gap-1.5"
                 >
-                  Reward Free PRO ⭐
+                  <Gift className="w-3.5 h-3.5" />
+                  <span>Reward Gift PRO</span>
                 </button>
               )}
             </div>
@@ -675,7 +745,6 @@ export default function SuperAdminPage() {
               <span>Music Library ({musicTracks.length})</span>
             </button>
 
-            {/* TAB BARU: SEO & Promo Card */}
             <button
               onClick={() => {
                 setActiveTab('seo');
@@ -748,9 +817,22 @@ export default function SuperAdminPage() {
                       {/* Plan Status */}
                       <div className="col-span-2">
                         {u.is_pro === 1 ? (
-                          <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold inline-flex items-center gap-1">
-                            ★ PRO Member
-                          </span>
+                          u.pro_type === 'gift' ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/30 text-purple-400 text-[10px] font-bold inline-flex items-center gap-1 w-fit">
+                                <Gift className="w-2.5 h-2.5" /> PRO Gift
+                              </span>
+                              <span className="text-[9px] text-neutral-400">
+                                {u.pro_expires_at
+                                  ? `Exp: ${new Date(u.pro_expires_at).toLocaleDateString()}`
+                                  : 'Lifetime'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold inline-flex items-center gap-1">
+                              ★ PRO Member
+                            </span>
+                          )
                         ) : (
                           <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-400 text-[10px] border border-neutral-700">
                             Free Tier
@@ -797,19 +879,30 @@ export default function SuperAdminPage() {
 
                       {/* Admin Actions */}
                       <div className="col-span-1 text-right flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => toggleProStatus(u.id, u.username, u.is_pro)}
-                          disabled={actionLoadingId === u.id}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition disabled:opacity-50 ${
-                            u.is_pro === 1
-                              ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10'
-                              : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
-                          }`}
-                          title={u.is_pro === 1 ? 'Revoke PRO' : 'Grant PRO'}
-                        >
-                          {actionLoadingId === u.id ? '...' : u.is_pro === 1 ? 'Revoke' : 'PRO'}
-                        </button>
+                        {u.is_pro === 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleRevokePro(u.id, u.username)}
+                            disabled={actionLoadingId === u.id}
+                            className="px-2 py-1 rounded-lg text-[10px] font-semibold border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition disabled:opacity-50"
+                            title="Revoke PRO Status"
+                          >
+                            {actionLoadingId === u.id ? '...' : 'Revoke'}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGiftTargetUser(u);
+                              setGiftDurationDays(30);
+                            }}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 transition flex items-center gap-1"
+                            title="Gift PRO Access"
+                          >
+                            <Gift className="w-2.5 h-2.5" />
+                            <span>Gift</span>
+                          </button>
+                        )}
 
                         {/* Delete Account (Hidden for Owner) */}
                         {!isOwner && (
@@ -872,7 +965,7 @@ export default function SuperAdminPage() {
         {activeTab === 'music' && (
           <div className="flex flex-col gap-6">
             
-            {/* Form Tambah Track MP3 */}
+            {/* Form Upload MP3 Track */}
             <form onSubmit={handleAddTrack} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -973,7 +1066,7 @@ export default function SuperAdminPage() {
               </button>
             </form>
 
-            {/* List Lagu Aktif */}
+            {/* Active Soundtracks List */}
             <div>
               <h3 className="text-xs font-bold text-neutral-300 uppercase tracking-wider mb-3">
                 Active Library Soundtracks ({musicTracks.length})
@@ -1156,7 +1249,7 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-neutral-900/50 border border-neutral-800 text-[11px] text-neutral-400 leading-relaxed">
-                  💡 <strong>Tips:</strong> Setiap kali Anda mengganti teks atau gambar promo di sini, X dan WhatsApp akan otomatis menyajikan banner baru tersebut saat pengguna menempelkan link <code>link.curiolot.com</code>.
+                  💡 <strong>Tips:</strong> Whenever you update the promo text or banner image here, platforms like X, WhatsApp, and Telegram will automatically serve this updated preview card when users share <code>link.curiolot.com</code>.
                 </div>
               </div>
 
@@ -1165,6 +1258,77 @@ export default function SuperAdminPage() {
         )}
 
       </div>
+
+      {/* Gift PRO Modal Dialog */}
+      {giftTargetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-sans">
+          <form
+            onSubmit={handleGrantGift}
+            className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative text-left flex flex-col gap-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                <Gift className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Grant Gift PRO Access</h3>
+                <p className="text-xs text-neutral-400">@{giftTargetUser.username}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Gifted PRO accounts receive full PRO benefits without being factored into your monthly subscription revenue calculation.
+            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs text-neutral-300 font-medium flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-purple-400" />
+                <span>Select Duration</span>
+              </label>
+
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {[
+                  { label: '7 Days', days: 7 },
+                  { label: '30 Days (1 Mo)', days: 30 },
+                  { label: '90 Days (3 Mo)', days: 90 },
+                  { label: '1 Year (365d)', days: 365 },
+                  { label: 'Lifetime / Forever', days: null },
+                ].map((tier) => (
+                  <button
+                    key={tier.label}
+                    type="button"
+                    onClick={() => setGiftDurationDays(tier.days)}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold text-left transition ${
+                      giftDurationDays === tier.days
+                        ? 'border-purple-500 bg-purple-500/10 text-purple-300'
+                        : 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700'
+                    }`}
+                  >
+                    {tier.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 mt-3 pt-2 border-t border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setGiftTargetUser(null)}
+                className="w-1/2 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={grantingGift}
+                className="w-1/2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition disabled:opacity-50 shadow-lg shadow-purple-600/20"
+              >
+                {grantingGift ? 'Granting...' : 'Confirm Gift'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Delete Confirmation Safety Dialog */}
       {deleteTarget && (

@@ -2,7 +2,7 @@
 
 const MASTER_PIN = '586042';
 
-// 1. GET: Ambil Statistik, Pengguna + Analitik Keaktifan (Kebal Crash)
+// 1. GET: Ambil Statistik, Pengguna + Analitik Keaktifan (Pisahkan Paid & Gift PRO)
 export async function onRequestGet({ request, env }) {
   try {
     const clientPin = request.headers.get('x-admin-pin');
@@ -13,34 +13,65 @@ export async function onRequestGet({ request, env }) {
       });
     }
 
-    // 1. Hitung statistik dasar pengguna
-    let total = 0;
-    let pro = 0;
-    let free = 0;
-    try {
-      const statsRes = await env.DB.prepare(`
-        SELECT 
-          COUNT(*) as total_users,
-          SUM(CASE WHEN is_pro = 1 THEN 1 ELSE 0 END) as total_pro,
-          SUM(CASE WHEN is_pro = 0 OR is_pro IS NULL THEN 1 ELSE 0 END) as total_free
-        FROM users
-      `).first();
-      total = statsRes?.total_users || 0;
-      pro = statsRes?.total_pro || 0;
-      free = statsRes?.total_free || 0;
-    } catch (e) {
-      console.warn('Stats fallback:', e);
-    }
-    const estimatedRevenue = pro * 3;
-
-    // 2. Ambil data users dasar (Pasti Berhasil)
+    // 1. Ambil data users lengkap dengan kolom pro_type dan pro_expires_at
     const { results: rawUsers } = await env.DB.prepare(`
-      SELECT id, username, email, COALESCE(is_pro, 0) as is_pro, COALESCE(role, 'creator') as role, created_at 
+      SELECT 
+        id, 
+        username, 
+        email, 
+        COALESCE(is_pro, 0) as is_pro, 
+        COALESCE(pro_type, CASE WHEN is_pro = 1 THEN 'paid' ELSE 'free' END) as pro_type,
+        pro_expires_at,
+        COALESCE(role, 'creator') as role, 
+        created_at 
       FROM users 
       ORDER BY created_at DESC
     `).all();
 
-    // 3. Ambil data analitik dengan proteksi try-catch mandiri
+    // 2. Evaluasi status kedaluwarsa Gift PRO secara real-time
+    const now = new Date();
+    const sanitizedUsers = [];
+
+    for (const u of (rawUsers || [])) {
+      let currentIsPro = Number(u.is_pro) === 1 ? 1 : 0;
+      let currentProType = u.pro_type || (currentIsPro ? 'paid' : 'free');
+      let currentExpiresAt = u.pro_expires_at;
+
+      // Jika akun tipe gift dan memiliki batas kedaluwarsa yang sudah lewat
+      if (currentIsPro && currentProType === 'gift' && currentExpiresAt) {
+        if (new Date(currentExpiresAt) < now) {
+          currentIsPro = 0;
+          currentProType = 'free';
+          currentExpiresAt = null;
+
+          // Sinkronisasi pembaruan kembali ke database D1
+          try {
+            await env.DB.prepare(
+              `UPDATE users SET is_pro = 0, pro_type = 'free', pro_expires_at = NULL WHERE id = ?`
+            ).bind(u.id).run();
+          } catch (dbErr) {
+            console.warn('Auto-expire sync error:', dbErr);
+          }
+        }
+      }
+
+      sanitizedUsers.push({
+        ...u,
+        is_pro: currentIsPro,
+        pro_type: currentProType,
+        pro_expires_at: currentExpiresAt,
+      });
+    }
+
+    // 3. Hitung statistik riil (Est. Revenue MURNI hanya dari member 'paid')
+    const total = sanitizedUsers.length;
+    const paidPro = sanitizedUsers.filter((u) => u.is_pro === 1 && u.pro_type === 'paid').length;
+    const giftPro = sanitizedUsers.filter((u) => u.is_pro === 1 && u.pro_type === 'gift').length;
+    const pro = paidPro + giftPro;
+    const free = total - pro;
+    const estimatedRevenue = paidPro * 3; // $3/bulan murni dari pelanggan berbayar
+
+    // 4. Ambil data analitik dengan proteksi try-catch mandiri
     // Views dari user_profiles
     let viewsMap = {};
     try {
@@ -92,7 +123,7 @@ export async function onRequestGet({ request, env }) {
     }
 
     // Satukan data user dengan analitik keaktifan
-    const users = (rawUsers || []).map((u) => {
+    const users = sanitizedUsers.map((u) => {
       const uname = (u.username || '').toLowerCase();
       const lData = linksMap[uname] || { links: 0, clicks: 0 };
       return {
@@ -111,7 +142,7 @@ export async function onRequestGet({ request, env }) {
       return scoreB - scoreA;
     });
 
-    // 4. Ambil pesan dukungan (support messages)
+    // 5. Ambil pesan dukungan (support messages)
     let messages = [];
     try {
       const msgRes = await env.DB.prepare(`
@@ -126,7 +157,14 @@ export async function onRequestGet({ request, env }) {
     }
 
     return new Response(JSON.stringify({
-      stats: { total, pro, free, estimatedRevenue },
+      stats: { 
+        total, 
+        pro, 
+        paid_pro: paidPro, 
+        gift_pro: giftPro, 
+        free, 
+        estimatedRevenue 
+      },
       users,
       messages
     }), {
@@ -141,7 +179,7 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-// 2. PATCH: Toggle Status PRO / Free
+// 2. PATCH: Kelola Status PRO (Mendukung Gift dengan Pilihan Durasi & Revoke)
 export async function onRequestPatch({ request, env }) {
   try {
     const clientPin = request.headers.get('x-admin-pin');
@@ -149,16 +187,49 @@ export async function onRequestPatch({ request, env }) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const { userId, username, is_pro } = await request.json();
-    const newPro = is_pro ? 1 : 0;
+    const { userId, username, is_pro, pro_type, duration_days, action } = await request.json();
 
-    if (userId) {
-      await env.DB.prepare(`UPDATE users SET is_pro = ? WHERE id = ?`).bind(newPro, userId).run();
-    } else if (username) {
-      await env.DB.prepare(`UPDATE users SET is_pro = ? WHERE LOWER(username) = LOWER(?)`).bind(newPro, username).run();
+    let newIsPro = is_pro ? 1 : 0;
+    let newProType = pro_type || (newIsPro ? 'paid' : 'free');
+    let newExpiresAt = null;
+
+    // Aksi pemberian Gift PRO dengan opsi durasi
+    if (action === 'grant_gift' || pro_type === 'gift') {
+      newIsPro = 1;
+      newProType = 'gift';
+      if (duration_days && Number(duration_days) > 0) {
+        const exp = new Date();
+        exp.setDate(exp.getDate() + Number(duration_days));
+        newExpiresAt = exp.toISOString();
+      } else {
+        newExpiresAt = null; // Lifetime / Permanen
+      }
+    } 
+    // Aksi pencabutan PRO (Revoke)
+    else if (action === 'revoke' || newIsPro === 0) {
+      newIsPro = 0;
+      newProType = 'free';
+      newExpiresAt = null;
+    } 
+    // Akun berbayar (Paid)
+    else if (newIsPro === 1 && newProType !== 'gift') {
+      newProType = 'paid';
+      newExpiresAt = null;
     }
 
-    return new Response(JSON.stringify({ success: true, is_pro: newPro }), {
+    const query = userId
+      ? `UPDATE users SET is_pro = ?, pro_type = ?, pro_expires_at = ? WHERE id = ?`
+      : `UPDATE users SET is_pro = ?, pro_type = ?, pro_expires_at = ? WHERE LOWER(username) = LOWER(?)`;
+    const identifier = userId || username;
+
+    await env.DB.prepare(query).bind(newIsPro, newProType, newExpiresAt, identifier).run();
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      is_pro: newIsPro, 
+      pro_type: newProType, 
+      pro_expires_at: newExpiresAt 
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
