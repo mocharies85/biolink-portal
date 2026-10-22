@@ -6,9 +6,23 @@ export async function onRequestGet({ request, env }) {
     const rawUsername = url.searchParams.get('username') || '';
     const username = rawUsername.trim().toLowerCase();
 
+    // 1. Ambil data profil
     let profile = await env.DB.prepare(
       'SELECT * FROM user_profiles WHERE LOWER(username) = ?'
     ).bind(username).first();
+
+    // 2. Ambil status PRO langsung dari tabel users agar sinkron 100%
+    let isPro = 0;
+    try {
+      const userRow = await env.DB.prepare(
+        'SELECT COALESCE(is_pro, 0) as is_pro FROM users WHERE LOWER(username) = ?'
+      ).bind(username).first();
+      if (userRow) {
+        isPro = Number(userRow.is_pro) === 1 ? 1 : 0;
+      }
+    } catch (e) {
+      console.warn('Could not query users table for is_pro:', e);
+    }
 
     if (!profile) {
       profile = {
@@ -28,6 +42,14 @@ export async function onRequestGet({ request, env }) {
         show_featured_video: 0,
         featured_video_autoplay: 1,
         featured_video_title: '',
+        bg_music_url: null,
+        bg_music_title: null,
+        is_pro: isPro,
+      };
+    } else {
+      profile = {
+        ...profile,
+        is_pro: isPro,
       };
     }
 
@@ -61,7 +83,9 @@ export async function onRequestPost({ request, env }) {
       featured_video_url = '',
       show_featured_video = 0,
       featured_video_autoplay = 1,
-      featured_video_title = ''
+      featured_video_title = '',
+      bg_music_url = null,
+      bg_music_title = null
     } = data;
 
     if (!username) {
@@ -76,9 +100,10 @@ export async function onRequestPost({ request, env }) {
         username, name, tagline, bio, avatar, socials, 
         og_title, og_description, og_image, theme, bg_image,
         featured_video_url, show_featured_video, featured_video_autoplay, featured_video_title,
+        bg_music_url, bg_music_title,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(username) DO UPDATE SET
         name = excluded.name,
         tagline = excluded.tagline,
@@ -94,6 +119,8 @@ export async function onRequestPost({ request, env }) {
         show_featured_video = excluded.show_featured_video,
         featured_video_autoplay = excluded.featured_video_autoplay,
         featured_video_title = excluded.featured_video_title,
+        bg_music_url = excluded.bg_music_url,
+        bg_music_title = excluded.bg_music_title,
         updated_at = CURRENT_TIMESTAMP
     `).bind(
       cleanUsername,
@@ -110,7 +137,9 @@ export async function onRequestPost({ request, env }) {
       featured_video_url?.trim() || '',
       show_featured_video ? 1 : 0,
       featured_video_autoplay ? 1 : 0,
-      featured_video_title?.trim() || ''
+      featured_video_title?.trim() || '',
+      bg_music_url?.trim() || null,
+      bg_music_title?.trim() || null
     ).run();
 
     return new Response(JSON.stringify({ success: true }), {
