@@ -397,7 +397,32 @@ export default function UserBioClient() {
       });
     }
   };
+useEffect(() => {
+    const audio = bgMusicRef.current;
+    if (!audio || !profile?.bg_music_url) return;
 
+    const handleFirstTouch = () => {
+      if (audio.paused) {
+        audio.play().then(() => {
+          setIsPlayingMusic(true);
+          setMusicMutedByVideo(false);
+        }).catch(() => {});
+      }
+      window.removeEventListener('click', handleFirstTouch);
+      window.removeEventListener('touchstart', handleFirstTouch);
+      window.removeEventListener('scroll', handleFirstTouch);
+    };
+
+    window.addEventListener('click', handleFirstTouch, { once: true });
+    window.addEventListener('touchstart', handleFirstTouch, { once: true });
+    window.addEventListener('scroll', handleFirstTouch, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleFirstTouch);
+      window.removeEventListener('touchstart', handleFirstTouch);
+      window.removeEventListener('scroll', handleFirstTouch);
+    };
+  }, [profile?.bg_music_url]);
   const handleShare = async () => {
     const currentUrl = typeof window !== 'undefined' ? window.location.href : `https://link.curiolot.com/${username}`;
 
