@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Send, 
   MessageSquare, 
@@ -14,7 +14,10 @@ import {
   QrCode,
   Download,
   X,
-  Lock
+  Lock,
+  Disc3,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import StoryModal from '@/components/StoryModal';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -203,6 +206,8 @@ export default function UserBioClient() {
     show_featured_video?: number;
     featured_video_autoplay?: number;
     featured_video_title?: string;
+    bg_music_url?: string;
+    bg_music_title?: string;
   }>({
     name: '',
     tagline: 'Digital Creator',
@@ -211,7 +216,9 @@ export default function UserBioClient() {
     socials: {},
     is_pro: 0,
     theme: 'dark',
-    bg_image: ''
+    bg_image: '',
+    bg_music_url: '',
+    bg_music_title: '',
   });
 
   const [links, setLinks] = useState<LinkItem[]>([]);
@@ -222,6 +229,12 @@ export default function UserBioClient() {
 
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [isStoryOpen, setIsStoryOpen] = useState(false);
+
+  // Background Music & Showcase Video Sync Refs & States
+  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [isPlayingMusic, setIsPlayingMusic] = useState(false);
+  const [musicMutedByVideo, setMusicMutedByVideo] = useState(false);
 
   // PIN Unlock State
   const [pinModalOpen, setPinModalOpen] = useState(false);
@@ -331,6 +344,60 @@ export default function UserBioClient() {
     };
   }, [username]);
 
+  // Sinkronisasi Audio: Auto-Mute Musik Latar jika Video Showcase bersuara diputar
+  useEffect(() => {
+    const video = videoRef.current;
+    const bgAudio = bgMusicRef.current;
+    if (!video || !bgAudio) return;
+
+    const handleAudioSync = () => {
+      const isVideoSoundActive = !video.paused && !video.muted && video.volume > 0;
+
+      if (isVideoSoundActive) {
+        if (!bgAudio.paused) {
+          bgAudio.pause();
+          setMusicMutedByVideo(true);
+        }
+      } else {
+        if (musicMutedByVideo && isPlayingMusic) {
+          bgAudio.play().catch(() => {});
+          setMusicMutedByVideo(false);
+        }
+      }
+    };
+
+    video.addEventListener('play', handleAudioSync);
+    video.addEventListener('pause', handleAudioSync);
+    video.addEventListener('volumechange', handleAudioSync);
+    video.addEventListener('ended', handleAudioSync);
+
+    return () => {
+      video.removeEventListener('play', handleAudioSync);
+      video.removeEventListener('pause', handleAudioSync);
+      video.removeEventListener('volumechange', handleAudioSync);
+      video.removeEventListener('ended', handleAudioSync);
+    };
+  }, [isPlayingMusic, musicMutedByVideo]);
+
+  // Tombol Toggle Musik Latar Manual oleh Pengunjung
+  const toggleBackgroundMusic = () => {
+    const audio = bgMusicRef.current;
+    if (!audio) return;
+
+    if (isPlayingMusic) {
+      audio.pause();
+      setIsPlayingMusic(false);
+      setMusicMutedByVideo(false);
+    } else {
+      audio.play().then(() => {
+        setIsPlayingMusic(true);
+        setMusicMutedByVideo(false);
+      }).catch((err) => {
+        console.warn('Audio play restricted by browser autoplay policy:', err);
+      });
+    }
+  };
+
   const handleShare = async () => {
     const currentUrl = typeof window !== 'undefined' ? window.location.href : `https://link.curiolot.com/${username}`;
 
@@ -439,6 +506,7 @@ export default function UserBioClient() {
   const currentThemeKey = profile.theme && THEMES[profile.theme] ? profile.theme : 'dark';
   const theme = THEMES[currentThemeKey];
   const hasActiveWallpaper = Boolean(isPro && profile.bg_image);
+  const hasBgMusic = Boolean(isPro && profile.bg_music_url);
 
   return (
     <main 
@@ -454,6 +522,17 @@ export default function UserBioClient() {
           : undefined
       }
     >
+      {/* Background Audio Hidden Player */}
+      {hasBgMusic && (
+        <audio
+          ref={bgMusicRef}
+          src={profile.bg_music_url}
+          loop
+          preload="auto"
+          onEnded={() => setIsPlayingMusic(false)}
+        />
+      )}
+
       {!hasActiveWallpaper && (
         <>
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -739,6 +818,7 @@ export default function UserBioClient() {
               )}
               <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black shadow-inner">
                 <video
+                  ref={videoRef}
                   src={profile.featured_video_url}
                   controls
                   autoPlay={profile.featured_video_autoplay === 1}
@@ -886,7 +966,7 @@ export default function UserBioClient() {
                         ? 'bg-gradient-to-r from-amber-500/15 via-neutral-900 to-amber-500/15 border-2 border-amber-400 shadow-lg shadow-amber-500/20 hover:border-amber-300'
                         : isHighlight
                         ? 'bg-gradient-to-r from-emerald-950/40 via-neutral-900 to-neutral-900 border-emerald-500/50 hover:border-emerald-400'
-                        : `${theme.cardBg}${theme.cardBorder}`
+                        : `${theme.cardBg} ${theme.cardBorder}`
                     }`}
                   >
                     {isSpotlight && (
@@ -986,6 +1066,45 @@ export default function UserBioClient() {
         </footer>
 
       </div>
+
+      {/* Floating Audio Controller (Hanya Tampil Jika Akun PRO & Memiliki Lagu) */}
+      {hasBgMusic && (
+        <button
+          type="button"
+          onClick={toggleBackgroundMusic}
+          className={`fixed bottom-6 left-6 z-40 px-3.5 py-2 rounded-full border backdrop-blur-xl shadow-2xl flex items-center gap-2.5 transition-all hover:scale-105 ${
+            isPlayingMusic && !musicMutedByVideo
+              ? 'bg-neutral-900/90 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10'
+              : 'bg-neutral-900/80 border-neutral-700/80 text-neutral-300'
+          }`}
+          title={isPlayingMusic ? 'Mute background music' : 'Play background music'}
+        >
+          <Disc3
+            className={`w-4 h-4 text-emerald-400 shrink-0 ${
+              isPlayingMusic && !musicMutedByVideo ? 'animate-spin' : ''
+            }`}
+          />
+          <div className="flex flex-col text-left max-w-[130px] truncate">
+            <span className="text-[10px] font-bold truncate leading-tight text-white">
+              {profile.bg_music_title || 'Background Track'}
+            </span>
+            <span className="text-[8px] text-neutral-400 leading-tight">
+              {musicMutedByVideo
+                ? 'Muted for Video'
+                : isPlayingMusic
+                ? 'Playing Ambient'
+                : 'Tap to Play'}
+            </span>
+          </div>
+          <div className="p-1 rounded-full bg-neutral-800 text-neutral-300">
+            {isPlayingMusic && !musicMutedByVideo ? (
+              <Volume2 className="w-3 h-3 text-emerald-400" />
+            ) : (
+              <VolumeX className="w-3 h-3 text-neutral-400" />
+            )}
+          </div>
+        </button>
+      )}
 
       {/* QR Code Modal */}
       {showQrModal && (

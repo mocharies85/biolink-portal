@@ -42,6 +42,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Disc3,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface LinkItem {
@@ -106,6 +108,8 @@ interface ProfileData {
   show_featured_video?: number;
   featured_video_autoplay?: number;
   featured_video_title?: string;
+  bg_music_url?: string;
+  bg_music_title?: string;
 }
 
 interface CurrentUser {
@@ -204,16 +208,17 @@ const THEME_STYLES: Record<string, {
     accent: 'text-amber-400',
   },
 };
-// Helper untuk menentukan total durasi story berdasarkan jumlah gambar
+
 const getStoryTierDuration = (imageCount: number): number => {
   if (imageCount <= 3) {
-    return 25; // 1-3 gambar: 25 unit durasi
+    return 25;
   } else if (imageCount <= 6) {
-    return 45; // 4-6 gambar: 45 unit durasi
+    return 45;
   } else {
-    return 60; // > 6 gambar: 60 unit durasi
+    return 60;
   }
 };
+
 const compressImage = (
   file: File, 
   maxWidth = 1080, 
@@ -344,12 +349,14 @@ export default function AdminDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ogFileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
+  const bgMusicFileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const showcaseVideoInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingShowcaseVideo, setUploadingShowcaseVideo] = useState(false);
 
-  // Helper badge for schedule status
+  const [uploadingShowcaseVideo, setUploadingShowcaseVideo] = useState(false);
+  const [uploadingBgMusic, setUploadingBgMusic] = useState(false);
+
   const getScheduleBadge = (link: any) => {
     if (!link.schedule_start && !link.schedule_end) return null;
     const now = new Date().getTime();
@@ -383,7 +390,6 @@ export default function AdminDashboard() {
     );
   };
 
-  // Initialize stable Audio player instance
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const audio = new Audio();
@@ -407,7 +413,6 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // State for Edit Link & Header Modal
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [isUpdatingLink, setIsUpdatingLink] = useState(false);
 
@@ -446,6 +451,7 @@ export default function AdminDashboard() {
       setIsUpdatingLink(false);
     }
   };
+
   const customAudioInputRef = useRef<HTMLInputElement>(null);
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -466,8 +472,11 @@ export default function AdminDashboard() {
     featured_video_url: '',
     show_featured_video: 0,
     featured_video_autoplay: 1,
-    featured_video_title: ''
+    featured_video_title: '',
+    bg_music_url: '',
+    bg_music_title: '',
   });
+
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSavedSuccess, setProfileSavedSuccess] = useState(false);
 
@@ -478,7 +487,7 @@ export default function AdminDashboard() {
   const [newDesc, setNewDesc] = useState('');
   const [newIsSpotlight, setNewIsSpotlight] = useState(false);
   const [addingLink, setAddingLink] = useState(false);
-  // Smart Links state (PRO)
+
   const [scheduleStart, setScheduleStart] = useState('');
   const [scheduleEnd, setScheduleEnd] = useState('');
   const [pinCode, setPinCode] = useState('');
@@ -500,7 +509,7 @@ export default function AdminDashboard() {
   const [storyAnimationStyle, setStoryAnimationStyle] = useState<'slide' | 'fade' | 'zoom'>('slide');
   const [storyTotalDuration, setStoryTotalDuration] = useState<number>(25);
   const [processingMultiImages, setProcessingMultiImages] = useState(false);
-  // Dynamic Music Library (Read-only for creators, managed via /superadmin)
+
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
   const [loadingMusic, setLoadingMusic] = useState(true);
   const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
@@ -583,7 +592,9 @@ export default function AdminDashboard() {
             featured_video_url: data.profile.featured_video_url || '',
             show_featured_video: data.profile.show_featured_video || 0,
             featured_video_autoplay: data.profile.featured_video_autoplay ?? 1,
-            featured_video_title: data.profile.featured_video_title || ''
+            featured_video_title: data.profile.featured_video_title || '',
+            bg_music_url: data.profile.bg_music_url || '',
+            bg_music_title: data.profile.bg_music_title || '',
           });
         }
       }
@@ -801,6 +812,54 @@ export default function AdminDashboard() {
     }
   };
 
+  // Background Music Upload (PRO)
+  const handleBgMusicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      alert('Audio file is too large. Please select an audio file under 25MB.');
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingBgMusic(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('username', activeUsername);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const cleanTitle = file.name.replace(/\.[^/.]+$/, '');
+        setProfile((prev) => ({
+          ...prev,
+          bg_music_url: data.url,
+          bg_music_title: cleanTitle,
+        }));
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Failed to upload background audio.');
+      }
+    } catch {
+      alert('Network error while uploading audio.');
+    } finally {
+      setUploadingBgMusic(false);
+      e.target.value = '';
+    }
+  };
+
   const handleStoryMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -872,7 +931,7 @@ export default function AdminDashboard() {
 
     setProcessingMultiImages(true);
     try {
-      const fileArray = Array.from(files).slice(0, 10); // Max 10 images
+      const fileArray = Array.from(files).slice(0, 10);
       const compressedList: string[] = [];
 
       for (const file of fileArray) {
@@ -885,9 +944,7 @@ export default function AdminDashboard() {
       if (compressedList.length > 0) {
         setStoryMediaUrls(compressedList);
         setStoryMediaType('image');
-        setStoryMediaUrl(compressedList[0]); // First image for preview thumbnail
-        
-        // Calculate duration tier based on image count
+        setStoryMediaUrl(compressedList[0]);
         const autoDuration = getStoryTierDuration(compressedList.length);
         setStoryTotalDuration(autoDuration);
       }
@@ -900,7 +957,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Geser posisi urutan gambar (kiri / kanan)
   const handleMoveStoryImage = (index: number, direction: 'left' | 'right') => {
     const targetIndex = direction === 'left' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= storyMediaUrls.length) return;
@@ -910,10 +966,9 @@ export default function AdminDashboard() {
     updated.splice(targetIndex, 0, moved);
 
     setStoryMediaUrls(updated);
-    setStoryMediaUrl(updated[0]); // Gambar pertama otomatis menjadi cover utama
+    setStoryMediaUrl(updated[0]);
   };
 
-  // Hapus salah satu gambar dari daftar carousel
   const handleRemoveStoryImage = (index: number) => {
     const updated = storyMediaUrls.filter((_, i) => i !== index);
     setStoryMediaUrls(updated);
@@ -926,7 +981,7 @@ export default function AdminDashboard() {
       setStoryTotalDuration(25);
     }
   };
-  // Tambah foto baru ke daftar yang sudah ada (maksimal 10 foto)
+
   const handleAddStoryImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -971,6 +1026,7 @@ export default function AdminDashboard() {
       e.target.value = '';
     }
   };
+
   const handleShowcaseVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1051,7 +1107,6 @@ export default function AdminDashboard() {
     if (!newTitle.trim()) return;
     if (!isHeaderMode && !newUrl.trim()) return;
 
-    // Headers do not consume the free 3-link limit
     if (!isHeaderMode && !isProUser && links.filter(l => l.is_header !== 1).length >= 3) {
       setShowUpgradeModal(true);
       return;
@@ -1207,7 +1262,6 @@ export default function AdminDashboard() {
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (targetIndex < 0 || targetIndex >= links.length) return;
 
-    // Reorder locally first for instant UI response
     const newLinks = [...links];
     const [movedItem] = newLinks.splice(currentIndex, 1);
     newLinks.splice(targetIndex, 0, movedItem);
@@ -1224,7 +1278,7 @@ export default function AdminDashboard() {
       });
 
       if (!res.ok) {
-        fetchLinks(); // Revert on failure
+        fetchLinks();
       }
     } catch {
       fetchLinks();
@@ -1826,7 +1880,7 @@ export default function AdminDashboard() {
                 <span>Themes &amp; Visual Styling</span>
               </h1>
               <p className="text-xs text-neutral-400 mt-1">
-                Personalize your bio page appearance with curated color palettes and custom wallpapers.
+                Personalize your bio page appearance with curated color palettes, custom wallpapers, and background music.
               </p>
             </div>
 
@@ -1962,6 +2016,162 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* FITUR BARU: Profile Background Music (PRO Only) */}
+              <div className="pt-5 border-t border-neutral-800 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Disc3 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Profile Background Music</span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold flex items-center gap-0.5 shadow-sm">
+                        <Sparkles className="w-2.5 h-2.5" /> PRO
+                      </span>
+                    </label>
+                    <p className="text-[11px] text-neutral-400 mt-0.5">
+                      Ambient soundtrack that plays when visitors view your live bio link.
+                    </p>
+                  </div>
+                  {isProUser && profile.bg_music_url && (
+                    <button
+                      type="button"
+                      onClick={() => setProfile((prev) => ({ ...prev, bg_music_url: '', bg_music_title: '' }))}
+                      className="text-xs text-rose-400 hover:underline"
+                    >
+                      Remove Audio
+                    </button>
+                  )}
+                </div>
+
+                {!isProUser ? (
+                  <div 
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex items-center justify-between cursor-pointer hover:border-amber-500/40 transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <Lock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">Unlock Background Music</p>
+                        <p className="text-[10px] text-neutral-400">Add custom soundtracks to your public bio link profile</p>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 rounded-xl bg-amber-500 text-neutral-950 font-bold text-xs">
+                      PRO Feature
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
+                    {/* Active Track Status */}
+                    {profile.bg_music_url ? (
+                      <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300">
+                        <div className="flex items-center gap-2.5 truncate">
+                          <Disc3 className="w-4 h-4 text-emerald-400 animate-spin shrink-0" />
+                          <div className="truncate">
+                            <span className="font-bold text-white block truncate">
+                              {profile.bg_music_title || 'Custom Background Soundtrack'}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 block truncate">
+                              {profile.bg_music_url}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setProfile((prev) => ({ ...prev, bg_music_url: '', bg_music_title: '' }))}
+                          className="text-[11px] text-rose-400 hover:underline shrink-0 ml-2"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-neutral-500 italic">No background music currently attached to your profile.</p>
+                    )}
+
+                    {/* Upload / URL Options */}
+                    <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                      <button
+                        type="button"
+                        disabled={uploadingBgMusic}
+                        onClick={() => bgMusicFileInputRef.current?.click()}
+                        className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-xs font-semibold text-neutral-200 flex items-center justify-center gap-1.5 transition disabled:opacity-50 shrink-0"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{uploadingBgMusic ? 'Uploading Audio...' : 'Upload MP3 File'}</span>
+                      </button>
+
+                      <span className="text-xs text-neutral-600 hidden sm:inline">or</span>
+
+                      <input
+                        type="url"
+                        placeholder="Paste direct audio URL (.mp3)"
+                        value={profile.bg_music_url || ''}
+                        onChange={(e) => setProfile((prev) => ({
+                          ...prev,
+                          bg_music_url: e.target.value,
+                          bg_music_title: prev.bg_music_title || 'Custom Audio URL'
+                        }))}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+                      />
+
+                      <input
+                        type="file"
+                        ref={bgMusicFileInputRef}
+                        accept="audio/mp3,audio/*"
+                        onChange={handleBgMusicUpload}
+                        className="hidden"
+                      />
+                    </div>
+
+                    {/* Select from Creator Music Library */}
+                    {musicTracks.length > 0 && (
+                      <div className="pt-2 border-t border-neutral-900">
+                        <label className="text-[10px] text-neutral-400 block mb-1.5 font-medium">
+                          Or select from Global Creator Music Library:
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                          {musicTracks.map((trk) => (
+                            <button
+                              key={trk.id}
+                              type="button"
+                              onClick={() => setProfile((prev) => ({
+                                ...prev,
+                                bg_music_url: trk.url,
+                                bg_music_title: trk.title,
+                              }))}
+                              className={`p-2 rounded-lg border text-left text-[11px] flex items-center justify-between transition ${
+                                profile.bg_music_url === trk.url
+                                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300'
+                                  : 'border-neutral-850 bg-neutral-900 hover:border-neutral-700 text-neutral-300'
+                              }`}
+                            >
+                              <span className="truncate font-medium">{trk.title}</span>
+                              <span className="text-[9px] text-neutral-500 shrink-0 ml-1">{trk.duration}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Disclaimer Hak Cipta & Auto-Mute Sync Advisory */}
+                    <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 flex items-start gap-2.5 mt-1">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="flex flex-col gap-1 text-[11px] text-neutral-300 leading-relaxed">
+                        <strong className="text-amber-400">Copyright &amp; Audio Disclaimer:</strong>
+                        <span>
+                          It is highly recommended to use <strong>royalty-free or Creative Commons music</strong>. 
+                          If you choose to use copyrighted music without proper licensing, you assume full personal legal responsibility; 
+                          <strong> Curiolot assumes zero liability</strong> for any copyright notices or infringement.
+                        </span>
+                        <span className="text-[10px] text-neutral-400 border-t border-amber-500/20 pt-1 mt-0.5">
+                          💡 <em>Audio Synchronization: When a visitor un-mutes or plays your Showcase Video on your live profile, background music will automatically mute itself so the two tracks never overlap.</em>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between pt-2">
                 {profileSavedSuccess && (
                   <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
@@ -2013,8 +2223,7 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            
-          {/* Product Showcase Video Card (PRO Only) */}
+            {/* Product Showcase Video Card (PRO Only) */}
             <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -2034,7 +2243,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Toggle On / Off */}
                 <button
                   type="button"
                   onClick={() => {
@@ -2124,7 +2332,6 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Autoplay Checkbox */}
                   <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer pt-1">
                     <input
                       type="checkbox"
@@ -2156,7 +2363,6 @@ export default function AdminDashboard() {
                   {isHeaderMode ? 'Add Section Header' : 'Add New Link'}
                 </h3>
 
-                {/* Tab Selector: Standard Link vs Section Header */}
                 <div className="flex items-center p-1 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px]">
                   <button
                     type="button"
@@ -2184,7 +2390,6 @@ export default function AdminDashboard() {
               </div>
 
               {isHeaderMode ? (
-                /* Section Header Input */
                 <div>
                   <input
                     type="text"
@@ -2199,7 +2404,6 @@ export default function AdminDashboard() {
                   </p>
                 </div>
               ) : (
-                /* Standard Link Inputs */
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <input
@@ -2220,11 +2424,10 @@ export default function AdminDashboard() {
                     />
                   </div>
 
-                  {/* Media Embed PRO Alert for Free Tier */}
                   {!isProUser && (newUrl.includes('spotify.com') || newUrl.includes('youtube.com') || newUrl.includes('youtu.be')) && (
                     <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
                       <span className="flex items-center gap-1.5 text-[11px]">
-                        ⭐ <strong>Media Player Preview:</strong> Inline Spotify & YouTube embeds are exclusive to PRO. This link will display as a standard card button on Free tier.
+                        ⭐ <strong>Media Player Preview:</strong> Inline Spotify &amp; YouTube embeds are exclusive to PRO. This link will display as a standard card button on Free tier.
                       </span>
                       <button
                         type="button"
@@ -2246,7 +2449,6 @@ export default function AdminDashboard() {
                     />
                   </div>
 
-                  {/* Spotlight Toggle */}
                   <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-800">
                     <div className="flex items-center gap-2">
                       <Flame className={`w-4 h-4 ${newIsSpotlight ? 'text-amber-400' : 'text-neutral-500'}`} />
@@ -2282,7 +2484,6 @@ export default function AdminDashboard() {
                     </button>
                   </div>
 
-                  {/* Smart Links Section (PRO Features) */}
                   <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-white flex items-center gap-1.5">
@@ -2296,7 +2497,6 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                    {/* Schedule Start & Expiry */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       <div>
                         <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
@@ -2325,7 +2525,6 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    {/* PIN Protection */}
                     <div>
                       <label className="text-[10px] text-neutral-400 flex items-center gap-1 mb-1">
                         <Lock className="w-3 h-3 text-neutral-500" /> PIN Protection (Optional)
@@ -2370,7 +2569,6 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 links.map((link, index) => {
-                  // Render Section Header
                   if (link.is_header === 1) {
                     return (
                       <div
@@ -2386,7 +2584,6 @@ export default function AdminDashboard() {
                           </p>
                         </div>
 
-                        {/* Navigation, Edit & Delete for Header */}
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
@@ -2429,7 +2626,6 @@ export default function AdminDashboard() {
 
                   const isSpotlight = link.is_spotlight === 1;
 
-                  // Render Standard Link
                   return (
                     <div
                       key={link.id}
@@ -2443,28 +2639,24 @@ export default function AdminDashboard() {
                         <div className="flex items-center flex-wrap gap-1.5">
                           <p className="text-xs font-bold text-white truncate">{link.title}</p>
 
-                          {/* Spotlight Badge */}
                           {isSpotlight && (
                             <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-wider border border-amber-500/30 flex items-center gap-0.5">
                               <Flame className="w-2.5 h-2.5" /> Spotlight
                             </span>
                           )}
 
-                          {/* PIN Protection Badge */}
                           {Boolean(link.pin_code && link.pin_code.trim().length > 0) && (
                             <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[9px] font-bold uppercase tracking-wider border border-rose-500/30 flex items-center gap-0.5" title={`PIN: ${link.pin_code}`}>
                               <Lock className="w-2.5 h-2.5" /> PIN Protected
                             </span>
                           )}
 
-                          {/* Schedule Badge */}
                           {link.schedule_start && new Date(link.schedule_start) > new Date() && (
                             <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[9px] font-bold uppercase tracking-wider border border-blue-500/30 flex items-center gap-0.5" title={`Starts at: ${link.schedule_start}`}>
                               <Calendar className="w-2.5 h-2.5" /> Scheduled
                             </span>
                           )}
 
-                          {/* Expiry Badge */}
                           {link.schedule_end && new Date(link.schedule_end) < new Date() && (
                             <span className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 text-[9px] font-bold uppercase tracking-wider border border-neutral-700 flex items-center gap-0.5" title={`Expired at: ${link.schedule_end}`}>
                               <Calendar className="w-2.5 h-2.5" /> Expired
@@ -2474,7 +2666,6 @@ export default function AdminDashboard() {
                         <p className="text-[11px] text-neutral-500 truncate mt-0.5">{link.url}</p>
                       </div>
 
-                      {/* Navigation, Spotlight, Clicks & Delete Buttons */}
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
@@ -2515,7 +2706,6 @@ export default function AdminDashboard() {
                           <span className="text-[8px] text-neutral-500 uppercase tracking-tighter">clicks</span>
                         </div>
 
-                        {/* Edit Link Button */}
                         <button
                           type="button"
                           onClick={() => setEditingItem({ ...link })}
@@ -2525,7 +2715,6 @@ export default function AdminDashboard() {
                           <Pencil className="w-4 h-4" />
                         </button>
 
-                        {/* Delete Link Button */}
                         <button
                           type="button"
                           onClick={() => handleDeleteLink(link.id)}
@@ -2618,7 +2807,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Photo Display Duration Selection */}
               {storyMediaType === 'image' && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800">
                   <div className="flex flex-col">
@@ -2713,156 +2901,151 @@ export default function AdminDashboard() {
                   />
                 </div>
               </div>
-              {/* Multi-Image Carousel Options (PRO) */}
-            {isProUser && (
-              <div className="p-4 rounded-xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-3 mt-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
-                    Multi-Image Carousel
-                    <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
-                      PRO
-                    </span>
-                  </span>
-                  <span className="text-[11px] text-amber-400 font-medium">
-                    {storyMediaUrls.length > 0
-                      ? `${storyMediaUrls.length} images selected (${storyTotalDuration}s total)`
-                      : 'Max 10 Images'}
-                  </span>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <label className="px-3.5 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-neutral-200 cursor-pointer transition flex items-center gap-2">
-                    <span>{processingMultiImages ? 'Processing...' : '📁 Select Multiple Images'}</span>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      disabled={processingMultiImages}
-                      onChange={handleMultiStoryImagesUpload}
-                      className="hidden"
-                    />
-                  </label>
+              {isProUser && (
+                <div className="p-4 rounded-xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-3 mt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                      Multi-Image Carousel
+                      <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                        PRO
+                      </span>
+                    </span>
+                    <span className="text-[11px] text-amber-400 font-medium">
+                      {storyMediaUrls.length > 0
+                        ? `${storyMediaUrls.length} images selected (${storyTotalDuration}s total)`
+                        : 'Max 10 Images'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <label className="px-3.5 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-neutral-200 cursor-pointer transition flex items-center gap-2">
+                      <span>{processingMultiImages ? 'Processing...' : '📁 Select Multiple Images'}</span>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        disabled={processingMultiImages}
+                        onChange={handleMultiStoryImagesUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {storyMediaUrls.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStoryMediaUrls([]);
+                          setStoryMediaUrl('');
+                          setStoryTotalDuration(25);
+                        }}
+                        className="text-xs text-rose-400 hover:text-rose-300 hover:underline transition"
+                      >
+                        Reset All
+                      </button>
+                    )}
+                  </div>
+
                   {storyMediaUrls.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStoryMediaUrls([]);
-                        setStoryMediaUrl('');
-                        setStoryTotalDuration(25);
-                      }}
-                      className="text-xs text-rose-400 hover:text-rose-300 hover:underline transition"
-                    >
-                      Reset All
-                    </button>
+                    <div className="flex flex-col gap-2 pt-2">
+                      <span className="text-[11px] text-neutral-400">
+                        Drag or use arrows to order slides (Left = First, Right = Last):
+                      </span>
+                      <div className="flex gap-2.5 overflow-x-auto pb-2 pt-1">
+                        {storyMediaUrls.map((url, idx) => (
+                          <div
+                            key={idx}
+                            className="relative group shrink-0 w-24 h-32 rounded-xl border border-neutral-700 overflow-hidden bg-neutral-950 flex flex-col justify-between p-1.5 shadow-md"
+                          >
+                            <img
+                              src={url}
+                              alt={`Slide ${idx + 1}`}
+                              className="absolute inset-0 w-full h-full object-cover -z-0 opacity-80 group-hover:opacity-100 transition"
+                            />
+
+                            <div className="relative z-10 flex items-center justify-between">
+                              <span className="px-1.5 py-0.5 rounded-md bg-black/80 backdrop-blur-md text-[10px] font-extrabold text-amber-400 border border-white/10">
+                                #{idx + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveStoryImage(idx)}
+                                className="p-1 rounded-md bg-black/70 hover:bg-rose-500/80 text-white transition"
+                                title="Remove this image"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            <div className="relative z-10 flex items-center justify-between gap-1 mt-auto bg-black/60 backdrop-blur-md rounded-lg p-0.5 border border-white/10">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveStoryImage(idx, 'left')}
+                                className="flex-1 py-1 flex items-center justify-center text-white hover:text-amber-400 disabled:opacity-20 disabled:hover:text-white transition"
+                                title="Move Left (Earlier)"
+                              >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="text-[9px] text-neutral-400 font-bold select-none">•</span>
+                              <button
+                                type="button"
+                                disabled={idx === storyMediaUrls.length - 1}
+                                onClick={() => handleMoveStoryImage(idx, 'right')}
+                                className="flex-1 py-1 flex items-center justify-center text-white hover:text-amber-400 disabled:opacity-20 disabled:hover:text-white transition"
+                                title="Move Right (Later)"
+                              >
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {storyMediaUrls.length < 10 && (
+                          <label className="shrink-0 w-24 h-32 rounded-xl border border-dashed border-neutral-700 hover:border-amber-400 bg-neutral-950/60 hover:bg-neutral-900 flex flex-col items-center justify-center gap-1.5 cursor-pointer text-neutral-400 hover:text-amber-400 transition group shadow-sm">
+                            <div className="w-7 h-7 rounded-full bg-neutral-800 group-hover:bg-amber-400/20 border border-neutral-700 group-hover:border-amber-400/40 flex items-center justify-center transition">
+                              <Plus className="w-4 h-4 text-neutral-300 group-hover:text-amber-400" />
+                            </div>
+                            <span className="text-[10px] font-bold">Add Photo</span>
+                            <span className="text-[8px] text-neutral-500">
+                              ({10 - storyMediaUrls.length} left)
+                            </span>
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              disabled={processingMultiImages}
+                              onChange={handleAddStoryImages}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {storyMediaUrls.length > 1 && (
+                    <div className="pt-3 border-t border-neutral-800 flex flex-col sm:flex-row sm:items-center gap-2.5">
+                      <span className="text-xs text-neutral-400">Transition Effect:</span>
+                      <div className="flex gap-1.5">
+                        {(['slide', 'fade', 'zoom'] as const).map((style) => (
+                          <button
+                            key={style}
+                            type="button"
+                            onClick={() => setStoryAnimationStyle(style)}
+                            className={`px-3 py-1 text-xs rounded-lg border capitalize transition font-medium ${
+                              storyAnimationStyle === style
+                                ? 'border-amber-400 text-amber-400 bg-amber-400/10'
+                                : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                            }`}
+                          >
+                            {style}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                {/* Pratinjau & Pengaturan Urutan Gambar */}
-                {storyMediaUrls.length > 0 && (
-                  <div className="flex flex-col gap-2 pt-2">
-                    <span className="text-[11px] text-neutral-400">
-                      Drag or use arrows to order slides (Left = First, Right = Last):
-                    </span>
-                    <div className="flex gap-2.5 overflow-x-auto pb-2 pt-1">
-                      {storyMediaUrls.map((url, idx) => (
-                        <div
-                          key={idx}
-                          className="relative group shrink-0 w-24 h-32 rounded-xl border border-neutral-700 overflow-hidden bg-neutral-950 flex flex-col justify-between p-1.5 shadow-md"
-                        >
-                          <img
-                            src={url}
-                            alt={`Slide ${idx + 1}`}
-                            className="absolute inset-0 w-full h-full object-cover -z-0 opacity-80 group-hover:opacity-100 transition"
-                          />
-
-                          {/* Badge Urutan & Tombol Hapus */}
-                          <div className="relative z-10 flex items-center justify-between">
-                            <span className="px-1.5 py-0.5 rounded-md bg-black/80 backdrop-blur-md text-[10px] font-extrabold text-amber-400 border border-white/10">
-                              #{idx + 1}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveStoryImage(idx)}
-                              className="p-1 rounded-md bg-black/70 hover:bg-rose-500/80 text-white transition"
-                              title="Remove this image"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-
-                          {/* Tombol Geser Posisi */}
-                          <div className="relative z-10 flex items-center justify-between gap-1 mt-auto bg-black/60 backdrop-blur-md rounded-lg p-0.5 border border-white/10">
-                            <button
-                              type="button"
-                              disabled={idx === 0}
-                              onClick={() => handleMoveStoryImage(idx, 'left')}
-                              className="flex-1 py-1 flex items-center justify-center text-white hover:text-amber-400 disabled:opacity-20 disabled:hover:text-white transition"
-                              title="Move Left (Earlier)"
-                            >
-                              <ChevronLeft className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="text-[9px] text-neutral-400 font-bold select-none">•</span>
-                            <button
-                              type="button"
-                              disabled={idx === storyMediaUrls.length - 1}
-                              onClick={() => handleMoveStoryImage(idx, 'right')}
-                              className="flex-1 py-1 flex items-center justify-center text-white hover:text-amber-400 disabled:opacity-20 disabled:hover:text-white transition"
-                              title="Move Right (Later)"
-                            >
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-
-                      {/* Tombol Tambah Foto Baru */}
-                      {storyMediaUrls.length < 10 && (
-                        <label className="shrink-0 w-24 h-32 rounded-xl border border-dashed border-neutral-700 hover:border-amber-400 bg-neutral-950/60 hover:bg-neutral-900 flex flex-col items-center justify-center gap-1.5 cursor-pointer text-neutral-400 hover:text-amber-400 transition group shadow-sm">
-                          <div className="w-7 h-7 rounded-full bg-neutral-800 group-hover:bg-amber-400/20 border border-neutral-700 group-hover:border-amber-400/40 flex items-center justify-center transition">
-                            <Plus className="w-4 h-4 text-neutral-300 group-hover:text-amber-400" />
-                          </div>
-                          <span className="text-[10px] font-bold">Add Photo</span>
-                          <span className="text-[8px] text-neutral-500">
-                            ({10 - storyMediaUrls.length} left)
-                          </span>
-                          <input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            disabled={processingMultiImages}
-                            onChange={handleAddStoryImages}
-                            className="hidden"
-                          />
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Transition Effect Options */}
-                {storyMediaUrls.length > 1 && (
-                  <div className="pt-3 border-t border-neutral-800 flex flex-col sm:flex-row sm:items-center gap-2.5">
-                    <span className="text-xs text-neutral-400">Transition Effect:</span>
-                    <div className="flex gap-1.5">
-                      {(['slide', 'fade', 'zoom'] as const).map((style) => (
-                        <button
-                          key={style}
-                          type="button"
-                          onClick={() => setStoryAnimationStyle(style)}
-                          className={`px-3 py-1 text-xs rounded-lg border capitalize transition font-medium ${
-                            storyAnimationStyle === style
-                              ? 'border-amber-400 text-amber-400 bg-amber-400/10'
-                              : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
-                          }`}
-                        >
-                          {style}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}          
+              )}
 
               <div>
                 <label className="text-[11px] text-neutral-400 block mb-1">
@@ -2902,7 +3085,6 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Dynamic Soundtracks */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] text-neutral-300 font-semibold flex items-center gap-1.5">
@@ -2973,7 +3155,6 @@ export default function AdminDashboard() {
                       ))
                     )}
 
-                    {/* Custom Audio Upload */}
                     <div className="p-2.5 rounded-lg bg-neutral-900/50 border border-dashed border-neutral-700 hover:border-emerald-500/50 flex items-center justify-between gap-2 transition col-span-1 sm:col-span-2">
                       <div className="truncate flex-1">
                         <p className="text-xs font-medium text-neutral-200 flex items-center gap-1.5 truncate">
@@ -3089,7 +3270,6 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* Inbox Header & Export CSV Button */}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">Direct Messages</h3>
 
@@ -3289,7 +3469,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* Smart Options Edit */}
                     <div className="pt-2 border-t border-neutral-800/80 space-y-3">
                       <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">Smart Link Options</p>
                       
@@ -3537,8 +3716,13 @@ export default function AdminDashboard() {
             </div>
 
             <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-3 text-xs text-neutral-300">
-              
-              {/* Interactive Media Embeds */}
+              <div className="flex items-start gap-2.5">
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <div>
+                  <strong className="text-white">Profile Background Music:</strong> Play custom ambient background tracks on your public page with automatic mute synchronization when videos play.
+                </div>
+              </div>
+
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3546,7 +3730,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* PIN Code Protection */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3554,7 +3737,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Smart Scheduling */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3562,7 +3744,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Custom Wallpapers */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3570,7 +3751,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Social Share Card & SEO */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3578,7 +3758,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Spotlight Glow */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3586,7 +3765,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Stories Duration */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3594,7 +3772,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Unlimited Links */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3602,7 +3779,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Analytics */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -3610,14 +3786,12 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Gold Badge */}
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
                   <strong className="text-white">Verified PRO Badge:</strong> Exclusive gold verification badge displayed beside your profile name to build trust and credibility.
                 </div>
               </div>
-
             </div>
 
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-5">
