@@ -1833,7 +1833,7 @@ export default function AdminDashboard() {
                             }
                             ogFileInputRef.current?.click();
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition"
+                          className="px-3 py-1.5 rounded-xl bg-neutral-855 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition"
                         >
                           <Upload className="w-3.5 h-3.5 text-amber-400" />
                           <span>{profile.og_image ? 'Change Banner' : 'Upload Banner'}</span>
@@ -2016,7 +2016,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* FITUR BARU: Profile Background Music (PRO Only) */}
+              {/* Profile Background Music (PRO Only) */}
               <div className="pt-5 border-t border-neutral-800 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -2062,7 +2062,6 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
-                    {/* Active Track Status */}
                     {profile.bg_music_url ? (
                       <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300">
                         <div className="flex items-center gap-2.5 truncate">
@@ -2088,7 +2087,6 @@ export default function AdminDashboard() {
                       <p className="text-[11px] text-neutral-500 italic">No background music currently attached to your profile.</p>
                     )}
 
-                    {/* Upload / URL Options */}
                     <div className="flex flex-col sm:flex-row items-center gap-2.5">
                       <button
                         type="button"
@@ -2123,7 +2121,6 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    {/* Select from Creator Music Library */}
                     {musicTracks.length > 0 && (
                       <div className="pt-2 border-t border-neutral-900">
                         <label className="text-[10px] text-neutral-400 block mb-1.5 font-medium">
@@ -2153,7 +2150,6 @@ export default function AdminDashboard() {
                       </div>
                     )}
 
-                    {/* Disclaimer Hak Cipta & Auto-Mute Sync Advisory */}
                     <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 flex items-start gap-2.5 mt-1">
                       <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                       <div className="flex flex-col gap-1 text-[11px] text-neutral-300 leading-relaxed">
@@ -3703,7 +3699,7 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-bold text-white mt-3">Upgrade to Curiolot Link PRO</h3>
               
               <div className="flex items-baseline justify-center gap-1 mt-2">
-                <span className="text-3xl font-black text-white tracking-tight">$3</span>
+                <span className="text-3xl font-black text-white tracking-tight">$5</span>
                 <span className="text-xs text-neutral-400 font-medium">/ month</span>
                 <span className="ml-2 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
                   Cancel anytime
@@ -3794,28 +3790,43 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-5">
-              💡 <strong>Instant Activation:</strong> When subscribing via Ko-fi, please keep your account email (<strong>{currentUser?.email}</strong>) or write <strong>@{activeUsername}</strong> in the message box. Your PRO features will unlock automatically!
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-4">
+              💡 <strong>Instant Activation:</strong> Subscribing via Card / PayPal instantly upgrades your account. If you prefer manual supporter tipping via Ko-fi ($3/mo), write <strong>@{activeUsername}</strong> in the message box.
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowUpgradeModal(false)}
-                className="w-1/3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
-              >
-                Cancel
-              </button>
+            {/* Action Buttons: Lemon Squeezy ($5) & Ko-fi ($3) */}
+            <div className="flex flex-col gap-2.5">
               <a
-                href="https://ko-fi.com/curiolot"
+                href={`https://curiolot.lemonsqueezy.com/checkout/buy/8e0b7992-ac75-475b-b584-c8173c9d2b95?checkout[custom][username]=${encodeURIComponent(activeUsername)}&checkout[email]=${encodeURIComponent(currentUser?.email || '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowUpgradeModal(false)}
-                className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
               >
-                <span>Get PRO Access ($3/mo)</span>
+                <span>Instant PRO Activation ($5/mo • Card / PayPal)</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
+
+              <div className="flex items-center justify-between gap-2.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="w-1/3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-400 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+
+                <a
+                  href="https://ko-fi.com/curiolot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="w-2/3 py-2.5 rounded-xl border border-neutral-800 hover:border-neutral-700 bg-neutral-950 hover:bg-neutral-900 text-neutral-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition"
+                >
+                  <span>Alternative via Ko-fi ($3/mo)</span>
+                  <ExternalLink className="w-3 h-3 text-neutral-500" />
+                </a>
+              </div>
             </div>
 
           </div>
