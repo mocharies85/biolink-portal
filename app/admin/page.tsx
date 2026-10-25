@@ -3699,7 +3699,7 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-bold text-white mt-3">Upgrade to Curiolot Link PRO</h3>
               
               <div className="flex items-baseline justify-center gap-1 mt-2">
-                <span className="text-3xl font-black text-white tracking-tight">$5</span>
+                <span className="text-3xl font-black text-white tracking-tight">$3</span>
                 <span className="text-xs text-neutral-400 font-medium">/ month</span>
                 <span className="ml-2 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
                   Cancel anytime
@@ -3791,42 +3791,28 @@ export default function AdminDashboard() {
             </div>
 
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-4">
-              💡 <strong>Instant Activation:</strong> Subscribing via Card / PayPal instantly upgrades your account. If you prefer manual supporter tipping via Ko-fi ($3/mo), write <strong>@{activeUsername}</strong> in the message box.
+              💡 <strong>Instant Activation:</strong> When subscribing via Ko-fi, please write <strong>@{activeUsername}</strong> or your account email (<strong>{currentUser?.email}</strong>) in the supporter message box. PRO features will be verified and unlocked!
             </div>
 
-            {/* Action Buttons: Lemon Squeezy ($5) & Ko-fi ($3) */}
-            <div className="flex flex-col gap-2.5">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-1/3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-400 hover:text-white transition"
+              >
+                Cancel
+              </button>
+
               <a
-                href={`https://curiolot.lemonsqueezy.com/checkout/buy/8e0b7992-ac75-475b-b584-c8173c9d2b95?checkout[custom][username]=${encodeURIComponent(activeUsername)}&checkout[email]=${encodeURIComponent(currentUser?.email || '')}`}
+                href="https://ko-fi.com/curiolot"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowUpgradeModal(false)}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
+                className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
               >
-                <span>Instant PRO Activation ($5/mo • Card / PayPal)</span>
+                <span>Upgrade via Ko-fi ($3/mo)</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
-
-              <div className="flex items-center justify-between gap-2.5 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setShowUpgradeModal(false)}
-                  className="w-1/3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-400 hover:text-white transition"
-                >
-                  Cancel
-                </button>
-
-                <a
-                  href="https://ko-fi.com/curiolot"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setShowUpgradeModal(false)}
-                  className="w-2/3 py-2.5 rounded-xl border border-neutral-800 hover:border-neutral-700 bg-neutral-950 hover:bg-neutral-900 text-neutral-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition"
-                >
-                  <span>Alternative via Ko-fi ($3/mo)</span>
-                  <ExternalLink className="w-3 h-3 text-neutral-500" />
-                </a>
-              </div>
             </div>
 
           </div>
