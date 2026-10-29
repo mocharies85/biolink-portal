@@ -375,7 +375,7 @@ export default function HomePage() {
 
                       <h3 className="text-xl font-bold text-amber-400">PRO Creator</h3>
                       <div className="flex items-baseline gap-1 mt-1 mb-2">
-                        <span className="text-3xl font-black text-amber-400">$3</span>
+                        <span className="text-3xl font-black text-amber-400">$5</span>
                         <span className="text-xs text-neutral-400">/ month</span>
                       </div>
                       <p className="text-xs text-neutral-400 leading-relaxed mb-4">
