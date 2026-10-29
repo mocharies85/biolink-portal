@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -51,6 +52,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 });
               }
             `,
+          }}
+        />
+
+        {/* Paddle Billing v2 Overlay Script */}
+        <Script
+          src="https://cdn.paddle.com/paddle/v2/paddle.js"
+          strategy="afterInteractive"
+          onLoad={() => {
+            if (typeof window !== "undefined" && (window as any).Paddle) {
+              (window as any).Paddle.Environment.set("production");
+              (window as any).Paddle.Initialize({
+                token: "live_b22de345130295633b70feef146",
+              });
+            }
           }}
         />
       </body>
