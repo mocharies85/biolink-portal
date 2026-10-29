@@ -460,70 +460,59 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex flex-col gap-3.5 mb-6">
-                  {/* Step 1: Wajib Daftar Akun Free & Verifikasi Email */}
-                  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start justify-between gap-3.5">
-                    <div className="flex items-start gap-3.5">
-                      <div className="w-7 h-7 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                        1
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <span>Register Free &amp; Verify Email</span>
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-extrabold uppercase">Required</span>
-                        </h4>
-                        <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                          Sign up for a Free account and click the verification link sent to your inbox.
-                        </p>
-                      </div>
-                    </div>
+  {/* Step 1: Wajib Daftar Akun Free & Verifikasi Email */}
+  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start justify-between gap-3.5">
+    <div className="flex items-start gap-3.5">
+      <div className="w-7 h-7 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+        1
+      </div>
+      <div>
+        <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+          <span>Register Free &amp; Verify Email</span>
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-extrabold uppercase">Required</span>
+        </h4>
+        <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
+          Sign up for a Free account and click the verification link sent to your inbox.
+        </p>
+      </div>
+    </div>
 
-                    <Link
-                      href="/register"
-                      onClick={handleClosePromo}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-400 text-xs font-bold shrink-0 transition flex items-center gap-1"
-                    >
-                      <UserCheck className="w-3.5 h-3.5" />
-                      <span>Register Now</span>
-                    </Link>
-                  </div>
+    <Link
+      href="/register"
+      onClick={handleClosePromo}
+      className="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-400 text-xs font-bold shrink-0 transition flex items-center gap-1"
+    >
+      <UserCheck className="w-3.5 h-3.5" />
+      <span>Register Now</span>
+    </Link>
+  </div>
 
-                  {/* Step 2: Gunakan Email / Username yang Sama di Ko-fi */}
-                  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start gap-3.5">
-                    <div className="w-7 h-7 rounded-xl bg-amber-500 text-neutral-950 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                      2
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white">Enter Account Details on Ko-fi</h4>
-                      <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                        On Ko-fi checkout ($5/MO), use the <strong>exact same email</strong> as your registered Curiolot account, or write your <strong>@username</strong> in the message box.
-                      </p>
-                    </div>
-                  </div>
+  {/* Step 2: Upgrade via Paddle di Dashboard */}
+  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start gap-3.5">
+    <div className="w-7 h-7 rounded-xl bg-amber-500 text-neutral-950 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+      2
+    </div>
+    <div>
+      <h4 className="text-xs font-bold text-white">Upgrade to PRO in Dashboard</h4>
+      <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
+        Log in to your account and click <strong>"Upgrade to PRO"</strong> ($5/mo). Secure checkout is powered by Paddle with Credit/Debit Card or PayPal.
+      </p>
+    </div>
+  </div>
 
-                  {/* Step 3: Aktivasi Instan Otomatis */}
-                  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start gap-3.5">
-                    <div className="w-7 h-7 rounded-xl bg-neutral-800 text-neutral-300 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                      3
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white">Automatic PRO Activation</h4>
-                      <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                        Once Ko-fi confirms your transaction, our webhook immediately unlocks PRO access on your dashboard!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tombol Aksi */}
-                <div className="flex items-center gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setPromoStep('compare')}
-                    className="w-1/3 py-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-neutral-800"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back</span>
-                  </button>
+  {/* Step 3: Aktivasi Instan Otomatis */}
+  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start gap-3.5">
+    <div className="w-7 h-7 rounded-xl bg-neutral-800 text-neutral-300 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+      3
+    </div>
+    <div>
+      <h4 className="text-xs font-bold text-white">Instant PRO Activation</h4>
+      <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
+        Once your Paddle payment is completed, our system immediately activates your PRO features automatically!
+      </p>
+    </div>
+  </div>
+</div>
 
                   <a
   href="/login"
