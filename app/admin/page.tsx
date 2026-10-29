@@ -301,8 +301,6 @@ const trimAndCompressAudio = async (file: File, maxDurationSeconds: number): Pro
   const length = renderedBuffer.length * numOfChan * 2 + 44;
   const buffer = new ArrayBuffer(length);
   const view = new DataView(buffer);
-  const channels: Float32Array[] = [];
-  let offset = 0;
   let pos = 0;
 
   const setUint16 = (data: number) => { view.setUint16(pos, data, true); pos += 2; };
@@ -322,10 +320,12 @@ const trimAndCompressAudio = async (file: File, maxDurationSeconds: number): Pro
   setUint32(0x61746164);
   setUint32(length - pos - 4);
 
+  const channels: Float32Array[] = [];
   for (let i = 0; i < numOfChan; i++) {
     channels.push(renderedBuffer.getChannelData(i));
   }
 
+  let offset = 0;
   while (pos < length) {
     for (let i = 0; i < numOfChan; i++) {
       let sample = Math.max(-1, Math.min(1, channels[i][offset]));
@@ -556,6 +556,27 @@ export default function AdminDashboard() {
     : `https://link.curiolot.com/${activeUsername}`;
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&data=${encodeURIComponent(liveProfileUrl)}`;
+
+  // Fungsi Integrasi Checkout Paddle Overlay Langsung
+  const handlePaddleCheckout = () => {
+    if (typeof window !== 'undefined' && (window as any).Paddle) {
+      (window as any).Paddle.Checkout.open({
+        items: [
+          {
+            priceId: 'pri_01m5w9cxb38v3xa2rhpd3e54an',
+            quantity: 1,
+          },
+        ],
+        customer: currentUser?.email ? { email: currentUser.email } : undefined,
+        customData: {
+          username: activeUsername,
+          userId: String(currentUser?.id || ''),
+        },
+      });
+    } else {
+      alert('Sistem checkout Paddle sedang dimuat. Silakan coba kembali dalam beberapa detik.');
+    }
+  };
 
   useEffect(() => {
     const storedUser = sessionStorage.getItem('curiolot_auth_user');
@@ -867,7 +888,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Background Music Upload (PRO)
   const handleBgMusicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1733,7 +1753,7 @@ export default function AdminDashboard() {
 
                 {/* Social Media Icons Bar */}
                 <div className="pt-4 border-t border-neutral-800">
-                  <label className="text-xs font-bold text-white block mb-1 flex items-center gap-1.5">
+                  <label className="text-xs font-bold text-white mb-1 flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Social Media Icons Bar</span>
                   </label>
@@ -3180,7 +3200,7 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-[11px] text-neutral-300 font-semibold block mb-1 flex items-center gap-1.5">
+                <label className="text-[11px] text-neutral-300 font-semibold mb-1 flex items-center gap-1.5">
                   <LinkIcon className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Clickable Story Link Sticker (Optional)</span>
                 </label>
@@ -3799,7 +3819,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Upgrade Modal */}
+      {/* Upgrade Modal Terhubung Langsung ke Paddle Checkout Overlay */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
@@ -3902,8 +3922,8 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-neutral-300 leading-relaxed mb-4">
-              💡 <strong>Instant Activation:</strong> When subscribing via Ko-fi, please write <strong>@{activeUsername}</strong> or your account email (<strong>{currentUser?.email}</strong>) in the supporter message box. PRO features will be verified and unlocked!
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-neutral-300 leading-relaxed mb-4">
+              ⚡ <strong>Instant Activation:</strong> Checkout aman via Paddle. Masukkan detail pembayaran (Kartu Kredit/Debit atau PayPal), dan akun <strong>@{activeUsername}</strong> akan langsung aktif otomatis!
             </div>
 
             <div className="flex items-center gap-3">
@@ -3915,16 +3935,17 @@ export default function AdminDashboard() {
                 Cancel
               </button>
 
-              <a
-                href="https://ko-fi.com/curiolot"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowUpgradeModal(false)}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUpgradeModal(false);
+                  handlePaddleCheckout();
+                }}
                 className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
               >
-                <span>Upgrade via Ko-fi ($5/mo)</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Upgrade to PRO ($5/mo)</span>
+              </button>
             </div>
 
           </div>
