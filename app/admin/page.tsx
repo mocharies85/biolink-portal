@@ -44,6 +44,7 @@ import {
   ChevronRight,
   Disc3,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 
 interface LinkItem {
@@ -358,6 +359,7 @@ export default function AdminDashboard() {
 
   const [uploadingShowcaseVideo, setUploadingShowcaseVideo] = useState(false);
   const [uploadingBgMusic, setUploadingBgMusic] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   // State untuk Fitur Penggantian Username / Handle
   const [editUsername, setEditUsername] = useState('');
@@ -418,6 +420,34 @@ export default function AdminDashboard() {
         audio.pause();
         audio.src = '';
       };
+    }
+  }, []);
+
+  // Pre-load dan Inisialisasi Paddle.js langsung saat dashboard dimuat
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const initPaddle = () => {
+        if ((window as any).Paddle) {
+          try {
+            (window as any).Paddle.Environment.set('production');
+            (window as any).Paddle.Initialize({
+              token: 'live_b22de345130295633b70feef146',
+            });
+          } catch (e) {
+            console.warn('Paddle pre-initialization note:', e);
+          }
+        }
+      };
+
+      if ((window as any).Paddle) {
+        initPaddle();
+      } else if (!document.querySelector('script[src*="paddle.com"]')) {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+        s.async = true;
+        s.onload = initPaddle;
+        document.head.appendChild(s);
+      }
     }
   }, []);
 
@@ -557,24 +587,53 @@ export default function AdminDashboard() {
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&data=${encodeURIComponent(liveProfileUrl)}`;
 
-  // Fungsi Integrasi Checkout Paddle Overlay Langsung
+  // Handler Checkout Paddle dengan Injeksi Otomatis & Penanganan Error
   const handlePaddleCheckout = () => {
+    setCheckoutLoading(true);
+
+    const openPaddle = () => {
+      try {
+        const paddle = (window as any).Paddle;
+        if (paddle) {
+          paddle.Environment.set('production');
+          paddle.Initialize({
+            token: 'live_b22de345130295633b70feef146',
+          });
+          setShowUpgradeModal(false);
+          paddle.Checkout.open({
+            items: [
+              {
+                priceId: 'pri_01m5w9cxb38v3xa2rhpd3e54an',
+                quantity: 1,
+              },
+            ],
+            customer: currentUser?.email ? { email: currentUser.email } : undefined,
+            customData: {
+              username: activeUsername,
+              userId: String(currentUser?.id || ''),
+            },
+          });
+        }
+      } catch (err) {
+        console.error('Error opening Paddle checkout:', err);
+        alert('Gagal membuka checkout Paddle. Silakan matikan ad-blocker dan coba kembali.');
+      } finally {
+        setCheckoutLoading(false);
+      }
+    };
+
     if (typeof window !== 'undefined' && (window as any).Paddle) {
-      (window as any).Paddle.Checkout.open({
-        items: [
-          {
-            priceId: 'pri_01m5w9cxb38v3xa2rhpd3e54an',
-            quantity: 1,
-          },
-        ],
-        customer: currentUser?.email ? { email: currentUser.email } : undefined,
-        customData: {
-          username: activeUsername,
-          userId: String(currentUser?.id || ''),
-        },
-      });
+      openPaddle();
     } else {
-      alert('Sistem checkout Paddle sedang dimuat. Silakan coba kembali dalam beberapa detik.');
+      const script = document.createElement('script');
+      script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+      script.async = true;
+      script.onload = () => openPaddle();
+      script.onerror = () => {
+        setCheckoutLoading(false);
+        alert('Gagal memuat skrip checkout Paddle. Pastikan ad-blocker dinonaktifkan.');
+      };
+      document.head.appendChild(script);
     }
   };
 
@@ -3607,7 +3666,7 @@ export default function AdminDashboard() {
                             type="datetime-local"
                             value={editingItem.schedule_start || ''}
                             onChange={(e) => setEditingItem({ ...editingItem, schedule_start: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-400"
+                            className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-400"
                           />
                         </div>
                         <div>
@@ -3616,7 +3675,7 @@ export default function AdminDashboard() {
                             type="datetime-local"
                             value={editingItem.schedule_end || ''}
                             onChange={(e) => setEditingItem({ ...editingItem, schedule_end: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-400"
+                            className="w-full px-3 py-2 rounded-xl bg-black/40 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-400"
                           />
                         </div>
                       </div>
@@ -3937,14 +3996,21 @@ export default function AdminDashboard() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setShowUpgradeModal(false);
-                  handlePaddleCheckout();
-                }}
-                className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
+                disabled={checkoutLoading}
+                onClick={handlePaddleCheckout}
+                className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20 disabled:opacity-50"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Upgrade to PRO ($5/mo)</span>
+                {checkoutLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Loading Checkout...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Upgrade to PRO ($5/mo)</span>
+                  </>
+                )}
               </button>
             </div>
 
