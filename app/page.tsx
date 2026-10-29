@@ -428,7 +428,7 @@ export default function HomePage() {
                       onClick={() => setPromoStep('tutorial')}
                       className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-extrabold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
                     >
-                      <span>Upgrade to PRO ($3/MO)</span>
+                      <span>Upgrade to PRO ($5/MO)</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -495,7 +495,7 @@ export default function HomePage() {
                     <div>
                       <h4 className="text-xs font-bold text-white">Enter Account Details on Ko-fi</h4>
                       <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                        On Ko-fi checkout ($3/mo), use the <strong>exact same email</strong> as your registered Curiolot account, or write your <strong>@username</strong> in the message box.
+                        On Ko-fi checkout ($5/MO), use the <strong>exact same email</strong> as your registered Curiolot account, or write your <strong>@username</strong> in the message box.
                       </p>
                     </div>
                   </div>
