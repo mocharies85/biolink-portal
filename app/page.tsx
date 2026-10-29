@@ -513,22 +513,31 @@ export default function HomePage() {
     </div>
   </div>
 </div>
-
+{/* Tombol Aksi */}
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPromoStep('compare')}
+                    className="w-1/3 py-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-neutral-800"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
                   <a
-  href="/login"
-  onClick={handleClosePromo}
-  className="w-2/3 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-amber-500/20"
->
-  <span>I'm Registered, Login & Upgrade</span>
-</a>
+                      href="/login"
+                      onClick={handleClosePromo}
+                      className="w-2/3 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-amber-500/20"
+                    >
+                      <span>I'm Registered, Login & Upgrade</span>
+                    </a>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-    </div>
-  );
-}
+      </div>
+    );
+  }
