@@ -526,15 +526,12 @@ export default function HomePage() {
                   </button>
 
                   <a
-                    href="https://ko-fi.com/curiolot"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={handleClosePromo}
-                    className="w-2/3 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-extrabold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
-                  >
-                    <span>I'm Registered, Go to Ko-fi</span>
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
+  href="/login"
+  onClick={handleClosePromo}
+  className="w-2/3 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-amber-500/20"
+>
+  <span>I'm Registered, Login & Upgrade</span>
+</a>
                 </div>
               </div>
             )}
