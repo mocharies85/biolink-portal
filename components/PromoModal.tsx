@@ -123,7 +123,7 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
 
               <h3 className="text-xl font-bold text-amber-400">PRO Creator</h3>
               <div className="flex items-baseline gap-1 mt-1 mb-2">
-                <span className="text-3xl font-black text-amber-400">$3</span>
+                <span className="text-3xl font-black text-amber-400">$5</span>
                 <span className="text-xs text-neutral-400">/ month</span>
               </div>
               <p className="text-xs text-neutral-400 leading-relaxed mb-4">
@@ -177,7 +177,7 @@ export default function PromoModal({ isOpen, onClose }: PromoModalProps) {
               rel="noopener noreferrer"
               className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-extrabold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
             >
-              <span>Upgrade to PRO ($3/MO)</span>
+              <span>Upgrade to PRO ($5/MO)</span>
               <ExternalLink className="w-4 h-4" />
             </a>
           </div>
