@@ -62,13 +62,25 @@ export async function onRequest(context) {
     }
   }
 
-  // 2. Abaikan API, asset Next.js, file statis, dan rute dashboard
+  // 2. Abaikan API, asset Next.js, file statis, rute dashboard, dan halaman legal/pricing
   if (
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/static/') ||
     pathname.includes('.') ||
-    ['/admin', '/login', '/register', '/404'].includes(pathname.toLowerCase())
+    [
+      '/admin', 
+      '/login', 
+      '/register', 
+      '/404', 
+      '/pricing', 
+      '/refund-policy', 
+      '/terms', 
+      '/privacy',
+      '/forgot-password',
+      '/reset-password',
+      '/superadmin'
+    ].includes(pathname.toLowerCase())
   ) {
     return next();
   }

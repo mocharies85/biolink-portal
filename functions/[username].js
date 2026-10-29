@@ -14,6 +14,8 @@ export async function onRequest({ request, env, params }) {
     'reset-password',
     'terms',     
     'privacy',
+    'pricing',
+    'refund-policy',
   ];
 
   // Jika URL adalah rute sistem atau file statis, sajikan halaman aslinya
