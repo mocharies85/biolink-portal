@@ -616,7 +616,7 @@ export default function AdminDashboard() {
         }
       } catch (err) {
         console.error('Error opening Paddle checkout:', err);
-        alert('Gagal membuka checkout Paddle. Silakan matikan ad-blocker dan coba kembali.');
+        alert('Failed to launch Paddle checkout. Please disable any ad-blockers and try again.');
       } finally {
         setCheckoutLoading(false);
       }
@@ -631,7 +631,7 @@ export default function AdminDashboard() {
       script.onload = () => openPaddle();
       script.onerror = () => {
         setCheckoutLoading(false);
-        alert('Gagal memuat skrip checkout Paddle. Pastikan ad-blocker dinonaktifkan.');
+        alert('Failed to load Paddle checkout script. Please disable your ad-blocker and try again.');
       };
       document.head.appendChild(script);
     }
@@ -3982,8 +3982,8 @@ export default function AdminDashboard() {
             </div>
 
             <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-neutral-300 leading-relaxed mb-4">
-              ⚡ <strong>Instant Activation:</strong> Checkout aman via Paddle. Masukkan detail pembayaran (Kartu Kredit/Debit atau PayPal), dan akun <strong>@{activeUsername}</strong> akan langsung aktif otomatis!
-            </div>
+  ⚡ <strong>Instant Activation:</strong> Secure checkout powered by Paddle. Complete your payment via Credit/Debit Card or PayPal, and your <strong>@{activeUsername}</strong> account will be upgraded instantly!
+</div>  
 
             <div className="flex items-center gap-3">
               <button
