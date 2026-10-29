@@ -59,14 +59,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Script
           src="https://cdn.paddle.com/paddle/v2/paddle.js"
           strategy="afterInteractive"
-          onLoad={() => {
-            if (typeof window !== "undefined" && (window as any).Paddle) {
-              (window as any).Paddle.Environment.set("production");
-              (window as any).Paddle.Initialize({
-                token: "live_b22de345130295633b70feef146",
-              });
-            }
-          }}
         />
       </body>
     </html>
