@@ -69,7 +69,7 @@ export async function onRequestGet({ request, env }) {
     const giftPro = sanitizedUsers.filter((u) => u.is_pro === 1 && u.pro_type === 'gift').length;
     const pro = paidPro + giftPro;
     const free = total - pro;
-    const estimatedRevenue = paidPro * 3; // $3/bulan murni dari pelanggan berbayar
+    const estimatedRevenue = paidPro * 3; // $5/bulan murni dari pelanggan berbayar
 
     // 4. Ambil data analitik dengan proteksi try-catch mandiri
     // Views dari user_profiles
