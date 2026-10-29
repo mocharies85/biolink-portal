@@ -45,6 +45,8 @@ import {
   Disc3,
   AlertTriangle,
   Loader2,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 interface LinkItem {
@@ -361,11 +363,12 @@ export default function AdminDashboard() {
   const [uploadingBgMusic, setUploadingBgMusic] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  // State untuk Fitur Penggantian Username / Handle
+  // Username / Biolink Handle Update Feature State
   const [editUsername, setEditUsername] = useState('');
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [usernameError, setUsernameError] = useState('');
   const [usernameSuccess, setUsernameSuccess] = useState('');
+  const [copiedHandle, setCopiedHandle] = useState(false);
 
   const getScheduleBadge = (link: any) => {
     if (!link.schedule_start && !link.schedule_end) return null;
@@ -423,7 +426,7 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // Pre-load dan Inisialisasi Paddle.js langsung saat dashboard dimuat
+  // Pre-load and Initialize Paddle.js on Dashboard Mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const initPaddle = () => {
@@ -587,7 +590,35 @@ export default function AdminDashboard() {
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&data=${encodeURIComponent(liveProfileUrl)}`;
 
-  // Handler Checkout Paddle dengan Injeksi Otomatis & Penanganan Error
+  // Copy Biolink URL to Clipboard
+  const handleCopyBiolink = () => {
+    const fullUrl = `https://link.curiolot.com/${activeUsername || ''}`;
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(fullUrl);
+      setCopiedHandle(true);
+      setTimeout(() => setCopiedHandle(false), 2000);
+    }
+  };
+
+  // Native Web Share Dialog with Fallback to Copy
+  const handleShareBiolink = async () => {
+    const fullUrl = `https://link.curiolot.com/${activeUsername || ''}`;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `@${activeUsername} - Curiolot Link`,
+          text: `Check out my biolink hub:`,
+          url: fullUrl,
+        });
+      } catch {
+        // User dismissed share dialog
+      }
+    } else {
+      handleCopyBiolink();
+    }
+  };
+
+  // Paddle Checkout Handler with Script Injection & Error Handling
   const handlePaddleCheckout = () => {
     setCheckoutLoading(true);
 
@@ -1674,7 +1705,7 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* FITUR BARU: Biolink URL Handle (Ganti Username) */}
+            {/* Biolink URL Handle (Change Username) with Integrated Copy & Share */}
             <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -1704,9 +1735,41 @@ export default function AdminDashboard() {
                     type="text"
                     value={editUsername}
                     onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-                    placeholder="your-handle"
-                    className="bg-transparent text-white font-semibold outline-none flex-1 ml-0.5 placeholder:text-neutral-700"
+                    placeholder={activeUsername || 'username'}
+                    className="bg-transparent text-white font-semibold outline-none flex-1 ml-0.5 placeholder:text-neutral-700 min-w-0 pr-2"
                   />
+
+                  {/* Copy Link & Native Share Action Buttons */}
+                  <div className="flex items-center gap-1 shrink-0 ml-1">
+                    <button
+                      type="button"
+                      onClick={handleCopyBiolink}
+                      title={copiedHandle ? 'Copied!' : 'Copy Link'}
+                      className={`p-1.5 rounded-lg text-xs transition flex items-center gap-1 ${
+                        copiedHandle
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      {copiedHandle ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-[10px] font-bold text-emerald-400">Copied</span>
+                        </>
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleShareBiolink}
+                      title="Share Biolink"
+                      className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <button
@@ -3878,7 +3941,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Upgrade Modal Terhubung Langsung ke Paddle Checkout Overlay */}
+      {/* Upgrade Modal Connected to Paddle Checkout Overlay */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
@@ -3982,8 +4045,8 @@ export default function AdminDashboard() {
             </div>
 
             <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-neutral-300 leading-relaxed mb-4">
-  ⚡ <strong>Instant Activation:</strong> Secure checkout powered by Paddle. Complete your payment via Credit/Debit Card or PayPal, and your <strong>@{activeUsername}</strong> account will be upgraded instantly!
-</div>  
+              ⚡ <strong>Instant Activation:</strong> Secure checkout powered by Paddle. Complete your payment via Credit/Debit Card or PayPal, and your <strong>@{activeUsername}</strong> account will be upgraded instantly!
+            </div>  
 
             <div className="flex items-center gap-3">
               <button
