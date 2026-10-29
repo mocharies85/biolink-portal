@@ -3811,7 +3811,7 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-bold text-white mt-3">Upgrade to Curiolot Link PRO</h3>
               
               <div className="flex items-baseline justify-center gap-1 mt-2">
-                <span className="text-3xl font-black text-white tracking-tight">$3</span>
+                <span className="text-3xl font-black text-white tracking-tight">$5</span>
                 <span className="text-xs text-neutral-400 font-medium">/ month</span>
                 <span className="ml-2 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
                   Cancel anytime
@@ -3922,7 +3922,7 @@ export default function AdminDashboard() {
                 onClick={() => setShowUpgradeModal(false)}
                 className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
               >
-                <span>Upgrade via Ko-fi ($3/mo)</span>
+                <span>Upgrade via Ko-fi ($5/mo)</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
