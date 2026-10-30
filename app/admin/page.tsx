@@ -539,6 +539,7 @@ export default function AdminDashboard() {
   const [storyMediaType, setStoryMediaType] = useState<'image' | 'video'>('image');
   const [selectedPhotoDuration, setSelectedPhotoDuration] = useState<number>(25);
   const [storyMediaUrl, setStoryMediaUrl] = useState('');
+  const [directMediaUrl, setDirectMediaUrl] = useState('');
   const [storyCaption, setStoryCaption] = useState('');
   const [storyAudioUrl, setStoryAudioUrl] = useState('');
   const [storyLinkUrl, setStoryLinkUrl] = useState('');
@@ -1058,6 +1059,7 @@ export default function AdminDashboard() {
         if (res.ok) {
           const data = await res.json();
           setStoryMediaUrl(data.url);
+          setDirectMediaUrl('');
         } else {
           const err = await res.json().catch(() => null);
           alert(err?.error || 'Failed to upload video to Cloudflare R2.');
@@ -1074,6 +1076,7 @@ export default function AdminDashboard() {
       try {
         const compressed = await compressImage(file, 1080, 1920, 0.75);
         setStoryMediaUrl(compressed);
+        setDirectMediaUrl('');
       } catch (err) {
         console.error('Error compressing story image:', err);
         alert('Failed to process story image. Please use JPG or PNG format.');
@@ -1190,6 +1193,37 @@ export default function AdminDashboard() {
       setProcessingMultiImages(false);
       e.target.value = '';
     }
+  };
+
+  // Add Direct Image URL to Multi-Image Carousel
+  const handleAddUrlToCarousel = () => {
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    const targetUrl = directMediaUrl.trim() || (!storyMediaUrl.startsWith('data:') ? storyMediaUrl.trim() : '');
+    if (!targetUrl) {
+      alert('Please enter a valid image URL first.');
+      return;
+    }
+
+    if (targetUrl.startsWith('data:')) {
+      alert('Please enter a valid HTTP/HTTPS image URL.');
+      return;
+    }
+
+    if (storyMediaUrls.length >= 10) {
+      alert('Maximum limit reached. You can only add up to 10 images.');
+      return;
+    }
+
+    const updated = [...storyMediaUrls, targetUrl];
+    setStoryMediaUrls(updated);
+    setStoryMediaType('image');
+    setStoryMediaUrl(updated[0]);
+    setStoryTotalDuration(getStoryTierDuration(updated.length));
+    setDirectMediaUrl('');
   };
 
   const handleShowcaseVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1355,7 +1389,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    if (!storyMediaUrl.trim()) {
+    const currentMedia = storyMediaUrls.length > 0 ? storyMediaUrls[0] : (directMediaUrl.trim() || storyMediaUrl);
+    if (!currentMedia.trim()) {
       alert('Please choose an image/video or enter a media URL first.');
       return;
     }
@@ -1367,7 +1402,7 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: activeUsername,
-          media_url: storyMediaUrl,
+          media_url: currentMedia,
           caption: storyCaption.trim(),
           audio_url: storyAudioUrl.trim() || null,
           link_url: storyLinkUrl.trim() || null,
@@ -1381,6 +1416,7 @@ export default function AdminDashboard() {
       if (res.ok) {
         setStorySuccess(true);
         setStoryMediaUrl('');
+        setDirectMediaUrl('');
         setStoryCaption('');
         setStoryAudioUrl('');
         setStoryLinkUrl('');
@@ -3298,16 +3334,47 @@ export default function AdminDashboard() {
               )}
 
               <div>
-                <label className="text-[11px] text-neutral-400 block mb-1">
-                  Or paste direct media URL ({storyMediaType === 'video' ? 'Video .mp4' : 'Image .jpg/.png'})
-                </label>
-                <input
-                  type="url"
-                  placeholder={storyMediaType === 'video' ? 'https://example.com/video.mp4' : 'https://images.unsplash.com/photo-...'}
-                  value={storyMediaUrl.startsWith('data:') ? '' : storyMediaUrl}
-                  onChange={(e) => setStoryMediaUrl(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] text-neutral-400 block">
+                    Or paste direct media URL ({storyMediaType === 'video' ? 'Video .mp4' : 'Image .jpg/.png'})
+                  </label>
+                  {isProUser && storyMediaType === 'image' && storyMediaUrls.length > 0 && (
+                    <span className="text-[10px] text-amber-400 font-medium">
+                      Carousel: {storyMediaUrls.length}/10 Images
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative flex items-center">
+                  <input
+                    type="url"
+                    placeholder={storyMediaType === 'video' ? 'https://example.com/video.mp4' : 'https://images.unsplash.com/photo-...'}
+                    value={directMediaUrl || (storyMediaUrl.startsWith('data:') ? '' : storyMediaUrl)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDirectMediaUrl(val);
+                      if (storyMediaUrls.length === 0) {
+                        setStoryMediaUrl(val);
+                      }
+                    }}
+                    className={`w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition ${
+                      storyMediaType === 'image' ? 'pr-12' : ''
+                    }`}
+                  />
+
+                  {/* Plus Button to Add Image URL to Carousel */}
+                  {storyMediaType === 'image' && (
+                    <button
+                      type="button"
+                      onClick={handleAddUrlToCarousel}
+                      title={isProUser ? 'Add image URL to Carousel' : 'Unlock Multi-Image Carousel (PRO)'}
+                      className="absolute right-1.5 p-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4 stroke-[2.5]" />
+                      {!isProUser && <Lock className="w-2.5 h-2.5 text-neutral-950" />}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -3446,7 +3513,7 @@ export default function AdminDashboard() {
 
               <button
                 type="submit"
-                disabled={postingStory || !storyMediaUrl || compressingStory}
+                disabled={postingStory || (!storyMediaUrl && !directMediaUrl && storyMediaUrls.length === 0) || compressingStory}
                 className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 mt-1 shadow-md shadow-emerald-500/20"
               >
                 <Radio className="w-4 h-4" />
