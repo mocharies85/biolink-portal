@@ -230,11 +230,12 @@ export default function UserBioClient() {
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [isStoryOpen, setIsStoryOpen] = useState(false);
 
-  // Background Music & Showcase Video Sync Refs & States
+  // Background Music, Showcase Video, and Story Audio Sync Refs & States
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
   const [musicMutedByVideo, setMusicMutedByVideo] = useState(false);
+  const [musicMutedByStory, setMusicMutedByStory] = useState(false);
 
   // PIN Unlock State
   const [pinModalOpen, setPinModalOpen] = useState(false);
@@ -344,7 +345,7 @@ export default function UserBioClient() {
     };
   }, [username]);
 
-  // Sinkronisasi Audio: Auto-Mute Musik Latar jika Video Showcase bersuara diputar
+  // Audio Synchronization: Auto-mute background music when showcase video plays with sound
   useEffect(() => {
     const video = videoRef.current;
     const bgAudio = bgMusicRef.current;
@@ -359,7 +360,7 @@ export default function UserBioClient() {
           setMusicMutedByVideo(true);
         }
       } else {
-        if (musicMutedByVideo && isPlayingMusic) {
+        if (musicMutedByVideo && isPlayingMusic && !musicMutedByStory && !isStoryOpen) {
           bgAudio.play().catch(() => {});
           setMusicMutedByVideo(false);
         }
@@ -377,9 +378,44 @@ export default function UserBioClient() {
       video.removeEventListener('volumechange', handleAudioSync);
       video.removeEventListener('ended', handleAudioSync);
     };
-  }, [isPlayingMusic, musicMutedByVideo]);
+  }, [isPlayingMusic, musicMutedByVideo, musicMutedByStory, isStoryOpen]);
 
-  // Tombol Toggle Musik Latar Manual oleh Pengunjung
+  // Audio Synchronization: Pause background music when Story modal is open, resume when closed
+  useEffect(() => {
+    const bgAudio = bgMusicRef.current;
+    if (!bgAudio) return;
+
+    if (isStoryOpen) {
+      if (!bgAudio.paused) {
+        bgAudio.pause();
+        setMusicMutedByStory(true);
+      }
+    } else {
+      if (musicMutedByStory && isPlayingMusic && !musicMutedByVideo) {
+        bgAudio.play().catch(() => {});
+        setMusicMutedByStory(false);
+      }
+    }
+  }, [isStoryOpen, isPlayingMusic, musicMutedByVideo, musicMutedByStory]);
+
+  // Global Audio Event Listener: prevent audio collisions with any other media elements
+  useEffect(() => {
+    const handleGlobalPlay = (e: Event) => {
+      const playingElement = e.target as HTMLMediaElement;
+      if (bgMusicRef.current && playingElement !== bgMusicRef.current) {
+        if (!bgMusicRef.current.paused) {
+          bgMusicRef.current.pause();
+        }
+      }
+    };
+
+    window.addEventListener('play', handleGlobalPlay, true);
+    return () => {
+      window.removeEventListener('play', handleGlobalPlay, true);
+    };
+  }, []);
+
+  // Manual Background Music Toggle Button
   const toggleBackgroundMusic = () => {
     const audio = bgMusicRef.current;
     if (!audio) return;
@@ -388,24 +424,28 @@ export default function UserBioClient() {
       audio.pause();
       setIsPlayingMusic(false);
       setMusicMutedByVideo(false);
+      setMusicMutedByStory(false);
     } else {
       audio.play().then(() => {
         setIsPlayingMusic(true);
         setMusicMutedByVideo(false);
+        setMusicMutedByStory(false);
       }).catch((err) => {
         console.warn('Audio play restricted by browser autoplay policy:', err);
       });
     }
   };
-useEffect(() => {
+
+  useEffect(() => {
     const audio = bgMusicRef.current;
     if (!audio || !profile?.bg_music_url) return;
 
     const handleFirstTouch = () => {
-      if (audio.paused) {
+      if (audio.paused && !isStoryOpen) {
         audio.play().then(() => {
           setIsPlayingMusic(true);
           setMusicMutedByVideo(false);
+          setMusicMutedByStory(false);
         }).catch(() => {});
       }
       window.removeEventListener('click', handleFirstTouch);
@@ -422,7 +462,8 @@ useEffect(() => {
       window.removeEventListener('touchstart', handleFirstTouch);
       window.removeEventListener('scroll', handleFirstTouch);
     };
-  }, [profile?.bg_music_url]);
+  }, [profile?.bg_music_url, isStoryOpen]);
+
   const handleShare = async () => {
     const currentUrl = typeof window !== 'undefined' ? window.location.href : `https://link.curiolot.com/${username}`;
 
@@ -532,6 +573,7 @@ useEffect(() => {
   const theme = THEMES[currentThemeKey];
   const hasActiveWallpaper = Boolean(isPro && profile.bg_image);
   const hasBgMusic = Boolean(isPro && profile.bg_music_url);
+  const isMusicAudible = isPlayingMusic && !musicMutedByVideo && !musicMutedByStory;
 
   return (
     <main 
@@ -1092,13 +1134,13 @@ useEffect(() => {
 
       </div>
 
-      {/* Floating Audio Controller (Hanya Tampil Jika Akun PRO & Memiliki Lagu) */}
+      {/* Floating Audio Controller (PRO accounts with background music only) */}
       {hasBgMusic && (
         <button
           type="button"
           onClick={toggleBackgroundMusic}
           className={`fixed bottom-6 left-6 z-40 px-3.5 py-2 rounded-full border backdrop-blur-xl shadow-2xl flex items-center gap-2.5 transition-all hover:scale-105 ${
-            isPlayingMusic && !musicMutedByVideo
+            isMusicAudible
               ? 'bg-neutral-900/90 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10'
               : 'bg-neutral-900/80 border-neutral-700/80 text-neutral-300'
           }`}
@@ -1106,7 +1148,7 @@ useEffect(() => {
         >
           <Disc3
             className={`w-4 h-4 text-emerald-400 shrink-0 ${
-              isPlayingMusic && !musicMutedByVideo ? 'animate-spin' : ''
+              isMusicAudible ? 'animate-spin' : ''
             }`}
           />
           <div className="flex flex-col text-left max-w-[130px] truncate">
@@ -1114,7 +1156,9 @@ useEffect(() => {
               {profile.bg_music_title || 'Background Track'}
             </span>
             <span className="text-[8px] text-neutral-400 leading-tight">
-              {musicMutedByVideo
+              {musicMutedByStory
+                ? 'Muted for Story'
+                : musicMutedByVideo
                 ? 'Muted for Video'
                 : isPlayingMusic
                 ? 'Playing Ambient'
@@ -1122,7 +1166,7 @@ useEffect(() => {
             </span>
           </div>
           <div className="p-1 rounded-full bg-neutral-800 text-neutral-300">
-            {isPlayingMusic && !musicMutedByVideo ? (
+            {isMusicAudible ? (
               <Volume2 className="w-3 h-3 text-emerald-400" />
             ) : (
               <VolumeX className="w-3 h-3 text-neutral-400" />
