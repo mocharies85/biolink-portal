@@ -4,10 +4,11 @@ import { Briefcase, ExternalLink } from 'lucide-react';
 interface BioMediaKitBannerProps {
   username: string;
   isPro: boolean;
+  isEnabled: boolean;
 }
 
-export default function BioMediaKitBanner({ username, isPro }: BioMediaKitBannerProps) {
-  if (!isPro) return null;
+export default function BioMediaKitBanner({ username, isPro, isEnabled }: BioMediaKitBannerProps) {
+  if (!isPro || !isEnabled) return null;
 
   return (
     <div className="w-full mb-5">

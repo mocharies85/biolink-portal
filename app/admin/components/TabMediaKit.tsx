@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Briefcase,
   Users,
@@ -13,7 +13,7 @@ import {
   Video,
   Lock,
   Sparkles,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react';
 
 export interface RateCardItem {
@@ -54,7 +54,24 @@ export default function TabMediaKit({
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Jika bukan PRO, tampilkan layar terkunci (Paywall)
+  // Form State Tambah Paket Baru
+  const [newPlatform, setNewPlatform] = useState('Instagram');
+  const [newDeliverable, setNewDeliverable] = useState('');
+  const [newPrice, setNewPrice] = useState<number | ''>('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newSampleUrl, setNewSampleUrl] = useState('');
+
+  const targetUsername = activeUsername || 'creator';
+  const packageCount = mediaKit.rate_cards?.length || 0;
+
+  // Sinkronisasi otomatis: Jika 0 paket maka wajib OFF
+  useEffect(() => {
+    if (packageCount === 0 && mediaKit.is_enabled) {
+      setMediaKit((prev) => ({ ...prev, is_enabled: false }));
+    }
+  }, [packageCount, mediaKit.is_enabled, setMediaKit]);
+
+  // Layar Terkunci untuk Free User (Paywall)
   if (!isPro) {
     return (
       <div className="max-w-2xl p-8 rounded-3xl bg-neutral-900/90 border border-neutral-800 text-center flex flex-col items-center gap-5 shadow-2xl relative overflow-hidden">
@@ -104,15 +121,7 @@ export default function TabMediaKit({
     );
   }
 
-  // Form State Tambah Paket Baru untuk user PRO
-  const [newPlatform, setNewPlatform] = useState('Instagram');
-  const [newDeliverable, setNewDeliverable] = useState('');
-  const [newPrice, setNewPrice] = useState<number | ''>('');
-  const [newDesc, setNewDesc] = useState('');
-  const [newSampleUrl, setNewSampleUrl] = useState('');
-
-  const targetUsername = activeUsername || 'aries';
-
+  // Tambah Paket Baru (Otomatis ON jika dari 0 paket)
   const handleAddPackage = () => {
     if (!newDeliverable.trim() || newPrice === '') return;
 
@@ -125,10 +134,14 @@ export default function TabMediaKit({
       sample_url: newSampleUrl.trim() || undefined,
     };
 
-    setMediaKit((prev) => ({
-      ...prev,
-      rate_cards: [...prev.rate_cards, newItem],
-    }));
+    setMediaKit((prev) => {
+      const updatedRateCards = [...(prev.rate_cards || []), newItem];
+      return {
+        ...prev,
+        rate_cards: updatedRateCards,
+        is_enabled: prev.rate_cards?.length === 0 ? true : prev.is_enabled,
+      };
+    });
 
     setNewDeliverable('');
     setNewPrice('');
@@ -136,22 +149,44 @@ export default function TabMediaKit({
     setNewSampleUrl('');
   };
 
+  // Hapus Paket (Otomatis OFF jika paket habis menjadi 0)
   const handleDeletePackage = (id: string) => {
+    setMediaKit((prev) => {
+      const updatedRateCards = (prev.rate_cards || []).filter((item) => item.id !== id);
+      return {
+        ...prev,
+        rate_cards: updatedRateCards,
+        is_enabled: updatedRateCards.length === 0 ? false : prev.is_enabled,
+      };
+    });
+  };
+
+  // Toggle Switch Manual
+  const handleToggleActive = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (packageCount === 0) return;
     setMediaKit((prev) => ({
       ...prev,
-      rate_cards: prev.rate_cards.filter((item) => item.id !== id),
+      is_enabled: e.target.checked,
     }));
   };
 
   const handleSave = async () => {
     setSaving(true);
+    const isCurrentlyEnabled = packageCount > 0 && mediaKit.is_enabled;
+
+    const payload = {
+      ...mediaKit,
+      is_enabled: isCurrentlyEnabled,
+    };
+
     try {
       const res = await fetch('/api/mediakit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: targetUsername,
-          mediaKitData: mediaKit,
+          mediaKitData: payload,
+          ...payload,
         }),
       });
 
@@ -170,6 +205,8 @@ export default function TabMediaKit({
     }
   };
 
+  const isSwitchOn = Boolean(mediaKit.is_enabled && packageCount > 0);
+
   return (
     <div className="max-w-2xl flex flex-col gap-6">
       {/* Header */}
@@ -183,15 +220,17 @@ export default function TabMediaKit({
             </span>
           </h1>
 
-          <a
-            href={`/${targetUsername}/mediakit`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-xs font-bold text-neutral-300 hover:text-white flex items-center gap-1.5 transition"
-          >
-            <span>View Public Media Kit</span>
-            <ExternalLink className="w-3.5 h-3.5 text-neutral-500" />
-          </a>
+          {isSwitchOn && (
+            <a
+              href={`/${targetUsername}/mediakit`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-xs font-bold text-neutral-300 hover:text-white flex items-center gap-1.5 transition"
+            >
+              <span>View Public Media Kit</span>
+              <ExternalLink className="w-3.5 h-3.5 text-neutral-500" />
+            </a>
+          )}
         </div>
         <p className="text-xs text-neutral-400 mt-1">
           Showcase your audience statistics, reach, and sponsorship pricing packages to close more brand partnerships.
@@ -210,7 +249,7 @@ export default function TabMediaKit({
             <label className="text-[11px] text-neutral-400 block mb-1">Total Audience Reach</label>
             <input
               type="number"
-              value={mediaKit.total_followers}
+              value={mediaKit.total_followers || ''}
               onChange={(e) => setMediaKit({ ...mediaKit, total_followers: Number(e.target.value) })}
               placeholder="e.g. 50000"
               className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
@@ -221,7 +260,7 @@ export default function TabMediaKit({
             <label className="text-[11px] text-neutral-400 block mb-1">Monthly Impressions</label>
             <input
               type="number"
-              value={mediaKit.monthly_impressions}
+              value={mediaKit.monthly_impressions || ''}
               onChange={(e) => setMediaKit({ ...mediaKit, monthly_impressions: Number(e.target.value) })}
               placeholder="e.g. 250000"
               className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
@@ -233,7 +272,7 @@ export default function TabMediaKit({
             <input
               type="number"
               step="0.1"
-              value={mediaKit.engagement_rate}
+              value={mediaKit.engagement_rate || ''}
               onChange={(e) => setMediaKit({ ...mediaKit, engagement_rate: Number(e.target.value) })}
               placeholder="e.g. 4.8"
               className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
@@ -246,7 +285,7 @@ export default function TabMediaKit({
             <label className="text-[11px] text-neutral-400 block mb-1">Primary Content Niche</label>
             <input
               type="text"
-              value={mediaKit.primary_niche}
+              value={mediaKit.primary_niche || ''}
               onChange={(e) => setMediaKit({ ...mediaKit, primary_niche: e.target.value })}
               placeholder="e.g. Tech, Gadgets, Digital Art"
               className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
@@ -257,7 +296,7 @@ export default function TabMediaKit({
             <label className="text-[11px] text-neutral-400 block mb-1">Top Audience Country</label>
             <input
               type="text"
-              value={mediaKit.audience_country}
+              value={mediaKit.audience_country || ''}
               onChange={(e) => setMediaKit({ ...mediaKit, audience_country: e.target.value })}
               placeholder="e.g. United States, Indonesia"
               className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
@@ -274,48 +313,55 @@ export default function TabMediaKit({
             <span>Rate Card &amp; Deliverables</span>
           </h3>
           <span className="text-[11px] text-neutral-400 font-medium">
-            {mediaKit.rate_cards.length} Packages listed
+            {packageCount} Packages listed
           </span>
         </div>
 
-        {/* List of existing packages */}
+        {/* Existing packages */}
         <div className="flex flex-col gap-2.5">
-          {mediaKit.rate_cards.map((item) => (
-            <div
-              key={item.id}
-              className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3"
-            >
-              <div className="truncate flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold">
-                    {item.platform}
-                  </span>
-                  <p className="text-xs font-bold text-white truncate">{item.deliverable}</p>
-                </div>
-                {item.description && (
-                  <p className="text-[11px] text-neutral-400 truncate mt-0.5">{item.description}</p>
-                )}
-                {item.sample_url && (
-                  <p className="text-[10px] text-amber-400/80 truncate mt-0.5 flex items-center gap-1">
-                    <Video className="w-3 h-3 shrink-0" />
-                    <span>Sample: {item.sample_url}</span>
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-xs font-black text-amber-400">${item.price}</span>
-                <button
-                  type="button"
-                  onClick={() => handleDeletePackage(item.id)}
-                  className="p-1.5 rounded-lg bg-neutral-900 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 transition"
-                  title="Delete package"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+          {packageCount === 0 ? (
+            <div className="py-6 px-4 rounded-xl bg-neutral-950/40 border border-neutral-800/60 text-center">
+              <p className="text-xs text-neutral-500">No sponsorship packages created yet.</p>
+              <p className="text-[11px] text-neutral-600 mt-0.5">Add your first package below to enable the Media Kit toggle switch.</p>
             </div>
-          ))}
+          ) : (
+            mediaKit.rate_cards.map((item) => (
+              <div
+                key={item.id}
+                className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3"
+              >
+                <div className="truncate flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold">
+                      {item.platform}
+                    </span>
+                    <p className="text-xs font-bold text-white truncate">{item.deliverable}</p>
+                  </div>
+                  {item.description && (
+                    <p className="text-[11px] text-neutral-400 truncate mt-0.5">{item.description}</p>
+                  )}
+                  {item.sample_url && (
+                    <p className="text-[10px] text-amber-400/80 truncate mt-0.5 flex items-center gap-1">
+                      <Video className="w-3 h-3 shrink-0" />
+                      <span>Sample: {item.sample_url}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs font-black text-amber-400">${item.price}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePackage(item.id)}
+                    className="p-1.5 rounded-lg bg-neutral-900 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 transition"
+                    title="Delete package"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Add New Package Form */}
@@ -326,7 +372,7 @@ export default function TabMediaKit({
             <select
               value={newPlatform}
               onChange={(e) => setNewPlatform(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white outline-none"
+              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white outline-none cursor-pointer"
             >
               <option value="Instagram">Instagram</option>
               <option value="TikTok">TikTok</option>
@@ -340,7 +386,7 @@ export default function TabMediaKit({
               placeholder="Deliverable (e.g. 1x Reel Video)"
               value={newDeliverable}
               onChange={(e) => setNewDeliverable(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-500/50 transition"
             />
 
             <input
@@ -348,7 +394,7 @@ export default function TabMediaKit({
               placeholder="Price ($ USD)"
               value={newPrice}
               onChange={(e) => setNewPrice(e.target.value ? Number(e.target.value) : '')}
-              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-500/50 transition"
             />
           </div>
 
@@ -358,7 +404,7 @@ export default function TabMediaKit({
               placeholder="Short description / details (optional)"
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-500/50 transition"
             />
 
             <input
@@ -366,14 +412,14 @@ export default function TabMediaKit({
               placeholder="Sample Video URL (e.g. YouTube / TikTok sample)"
               value={newSampleUrl}
               onChange={(e) => setNewSampleUrl(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+              className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-500/50 transition"
             />
           </div>
 
           <button
             type="button"
             onClick={handleAddPackage}
-            className="self-end px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition"
+            className="self-end px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Package</span>
@@ -381,22 +427,63 @@ export default function TabMediaKit({
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="flex items-center justify-between pt-1">
-        {savedSuccess && (
-          <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4" /> Media Kit updated successfully!
-          </p>
-        )}
-        <button
-          type="button"
-          disabled={saving}
-          onClick={handleSave}
-          className="ml-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/20"
-        >
-          <Save className="w-4 h-4" />
-          <span>{saving ? 'Saving...' : 'Save Media Kit'}</span>
-        </button>
+      {/* Footer: ON/OFF Toggle Switch & Save Button */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900 border border-neutral-800 shadow-md">
+        {/* Toggle Switch */}
+        <label className={`flex items-center gap-3 select-none ${packageCount === 0 ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={isSwitchOn}
+              disabled={packageCount === 0}
+              onChange={handleToggleActive}
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 rounded-full transition-colors duration-200 ${
+                isSwitchOn ? 'bg-emerald-500' : 'bg-neutral-800'
+              }`}
+            />
+            <div
+              className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ${
+                isSwitchOn ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </div>
+
+          <div className="flex flex-col text-left">
+            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>{isSwitchOn ? 'Media Kit Active' : 'Media Kit Disabled'}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isSwitchOn ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-600'}`} />
+            </span>
+            <span className="text-[10px] text-neutral-400">
+              {packageCount === 0
+                ? 'Add at least 1 package to activate'
+                : isSwitchOn
+                ? 'Visible on public bio & live preview'
+                : 'Hidden from bio profile'}
+            </span>
+          </div>
+        </label>
+
+        {/* Save Button */}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          {savedSuccess && (
+            <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4" /> Updated!
+            </p>
+          )}
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={handleSave}
+            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/20"
+          >
+            <Save className="w-4 h-4" />
+            <span>{saving ? 'Saving...' : 'Save Media Kit'}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

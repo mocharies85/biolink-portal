@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Flame } from 'lucide-react';
-import { ProfileData, LinkItem, StoryItem } from '../types';
+import { Flame, Briefcase, ExternalLink, Video } from 'lucide-react';
+import { ProfileData, LinkItem, StoryItem, MediaKitData } from '../types';
 
 interface PhoneMockupProps {
   profile: ProfileData;
@@ -11,13 +11,18 @@ interface PhoneMockupProps {
   activeUsername: string;
   isProUser: boolean;
   activeTheme: {
-    mockupBg: string;
-    cardBg: string;
-    cardBorder: string;
-    textPrimary: string;
-    textSecondary: string;
-    accent: string;
+    mockupBg?: string;
+    bg?: string;
+    pageBg?: string;
+    cardBg?: string;
+    card?: string;
+    cardBorder?: string;
+    textPrimary?: string;
+    textSecondary?: string;
+    accent?: string;
+    text?: string;
   };
+  mediaKit?: MediaKitData;
 }
 
 export default function PhoneMockup({
@@ -27,11 +32,33 @@ export default function PhoneMockup({
   activeUsername,
   isProUser,
   activeTheme,
+  mediaKit,
 }: PhoneMockupProps) {
+  // Verifikasi apakah Media Kit aktif dan memiliki minimal 1 paket
+  const hasValidPackages = (mediaKit?.rate_cards?.length ?? 0) > 0;
+  const isMediaKitShown = Boolean(isProUser && mediaKit?.is_enabled && hasValidPackages);
+
+  // Fallback kelas tema agar selalu sinkron
+  const bgClass =
+    activeTheme?.mockupBg ||
+    activeTheme?.bg ||
+    activeTheme?.pageBg ||
+    'bg-neutral-950';
+
+  const cardClass =
+    activeTheme?.cardBg ||
+    activeTheme?.card ||
+    'bg-neutral-900/90';
+
+  const borderClass = activeTheme?.cardBorder || 'border-neutral-800';
+  const textPrimaryClass = activeTheme?.textPrimary || activeTheme?.text || 'text-white';
+  const textSecondaryClass = activeTheme?.textSecondary || 'text-neutral-400';
+  const accentClass = activeTheme?.accent || 'text-emerald-400';
+
   return (
     <aside className="hidden xl:flex w-96 bg-neutral-900/40 border-l border-neutral-800 p-8 items-center justify-center shrink-0">
       <div
-        className={`w-full max-w-[280px] h-[560px] border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden transition-all duration-300 ${activeTheme.mockupBg}`}
+        className={`w-full max-w-[280px] h-[560px] border-[6px] border-neutral-800 rounded-[40px] shadow-2xl p-4 flex flex-col items-center relative overflow-hidden transition-all duration-300 ${bgClass}`}
         style={
           isProUser && profile.bg_image
             ? {
@@ -42,13 +69,19 @@ export default function PhoneMockup({
             : undefined
         }
       >
+        {/* Dynamic Island / Notch Mockup */}
         <div className="w-20 h-4 bg-neutral-800/80 rounded-full mb-5 shrink-0" />
 
-        <div className="w-full flex-1 overflow-y-auto flex flex-col items-center">
+        {/* Scrollable Bio Screen */}
+        <div className="w-full flex-1 overflow-y-auto flex flex-col items-center no-scrollbar">
+          {/* Avatar Profile */}
           <div className="relative">
             <img
-              src={profile.avatar}
+              src={profile.avatar || '/default-avatar.svg'}
               alt={profile.name}
+              onError={(e) => {
+                e.currentTarget.src = '/default-avatar.svg';
+              }}
               className={`w-16 h-16 rounded-full object-cover mb-2 shrink-0 shadow-lg transition ${
                 stories.length > 0
                   ? 'border-2 border-emerald-400 ring-2 ring-emerald-400/50'
@@ -62,8 +95,9 @@ export default function PhoneMockup({
             )}
           </div>
 
+          {/* Name & PRO Badge */}
           <div className="flex items-center justify-center gap-1 mt-1">
-            <h4 className={`text-xs font-bold text-center truncate max-w-[180px] ${activeTheme.textPrimary}`}>
+            <h4 className={`text-xs font-bold text-center truncate max-w-[180px] ${textPrimaryClass}`}>
               {profile.name}
             </h4>
             {isProUser && (
@@ -73,11 +107,11 @@ export default function PhoneMockup({
             )}
           </div>
 
-          <p className={`text-[10px] font-medium text-center ${activeTheme.accent}`}>
+          <p className={`text-[10px] font-medium text-center ${accentClass}`}>
             {profile.tagline}
           </p>
           {profile.bio && (
-            <p className={`text-[9px] text-center mt-1 px-2 line-clamp-2 leading-relaxed ${activeTheme.textSecondary}`}>
+            <p className={`text-[9px] text-center mt-1 px-2 line-clamp-2 leading-relaxed ${textSecondaryClass}`}>
               {profile.bio}
             </p>
           )}
@@ -118,7 +152,33 @@ export default function PhoneMockup({
             </div>
           )}
 
-          {/* Links in Mockup */}
+          {/* Product Showcase Video Preview */}
+          {isProUser && profile.show_featured_video === 1 && profile.featured_video_url && (
+            <div className="w-full my-2 rounded-xl overflow-hidden border border-neutral-800 bg-black aspect-video relative shrink-0 shadow-inner">
+              <video
+                src={profile.featured_video_url}
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-1 right-1 bg-black/60 rounded px-1 py-0.5 text-[8px] text-white flex items-center gap-0.5">
+                <Video className="w-2.5 h-2.5 text-emerald-400" />
+              </div>
+            </div>
+          )}
+
+          {/* Creator Media Kit Button (Otomatis tampil hanya jika ON & paket > 0) */}
+          {isMediaKitShown && (
+            <div className="w-full my-1.5 py-2 px-2.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/25 to-amber-500/15 border border-amber-500/40 text-amber-300 font-bold text-[9px] flex items-center justify-between transition shadow-sm animate-fade-in">
+              <div className="flex items-center gap-1.5 truncate">
+                <Briefcase className="w-3 h-3 text-amber-400 shrink-0" />
+                <span className="truncate">View Creator Media Kit &amp; Rates</span>
+              </div>
+              <ExternalLink className="w-2.5 h-2.5 text-amber-400/80 shrink-0" />
+            </div>
+          )}
+
+          {/* Links List in Mockup */}
           <div className="w-full flex flex-col gap-2 mt-2">
             {links.map((l) => {
               const isSpotlight = l.is_spotlight === 1;
@@ -129,7 +189,7 @@ export default function PhoneMockup({
                   className={`relative w-full py-2.5 px-3 rounded-xl border text-[10px] text-center truncate shadow-sm transition backdrop-blur-sm ${
                     isSpotlight
                       ? 'bg-gradient-to-r from-amber-500/20 via-neutral-900 to-amber-500/20 border-amber-400 text-amber-300 font-bold shadow-amber-500/10'
-                      : `${activeTheme.cardBg} ${activeTheme.cardBorder} ${activeTheme.textPrimary}`
+                      : `${cardClass} ${borderClass} ${textPrimaryClass}`
                   }`}
                 >
                   {isSpotlight && (

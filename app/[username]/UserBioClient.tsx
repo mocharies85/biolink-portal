@@ -43,6 +43,9 @@ export default function UserBioClient() {
   const [isProUser, setIsProUser] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
+  // Media Kit Status State
+  const [isMediaKitActive, setIsMediaKitActive] = useState(false);
+
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [isStoryOpen, setIsStoryOpen] = useState(false);
 
@@ -143,6 +146,24 @@ export default function UserBioClient() {
         setStories(Array.isArray(data.stories) ? data.stories : []);
       })
       .catch((err) => console.error('Failed to load stories:', err));
+
+    // Fetch Media Kit Status
+    fetch(`/api/mediakit?username=${encodeURIComponent(username)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isCurrent) return;
+        const kit = data?.mediakit || data?.mediaKit;
+        if (kit) {
+          const pkgs = kit.rate_cards || kit.packages || [];
+          const hasPackages = pkgs.length > 0;
+          setIsMediaKitActive(Boolean(kit.is_enabled && hasPackages));
+        } else {
+          setIsMediaKitActive(false);
+        }
+      })
+      .catch(() => {
+        if (isCurrent) setIsMediaKitActive(false);
+      });
 
     const sessionKey = `curiolot_viewed_${username}`;
     if (typeof window !== 'undefined' && !sessionStorage.getItem(sessionKey)) {
@@ -392,6 +413,7 @@ export default function UserBioClient() {
         <BioMediaKitBanner
           username={username}
           isPro={isPro}
+          isEnabled={isMediaKitActive}
         />
 
         <BioLinksList

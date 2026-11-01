@@ -98,34 +98,22 @@ export default function AdminDashboard() {
   const [detailedData, setDetailedData] = useState<DetailedAnalyticsData | null>(null);
   const [loadingDetailed, setLoadingDetailed] = useState(false);
 
-  // Media Kit State
+  // Media Kit State (Default: 0 / Kosong & OFF untuk user baru)
   const [mediaKit, setMediaKit] = useState<MediaKitData>({
-    is_enabled: true,
+    is_enabled: false,
     headline: 'Content Creator & Brand Partner',
     about: 'I create engaging short-form content, digital product reviews, and creative portfolio showcases for modern brands.',
     contact_email: '',
-    total_followers: 50000,
-    monthly_impressions: 250000,
-    engagement_rate: 4.8,
+    total_followers: 0,
+    monthly_impressions: 0,
+    engagement_rate: 0,
     primary_niche: 'Tech & Lifestyle',
     audience_country: 'United States',
-    rate_cards: [
-      {
-        id: '1',
-        platform: 'Instagram',
-        deliverable: '1x Dedicated Reel Video',
-        price: 150,
-        description: 'Includes 30 days usage rights and link in bio.',
-      },
-      {
-        id: '2',
-        platform: 'Curiolot Bio',
-        deliverable: 'Top Spotlight Link Banner (30 Days)',
-        price: 50,
-        description: 'Fixed top-level biolink card with HOT badge & neon glow.',
-      },
-    ],
+    rate_cards: [],
   });
+
+  // Ref untuk melacak perubahan jumlah paket secara real-time
+  const prevPackagesCountRef = useRef<number>(0);
 
   // Modals Visibility
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -158,6 +146,23 @@ export default function AdminDashboard() {
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&data=${encodeURIComponent(
     liveProfileUrl
   )}`;
+
+  // Logika Otomatis ON/OFF Media Kit Berdasarkan Jumlah Paket
+  useEffect(() => {
+    const currentCount = mediaKit.rate_cards?.length || 0;
+    const prevCount = prevPackagesCountRef.current;
+
+    // Jika paket 0 -> Otomatis paksa OFF
+    if (currentCount === 0 && mediaKit.is_enabled) {
+      setMediaKit((prev) => ({ ...prev, is_enabled: false }));
+    }
+    // Jika awalnya 0 paket lalu bertambah ada paket -> Default otomatis ON
+    else if (prevCount === 0 && currentCount > 0 && !mediaKit.is_enabled) {
+      setMediaKit((prev) => ({ ...prev, is_enabled: true }));
+    }
+
+    prevPackagesCountRef.current = currentCount;
+  }, [mediaKit.rate_cards?.length, mediaKit.is_enabled]);
 
   // Session Validation
   useEffect(() => {
@@ -288,8 +293,15 @@ export default function AdminDashboard() {
       const res = await fetch(`/api/mediakit?username=${encodeURIComponent(activeUsername)}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.mediakit) {
-          setMediaKit(data.mediakit);
+        const kit = data.mediakit || data.mediaKit;
+        if (kit) {
+          const pkgs = kit.rate_cards || kit.packages || [];
+          setMediaKit({
+            ...kit,
+            rate_cards: pkgs,
+            is_enabled: pkgs.length > 0 ? Boolean(kit.is_enabled) : false,
+          });
+          prevPackagesCountRef.current = pkgs.length;
         }
       }
     } catch (err) {
@@ -711,6 +723,7 @@ export default function AdminDashboard() {
         activeUsername={activeUsername}
         isProUser={isProUser}
         activeTheme={activeTheme}
+        mediaKit={mediaKit}
       />
 
       {/* Pop-up Modals Container */}
