@@ -139,7 +139,37 @@ const THEMES: Record<string, {
     accent: 'text-amber-400',
     accentBadge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     inboxBg: 'bg-[#260e12]/70 border-rose-950/80',
-  }
+  },
+  aurora: {
+    pageBg: 'bg-[#03131e] text-cyan-50',
+    cardBg: 'bg-[#062438]/90 hover:bg-[#0a3552]/80',
+    cardBorder: 'border-cyan-900/60 hover:border-cyan-500/60',
+    textPrimary: 'text-cyan-100',
+    textSecondary: 'text-cyan-300/70',
+    accent: 'text-cyan-400',
+    accentBadge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+    inboxBg: 'bg-[#062438]/70 border-cyan-900/80',
+  },
+  amethyst: {
+    pageBg: 'bg-[#0f041c] text-purple-50',
+    cardBg: 'bg-[#1c0836]/90 hover:bg-[#2b0d52]/80',
+    cardBorder: 'border-purple-900/60 hover:border-purple-500/60',
+    textPrimary: 'text-purple-100',
+    textSecondary: 'text-purple-300/70',
+    accent: 'text-purple-400',
+    accentBadge: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    inboxBg: 'bg-[#1c0836]/70 border-purple-900/80',
+  },
+  gold: {
+    pageBg: 'bg-[#140e02] text-amber-50',
+    cardBg: 'bg-[#261b05]/90 hover:bg-[#382808]/80',
+    cardBorder: 'border-amber-900/60 hover:border-amber-500/60',
+    textPrimary: 'text-amber-100',
+    textSecondary: 'text-amber-300/70',
+    accent: 'text-amber-400',
+    accentBadge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    inboxBg: 'bg-[#261b05]/70 border-amber-900/80',
+  },
 };
 
 // Spotify Embed Extractor
