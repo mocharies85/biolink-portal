@@ -1,219 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Send, 
-  MessageSquare, 
-  ExternalLink, 
-  Heart, 
-  Sparkles, 
-  CheckCircle2,
-  Share2,
-  Check,
-  Flame,
-  QrCode,
-  Download,
-  X,
-  Lock,
-  Disc3,
-  Volume2,
-  VolumeX,
-  Briefcase
-} from 'lucide-react';
+import { Heart } from 'lucide-react';
 import StoryModal from '@/components/StoryModal';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { useLanguage } from '@/context/LanguageContext';
 
-interface LinkItem {
-  id: number;
-  title: string;
-  url: string;
-  description?: string;
-  desc?: string;
-  clicks?: number;
-  is_active?: number;
-  active?: number | boolean;
-  is_spotlight?: number;
-  is_highlighted?: number | boolean;
-  highlight?: number | boolean;
-  has_pin?: boolean;
-  pin_code?: string | null;
-  schedule_start?: string | null;
-  schedule_end?: string | null;
-  is_header?: number;
-}
-
-interface SocialLinks {
-  instagram?: string;
-  tiktok?: string;
-  youtube?: string;
-  x?: string;
-  github?: string;
-  whatsapp?: string;
-  facebook?: string;
-  linkedin?: string;
-  discord?: string;
-  twitch?: string;
-}
-
-interface StoryItem {
-  id: string;
-  media_url: string;
-  media_urls?: string | null;
-  caption?: string;
-  audio_url?: string;
-  link_url?: string;
-  duration?: number;
-  total_duration?: number;
-  animation_style?: 'slide' | 'fade' | 'zoom';
-  created_at: number;
-}
-
-// Preset Theme Configurations
-const THEMES: Record<string, {
-  pageBg: string;
-  cardBg: string;
-  cardBorder: string;
-  textPrimary: string;
-  textSecondary: string;
-  accent: string;
-  accentBadge: string;
-  inboxBg: string;
-}> = {
-  dark: {
-    pageBg: 'bg-neutral-950 text-neutral-100',
-    cardBg: 'bg-neutral-900/90 hover:bg-neutral-800/80',
-    cardBorder: 'border-neutral-800 hover:border-neutral-700',
-    textPrimary: 'text-neutral-100',
-    textSecondary: 'text-neutral-400',
-    accent: 'text-emerald-400',
-    accentBadge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    inboxBg: 'bg-neutral-900/60 border-neutral-800/80',
-  },
-  light: {
-    pageBg: 'bg-slate-50 text-slate-900',
-    cardBg: 'bg-white hover:bg-slate-100/90 shadow-sm',
-    cardBorder: 'border-slate-200 hover:border-slate-300',
-    textPrimary: 'text-slate-900',
-    textSecondary: 'text-slate-600',
-    accent: 'text-indigo-600',
-    accentBadge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    inboxBg: 'bg-white/80 border-slate-200 shadow-sm',
-  },
-  emerald: {
-    pageBg: 'bg-[#061a14] text-emerald-50',
-    cardBg: 'bg-[#0a261e]/90 hover:bg-[#0e3328]/80',
-    cardBorder: 'border-emerald-900/60 hover:border-emerald-700/60',
-    textPrimary: 'text-emerald-100',
-    textSecondary: 'text-emerald-400/80',
-    accent: 'text-emerald-400',
-    accentBadge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    inboxBg: 'bg-[#0a261e]/70 border-emerald-900/80',
-  },
-  midnight: {
-    pageBg: 'bg-[#0b0f19] text-blue-50',
-    cardBg: 'bg-[#111827]/90 hover:bg-[#1f2937]/80',
-    cardBorder: 'border-slate-800 hover:border-slate-700',
-    textPrimary: 'text-slate-100',
-    textSecondary: 'text-slate-400',
-    accent: 'text-sky-400',
-    accentBadge: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
-    inboxBg: 'bg-[#111827]/70 border-slate-800',
-  },
-  cyberpunk: {
-    pageBg: 'bg-[#080312] text-fuchsia-50',
-    cardBg: 'bg-[#150a29]/90 hover:bg-[#200f3e]/80',
-    cardBorder: 'border-fuchsia-900/60 hover:border-fuchsia-500/60',
-    textPrimary: 'text-fuchsia-100',
-    textSecondary: 'text-fuchsia-300/70',
-    accent: 'text-yellow-400',
-    accentBadge: 'bg-yellow-400/20 text-yellow-300 border-yellow-400/30',
-    inboxBg: 'bg-[#150a29]/70 border-fuchsia-900/80',
-  },
-  sunset: {
-    pageBg: 'bg-[#18080a] text-amber-50',
-    cardBg: 'bg-[#260e12]/90 hover:bg-[#38141a]/80',
-    cardBorder: 'border-amber-950/80 hover:border-rose-900/80',
-    textPrimary: 'text-amber-100',
-    textSecondary: 'text-rose-300/80',
-    accent: 'text-amber-400',
-    accentBadge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    inboxBg: 'bg-[#260e12]/70 border-rose-950/80',
-  },
-  aurora: {
-    pageBg: 'bg-[#03131e] text-cyan-50',
-    cardBg: 'bg-[#062438]/90 hover:bg-[#0a3552]/80',
-    cardBorder: 'border-cyan-900/60 hover:border-cyan-500/60',
-    textPrimary: 'text-cyan-100',
-    textSecondary: 'text-cyan-300/70',
-    accent: 'text-cyan-400',
-    accentBadge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-    inboxBg: 'bg-[#062438]/70 border-cyan-900/80',
-  },
-  amethyst: {
-    pageBg: 'bg-[#0f041c] text-purple-50',
-    cardBg: 'bg-[#1c0836]/90 hover:bg-[#2b0d52]/80',
-    cardBorder: 'border-purple-900/60 hover:border-purple-500/60',
-    textPrimary: 'text-purple-100',
-    textSecondary: 'text-purple-300/70',
-    accent: 'text-purple-400',
-    accentBadge: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    inboxBg: 'bg-[#1c0836]/70 border-purple-900/80',
-  },
-  gold: {
-    pageBg: 'bg-[#140e02] text-amber-50',
-    cardBg: 'bg-[#261b05]/90 hover:bg-[#382808]/80',
-    cardBorder: 'border-amber-900/60 hover:border-amber-500/60',
-    textPrimary: 'text-amber-100',
-    textSecondary: 'text-amber-300/70',
-    accent: 'text-amber-400',
-    accentBadge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    inboxBg: 'bg-[#261b05]/70 border-amber-900/80',
-  },
-};
-
-// Spotify Embed Extractor
-const getSpotifyEmbedUrl = (url: string): string | null => {
-  try {
-    const parsed = new URL(url);
-    if (!parsed.hostname.includes('spotify.com')) return null;
-
-    const match = parsed.pathname.match(/\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/);
-    if (match) {
-      const [, type, id] = match;
-      return `https://open.spotify.com/embed/${type}/${id}?utm_source=generator&theme=0`;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-};
-
-// YouTube Embed Extractor
-const getYouTubeEmbedUrl = (url: string): string | null => {
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname === 'youtu.be') {
-      const id = parsed.pathname.slice(1).split(/[?&]/)[0];
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
-    if (parsed.hostname.includes('youtube.com')) {
-      if (parsed.pathname.startsWith('/shorts/')) {
-        const id = parsed.pathname.split('/shorts/')[1]?.split(/[?&]/)[0];
-        return id ? `https://www.youtube.com/embed/${id}` : null;
-      }
-      const id = parsed.searchParams.get('v');
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-};
+import { UserProfile, LinkItem, StoryItem, THEMES } from './types';
+import BioHeader from './components/BioHeader';
+import BioShowcaseVideo from './components/BioShowcaseVideo';
+import BioMediaKitBanner from './components/BioMediaKitBanner';
+import BioLinksList from './components/BioLinksList';
+import BioMessaging from './components/BioMessaging';
+import BioAudioPlayer from './components/BioAudioPlayer';
+import BioModals from './components/BioModals';
 
 export default function UserBioClient() {
-  const { t } = useLanguage();
-
   const [username, setUsername] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
@@ -224,22 +24,7 @@ export default function UserBioClient() {
     return '';
   });
 
-  const [profile, setProfile] = useState<{
-    name: string;
-    tagline: string;
-    bio: string;
-    avatar: string;
-    socials?: string | SocialLinks;
-    is_pro?: number;
-    theme?: string;
-    bg_image?: string;
-    featured_video_url?: string;
-    show_featured_video?: number;
-    featured_video_autoplay?: number;
-    featured_video_title?: string;
-    bg_music_url?: string;
-    bg_music_title?: string;
-  }>({
+  const [profile, setProfile] = useState<UserProfile>({
     name: '',
     tagline: 'Digital Creator',
     bio: '',
@@ -261,7 +46,7 @@ export default function UserBioClient() {
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [isStoryOpen, setIsStoryOpen] = useState(false);
 
-  // Background Music, Showcase Video, and Story Audio Sync Refs & States
+  // Audio Sync Refs & States
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
@@ -304,10 +89,7 @@ export default function UserBioClient() {
         return;
       }
 
-      // 1. Record analytics click
       handleLinkClick(targetPinLink.id);
-
-      // 2. Open destination URL in new tab
       window.open(data.url, '_blank', 'noopener,noreferrer');
       setPinModalOpen(false);
       setPinInput('');
@@ -338,9 +120,7 @@ export default function UserBioClient() {
       .then((res) => res.json())
       .then((data) => {
         if (!isCurrent) return;
-        if (data.profile) {
-          setProfile(data.profile);
-        }
+        if (data.profile) setProfile(data.profile);
       })
       .catch((err) => console.error('Failed to load profile:', err));
 
@@ -376,7 +156,7 @@ export default function UserBioClient() {
     };
   }, [username]);
 
-  // Audio Synchronization: Auto-mute background music when showcase video plays with sound
+  // Audio Sync with Video
   useEffect(() => {
     const video = videoRef.current;
     const bgAudio = bgMusicRef.current;
@@ -384,7 +164,6 @@ export default function UserBioClient() {
 
     const handleAudioSync = () => {
       const isVideoSoundActive = !video.paused && !video.muted && video.volume > 0;
-
       if (isVideoSoundActive) {
         if (!bgAudio.paused) {
           bgAudio.pause();
@@ -411,7 +190,7 @@ export default function UserBioClient() {
     };
   }, [isPlayingMusic, musicMutedByVideo, musicMutedByStory, isStoryOpen]);
 
-  // Audio Synchronization: Pause background music when Story modal is open, resume when closed
+  // Audio Sync with Stories
   useEffect(() => {
     const bgAudio = bgMusicRef.current;
     if (!bgAudio) return;
@@ -429,7 +208,7 @@ export default function UserBioClient() {
     }
   }, [isStoryOpen, isPlayingMusic, musicMutedByVideo, musicMutedByStory]);
 
-  // Global Audio Event Listener: prevent audio collisions with any other media elements
+  // Global Audio Listener
   useEffect(() => {
     const handleGlobalPlay = (e: Event) => {
       const playingElement = e.target as HTMLMediaElement;
@@ -446,7 +225,6 @@ export default function UserBioClient() {
     };
   }, []);
 
-  // Manual Background Music Toggle Button
   const toggleBackgroundMusic = () => {
     const audio = bgMusicRef.current;
     if (!audio) return;
@@ -552,53 +330,6 @@ export default function UserBioClient() {
     }
   };
 
-  const [senderName, setSenderName] = useState('');
-  const [message, setMessage] = useState('');
-  const [isSent, setIsSent] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-
-    setLoading(true);
-    try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: username,
-          sender: senderName.trim() || 'Anonymous',
-          content: message.trim(),
-        }),
-      });
-
-      if (res.ok) {
-        setIsSent(true);
-        setSenderName('');
-        setMessage('');
-        setTimeout(() => setIsSent(false), 5000);
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        alert(errData.error || 'Failed to send message.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Network connection error.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  let parsedSocials: SocialLinks = {};
-  if (typeof profile.socials === 'string') {
-    try {
-      parsedSocials = JSON.parse(profile.socials);
-    } catch {}
-  } else if (profile.socials) {
-    parsedSocials = profile.socials;
-  }
-
   const isPro = isProUser || profile.is_pro === 1;
   const currentThemeKey = profile.theme && THEMES[profile.theme] ? profile.theme : 'dark';
   const theme = THEMES[currentThemeKey];
@@ -620,7 +351,7 @@ export default function UserBioClient() {
           : undefined
       }
     >
-      {/* Background Audio Hidden Player */}
+      {/* Background Audio Element */}
       {hasBgMusic && (
         <audio
           ref={bgMusicRef}
@@ -639,647 +370,66 @@ export default function UserBioClient() {
       )}
 
       <div className="w-full max-w-md flex flex-col items-center relative z-10">
-        
-        {/* Top Navigation Bar */}
-        <div className="w-full flex items-center justify-between mb-6 pb-3 border-b border-white/10 gap-2">
-          <a
-            href="/register"
-            className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full transition shadow-sm ${theme.accentBadge}`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Create your link</span>
-          </a>
+        <BioHeader
+          username={username}
+          profile={profile}
+          isPro={isPro}
+          theme={theme}
+          stories={stories}
+          isCopied={isCopied}
+          onOpenStory={() => setIsStoryOpen(true)}
+          onOpenQr={() => setShowQrModal(true)}
+          onShare={handleShare}
+        />
 
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
+        <BioShowcaseVideo
+          profile={profile}
+          isPro={isPro}
+          theme={theme}
+          videoRef={videoRef}
+        />
 
-            <a
-              href="/login"
-              className="text-[11px] font-medium text-neutral-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/10 transition"
-            >
-              Log in
-            </a>
+        <BioMediaKitBanner
+          username={username}
+          isPro={isPro}
+        />
 
-            <button
-              onClick={() => setShowQrModal(true)}
-              aria-label="Show QR Code"
-              title="Show QR Code"
-              className="p-2 rounded-full border border-white/15 bg-black/30 hover:bg-black/50 text-neutral-300 hover:text-white transition shadow-md"
-            >
-              <QrCode className="w-3.5 h-3.5" />
-            </button>
+        <BioLinksList
+          links={links}
+          loadingLinks={loadingLinks}
+          isPro={isPro}
+          theme={theme}
+          onLinkClick={handleLinkClick}
+          onRequirePin={(link: LinkItem) => {
+            setTargetPinLink(link);
+            setPinInput('');
+            setPinError('');
+            setPinModalOpen(true);
+          }}
+        />
 
-            <button 
-              onClick={handleShare} 
-              aria-label="Share profile"
-              className={`p-2 rounded-full border transition-all duration-200 flex items-center gap-1.5 shadow-md ${
-                isCopied
-                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
-                  : 'bg-black/30 border-white/15 hover:bg-black/50 text-neutral-300 hover:text-white'
-              }`}
-            >
-              {isCopied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-[10px] font-semibold text-emerald-300 pr-1">Copied!</span>
-                </>
-              ) : (
-                <Share2 className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </div>
-        </div>
+        <BioMessaging
+          username={username}
+          theme={theme}
+        />
 
-        {/* Profile Header */}
-        <header className="flex flex-col items-center text-center mb-6">
-          <div className="relative group">
-            <div 
-              onClick={() => {
-                if (stories.length > 0) setIsStoryOpen(true);
-              }}
-              className={`w-24 h-24 rounded-full p-1 transition-all duration-300 ${
-                stories.length > 0 
-                  ? 'bg-gradient-to-tr from-emerald-400 via-teal-300 to-emerald-500 ring-4 ring-emerald-500/30 cursor-pointer hover:scale-105 animate-pulse' 
-                  : 'bg-gradient-to-tr from-emerald-400 via-teal-500 to-indigo-500'
-              } shadow-xl shadow-emerald-500/10`}
-            >
-              <img
-                src={profile.avatar || '/default-avatar.svg'}
-                alt={profile.name || username}
-                onError={(e) => {
-                  e.currentTarget.src = '/default-avatar.svg';
-                }}
-                className="w-full h-full rounded-full object-cover border-2 border-neutral-950"
-              />
-            </div>
-
-            {stories.length > 0 ? (
-              <span 
-                onClick={() => setIsStoryOpen(true)}
-                className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-emerald-500 text-neutral-950 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-md cursor-pointer pointer-events-auto"
-              >
-                Story
-              </span>
-            ) : (
-              <span className="absolute bottom-1 right-1 bg-emerald-500 text-neutral-950 p-1 rounded-full text-xs shadow-md">
-                <Sparkles className="w-3.5 h-3.5" />
-              </span>
-            )}
-          </div>
-
-          <div className="mt-4 flex items-center justify-center gap-1.5">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {profile.name || username.toUpperCase()}
-            </h1>
-            {isPro && (
-              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30 flex items-center gap-0.5 shadow-sm">
-                <Sparkles className="w-2.5 h-2.5" /> PRO
-              </span>
-            )}
-          </div>
-
-          <p className={`text-xs font-semibold mt-1 tracking-wider uppercase ${theme.accent}`}>
-            @{username} {profile.tagline ? `• ${profile.tagline}` : ''}
-          </p>
-
-          {profile.bio && (
-            <p className={`text-sm mt-2 max-w-xs leading-relaxed ${theme.textSecondary}`}>
-              {profile.bio}
-            </p>
-          )}
-        </header>
-
-        {/* Social Icons Bar */}
-        {Boolean(
-          parsedSocials.instagram ||
-          parsedSocials.tiktok ||
-          parsedSocials.youtube ||
-          parsedSocials.x ||
-          parsedSocials.github ||
-          parsedSocials.whatsapp ||
-          parsedSocials.facebook ||
-          parsedSocials.linkedin ||
-          parsedSocials.discord ||
-          parsedSocials.twitch
-        ) && (
-          <div className="flex items-center justify-center gap-3 mb-7 flex-wrap">
-            {parsedSocials.instagram && (
-              <a
-                href={`https://instagram.com/${parsedSocials.instagram.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-pink-500/50 hover:text-pink-400 text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="Instagram"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-              </a>
-            )}
-
-            {parsedSocials.tiktok && (
-              <a
-                href={`https://tiktok.com/@${parsedSocials.tiktok.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-cyan-500/50 hover:text-cyan-400 text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="TikTok"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-              </a>
-            )}
-
-            {parsedSocials.youtube && (
-              <a
-                href={parsedSocials.youtube}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-red-500/50 hover:text-red-400 text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="YouTube"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-              </a>
-            )}
-
-            {parsedSocials.x && (
-              <a
-                href={`https://x.com/${parsedSocials.x.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-neutral-400 hover:text-white text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="X (Twitter)"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              </a>
-            )}
-
-            {parsedSocials.github && (
-              <a
-                href={`https://github.com/${parsedSocials.github.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-purple-500/50 hover:text-purple-400 text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="GitHub"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-              </a>
-            )}
-
-            {parsedSocials.whatsapp && (
-              <a
-                href={`https://wa.me/${parsedSocials.whatsapp.replace(/[^0-9]/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-emerald-500/50 hover:text-emerald-400 text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="WhatsApp"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.634.053-1.892-.47-1.464-.608-2.433-2.094-2.508-2.193-.075-.098-.598-.795-.598-1.517 0-.722.378-1.077.514-1.223.136-.145.297-.182.396-.182.099 0 .198.001.284.005.092.004.215-.035.335.253.125.298.428 1.042.465 1.117.037.075.062.162.012.261-.05.098-.075.161-.15.248-.075.086-.157.192-.224.258-.075.074-.153.155-.066.304.087.149.387.639.831 1.034.571.508 1.054.665 1.203.74.149.074.236.062.323-.037.087-.1.372-.434.471-.583.099-.149.198-.124.334-.074.137.05 8.65 4.09 1.002 4.254z"/></svg>
-              </a>
-            )}
-
-            {/* Facebook */}
-            {parsedSocials.facebook && (
-              <a
-                href={
-                  parsedSocials.facebook.startsWith('http')
-                    ? parsedSocials.facebook
-                    : `https://facebook.com/${parsedSocials.facebook.replace('@', '')}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-blue-600/50 hover:text-blue-500 text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="Facebook"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-              </a>
-            )}
-
-            {/* LinkedIn */}
-            {parsedSocials.linkedin && (
-              <a
-                href={
-                  parsedSocials.linkedin.startsWith('http')
-                    ? parsedSocials.linkedin
-                    : `https://linkedin.com/in/${parsedSocials.linkedin.replace('@', '')}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-sky-600/50 hover:text-sky-400 text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="LinkedIn"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-              </a>
-            )}
-
-            {/* Discord */}
-            {parsedSocials.discord && (
-              <a
-                href={
-                  parsedSocials.discord.startsWith('http')
-                    ? parsedSocials.discord
-                    : `https://discord.gg/${parsedSocials.discord}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-indigo-500/50 hover:text-indigo-400 text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="Discord"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
-              </a>
-            )}
-
-            {/* Twitch */}
-            {parsedSocials.twitch && (
-              <a
-                href={
-                  parsedSocials.twitch.startsWith('http')
-                    ? parsedSocials.twitch
-                    : `https://twitch.tv/${parsedSocials.twitch.replace('@', '')}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-purple-500/50 hover:text-purple-400 text-neutral-300 transition transform hover:-translate-y-0.5"
-                title="Twitch"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.429h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
-              </a>
-            )}
-          </div>
-        )}
-
-        {/* Product Showcase Video (PRO Hero Spotlight) */}
-        {Boolean(isPro && profile.show_featured_video === 1 && profile.featured_video_url) && (
-          <section className="w-full mb-6">
-            <div className={`w-full rounded-2xl overflow-hidden border p-3 shadow-lg transition-all ${theme.cardBg} ${theme.cardBorder}`}>
-              {profile.featured_video_title && (
-                <p className={`text-xs font-bold mb-2.5 px-1 truncate ${theme.textPrimary}`}>
-                  {profile.featured_video_title}
-                </p>
-              )}
-              <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black shadow-inner">
-                <video
-                  ref={videoRef}
-                  src={profile.featured_video_url}
-                  controls
-                  autoPlay={profile.featured_video_autoplay === 1}
-                  muted={profile.featured_video_autoplay === 1}
-                  loop={profile.featured_video_autoplay === 1}
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Creator Media Kit Direct Access (PRO Only) */}
-        {isPro && (
-          <div className="w-full mb-5">
-            <a
-              href={`/${username}/mediakit`}
-              className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/20 to-amber-500/10 border border-amber-500/30 hover:border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-between transition group shadow-sm hover:scale-[1.01] active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
-                  <Briefcase className="w-3.5 h-3.5" />
-                </div>
-                <span>View Creator Media Kit &amp; Rates</span>
-              </div>
-              <ExternalLink className="w-3.5 h-3.5 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition" />
-            </a>
-          </div>
-        )}
-
-        {/* Links List with Spotlight, Media Embed & PIN Protection */}
-        <section className="w-full flex flex-col gap-3.5 mb-8">
-          {loadingLinks ? (
-            <div className="p-8 text-center text-xs text-neutral-500 animate-pulse">
-              Loading links...
-            </div>
-          ) : (
-            links
-              .filter((link: any) => {
-                if (link.is_header === 1) return true;
-                if (link.is_active === 0 || link.active === false) return false;
-
-                const now = new Date().getTime();
-
-                if (link.schedule_start) {
-                  const startTime = new Date(link.schedule_start).getTime();
-                  if (!isNaN(startTime) && now < startTime) {
-                    return false;
-                  }
-                }
-
-                if (link.schedule_end) {
-                  const endTime = new Date(link.schedule_end).getTime();
-                  if (!isNaN(endTime) && now > endTime) {
-                    return false;
-                  }
-                }
-
-                return true;
-              })
-              .map((link) => {
-                // Category Section Header
-                if (link.is_header === 1) {
-                  return (
-                    <div key={link.id} className="w-full pt-5 pb-1 text-center">
-                      <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest px-2">
-                        {link.title}
-                      </h3>
-                    </div>
-                  );
-                }
-
-                const isHighlight = Boolean(link.is_highlighted || (link as any).highlight);
-                const isSpotlight = Boolean(link.is_spotlight === 1 || (link as any).is_spotlight === true);
-                const descText = link.description || (link as any).desc;
-                
-                // PIN Protection Detection
-                const hasPin = Boolean(
-                  link.has_pin ||
-                  (link as any).hasPin ||
-                  (link.pin_code && String(link.pin_code).trim().length > 0)
-                );
-
-                // Media Embed Detection (Disabled if link has PIN protection)
-                const spotifyEmbed = isPro && !hasPin && getSpotifyEmbedUrl(link.url);
-                const youtubeEmbed = isPro && !hasPin && getYouTubeEmbedUrl(link.url);
-
-                if (spotifyEmbed) {
-                  return (
-                    <div
-                      key={link.id}
-                      className={`w-full rounded-2xl overflow-hidden border p-3 transition-all duration-300 shadow-sm ${theme.cardBg} ${theme.cardBorder}`}
-                    >
-                      {link.title && (
-                        <p className={`text-xs font-semibold mb-2.5 px-1 truncate ${theme.textPrimary}`}>
-                          {link.title}
-                        </p>
-                      )}
-                      <iframe
-                        src={spotifyEmbed}
-                        width="100%"
-                        height="152"
-                        frameBorder="0"
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                        loading="lazy"
-                        className="w-full rounded-xl"
-                      />
-                    </div>
-                  );
-                }
-
-                if (youtubeEmbed) {
-                  return (
-                    <div
-                      key={link.id}
-                      className={`w-full rounded-2xl overflow-hidden border p-3 transition-all duration-300 shadow-sm ${theme.cardBg} ${theme.cardBorder}`}
-                    >
-                      {link.title && (
-                        <p className={`text-xs font-semibold mb-2.5 px-1 truncate ${theme.textPrimary}`}>
-                          {link.title}
-                        </p>
-                      )}
-                      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/60 shadow-inner">
-                        <iframe
-                          src={youtubeEmbed}
-                          title={link.title || 'YouTube Video Player'}
-                          className="absolute inset-0 w-full h-full border-0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          loading="lazy"
-                        />
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Standard Link Button
-                return (
-                  <a
-                    key={link.id}
-                    href={hasPin ? '#' : (link.url || '#')}
-                    target={hasPin ? '_self' : '_blank'}
-                    rel="noopener noreferrer"
-                    onClick={(e) => {
-                      if (hasPin) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setTargetPinLink(link);
-                        setPinInput('');
-                        setPinError('');
-                        setPinModalOpen(true);
-                        return;
-                      }
-                      if (!link.url) {
-                        e.preventDefault();
-                        return;
-                      }
-                      handleLinkClick(link.id);
-                    }}
-                    className={`relative group w-full p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between shadow-sm hover:scale-[1.015] active:scale-[0.99] backdrop-blur-md cursor-pointer ${
-                      isSpotlight
-                        ? 'bg-gradient-to-r from-amber-500/15 via-neutral-900 to-amber-500/15 border-2 border-amber-400 shadow-lg shadow-amber-500/20 hover:border-amber-300'
-                        : isHighlight
-                        ? 'bg-gradient-to-r from-emerald-950/40 via-neutral-900 to-neutral-900 border-emerald-500/50 hover:border-emerald-400'
-                        : `${theme.cardBg} ${theme.cardBorder}`
-                    }`}
-                  >
-                    {isSpotlight && (
-                      <span className="absolute -top-2.5 right-4 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-neutral-950 font-black text-[9px] uppercase tracking-wider flex items-center gap-1 shadow-md">
-                        <Flame className="w-2.5 h-2.5 fill-current" /> HOT
-                      </span>
-                    )}
-
-                    <div className="flex flex-col text-left truncate pr-2">
-                      <span className={`text-sm font-semibold flex items-center gap-1.5 truncate ${
-                        isSpotlight ? 'text-amber-300' : theme.textPrimary
-                      }`}>
-                        {hasPin && <Lock className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
-                        {link.title}
-                        {isHighlight && !isSpotlight && (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${theme.accentBadge}`}>
-                            Featured
-                          </span>
-                        )}
-                      </span>
-                      {descText && (
-                        <span className={`text-xs mt-0.5 truncate ${theme.textSecondary}`}>{descText}</span>
-                      )}
-                    </div>
-
-                    <div className={`p-1.5 rounded-xl shrink-0 transition ${
-                      isSpotlight ? 'bg-amber-500/20 text-amber-300' : 'text-neutral-400 group-hover:text-white'
-                    }`}>
-                      {hasPin ? (
-                        <Lock className="w-4 h-4 text-rose-400" />
-                      ) : (
-                        <ExternalLink className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                      )}
-                    </div>
-                  </a>
-                );
-              })
-          )}
-        </section>
-{/* Creator Media Kit Direct Access */}
-        <div className="w-full mb-5">
-          <a
-            href={`/${username}/mediakit`}
-            className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/20 to-amber-500/10 border border-amber-500/30 hover:border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-between transition group shadow-sm hover:scale-[1.01] active:scale-[0.99]"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
-                <Briefcase className="w-3.5 h-3.5" />
-              </div>
-              <span>View Creator Media Kit &amp; Rates</span>
-            </div>
-            <ExternalLink className="w-3.5 h-3.5 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition" />
-          </a>
-        </div>
-        {/* Direct Messaging Section */}
-        <section className={`w-full p-5 rounded-2xl border backdrop-blur-md mb-10 ${theme.inboxBg}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <MessageSquare className={`w-4 h-4 ${theme.accent}`} />
-            <h2 className="text-sm font-semibold">{t('messages')}</h2>
-          </div>
-          <p className={`text-xs mb-4 leading-relaxed ${theme.textSecondary}`}>
-            {t('messageDesc')}
-          </p>
-
-          {isSent ? (
-            <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center flex flex-col items-center gap-1.5">
-              <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-              <p className="text-xs font-semibold text-emerald-300">{t('msgSuccessTitle')}</p>
-              <p className="text-[11px] text-neutral-400">{t('msgSuccessDesc')}</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSendMessage} className="flex flex-col gap-2.5">
-              <input
-                type="text"
-                value={senderName}
-                onChange={(e) => setSenderName(e.target.value)}
-                placeholder={t('namePlaceholder')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500 transition"
-              />
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={3}
-                required
-                placeholder={t('messagePlaceholder')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500 transition resize-none"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-semibold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
-              >
-                {loading ? (
-                  <span>{t('sendingBtn')}</span>
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5" />
-                    <span>{t('sendBtn')}</span>
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-        </section>
-
-        {/* Branding Footer */}
         <footer className="flex flex-col items-center gap-1 text-center text-xs text-neutral-500">
           <p className="flex items-center gap-1 text-[11px]">
             Powered by <Heart className="w-3 h-3 text-rose-500 fill-rose-500 inline" /> Curiolot Link
           </p>
         </footer>
-
       </div>
 
-      {/* Floating Audio Controller (PRO accounts with background music only) */}
-      {hasBgMusic && (
-        <button
-          type="button"
-          onClick={toggleBackgroundMusic}
-          className={`fixed bottom-6 left-6 z-40 px-3.5 py-2 rounded-full border backdrop-blur-xl shadow-2xl flex items-center gap-2.5 transition-all hover:scale-105 ${
-            isMusicAudible
-              ? 'bg-neutral-900/90 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10'
-              : 'bg-neutral-900/80 border-neutral-700/80 text-neutral-300'
-          }`}
-          title={isPlayingMusic ? 'Mute background music' : 'Play background music'}
-        >
-          <Disc3
-            className={`w-4 h-4 text-emerald-400 shrink-0 ${
-              isMusicAudible ? 'animate-spin' : ''
-            }`}
-          />
-          <div className="flex flex-col text-left max-w-[130px] truncate">
-            <span className="text-[10px] font-bold truncate leading-tight text-white">
-              {profile.bg_music_title || 'Background Track'}
-            </span>
-            <span className="text-[8px] text-neutral-400 leading-tight">
-              {musicMutedByStory
-                ? 'Muted for Story'
-                : musicMutedByVideo
-                ? 'Muted for Video'
-                : isPlayingMusic
-                ? 'Playing Ambient'
-                : 'Tap to Play'}
-            </span>
-          </div>
-          <div className="p-1 rounded-full bg-neutral-800 text-neutral-300">
-            {isMusicAudible ? (
-              <Volume2 className="w-3 h-3 text-emerald-400" />
-            ) : (
-              <VolumeX className="w-3 h-3 text-neutral-400" />
-            )}
-          </div>
-        </button>
-      )}
+      <BioAudioPlayer
+        hasBgMusic={hasBgMusic}
+        isPlayingMusic={isPlayingMusic}
+        isMusicAudible={isMusicAudible}
+        musicMutedByStory={musicMutedByStory}
+        musicMutedByVideo={musicMutedByVideo}
+        trackTitle={profile.bg_music_title}
+        onToggle={toggleBackgroundMusic}
+      />
 
-      {/* QR Code Modal */}
-      {showQrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-          <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative flex flex-col items-center text-center">
-            <button
-              type="button"
-              onClick={() => setShowQrModal(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3">
-              <QrCode className="w-6 h-6" />
-            </div>
-
-            <h3 className="text-base font-bold text-white">Scan QR Code</h3>
-            <p className="text-xs text-neutral-400 mt-1 max-w-[240px]">
-              Scan to open <strong>@{username}</strong>'s biolink hub on any smartphone.
-            </p>
-
-            <div className="my-5 p-4 bg-white rounded-2xl shadow-xl flex items-center justify-center">
-              <img
-                src={qrImageUrl}
-                alt="Biolink QR Code"
-                className="w-48 h-48 object-contain"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleDownloadQr}
-              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-500/20"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download High-Res PNG</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Story Modal Viewer */}
       <StoryModal
         stories={stories}
         isOpen={isStoryOpen}
@@ -1288,67 +438,26 @@ export default function UserBioClient() {
         isPro={isPro}
       />
 
-      {/* PIN Unlock Modal */}
-      {pinModalOpen && targetPinLink && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-sm rounded-3xl bg-neutral-900 border border-neutral-800 p-6 shadow-2xl">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-3">
-                <Lock className="w-6 h-6" />
-              </div>
-
-              <h4 className="text-base font-bold text-white">Protected Link</h4>
-              <p className="text-xs text-neutral-400 mt-1 line-clamp-1">
-                {targetPinLink.title}
-              </p>
-              <p className="text-[11px] text-neutral-500 mt-0.5">
-                Enter the access PIN code to unlock this link.
-              </p>
-            </div>
-
-            <form onSubmit={handleUnlockPin} className="mt-5 space-y-3">
-              <div>
-                <input
-                  type="password"
-                  maxLength={12}
-                  autoFocus
-                  placeholder="Enter PIN..."
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  className="w-full text-center tracking-widest text-lg font-bold py-2.5 px-4 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-rose-500 transition"
-                />
-                {pinError && (
-                  <p className="text-xs text-rose-400 mt-1.5 text-center font-medium">
-                    {pinError}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPinModalOpen(false);
-                    setPinInput('');
-                    setPinError('');
-                    setTargetPinLink(null);
-                  }}
-                  className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isVerifyingPin || !pinInput.trim()}
-                  className="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-xs font-bold text-white transition disabled:opacity-50"
-                >
-                  {isVerifyingPin ? 'Unlocking...' : 'Unlock Link'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <BioModals
+        username={username}
+        showQrModal={showQrModal}
+        onCloseQr={() => setShowQrModal(false)}
+        qrImageUrl={qrImageUrl}
+        onDownloadQr={handleDownloadQr}
+        pinModalOpen={pinModalOpen}
+        targetPinLink={targetPinLink}
+        pinInput={pinInput}
+        pinError={pinError}
+        isVerifyingPin={isVerifyingPin}
+        onPinChange={setPinInput}
+        onUnlockPin={handleUnlockPin}
+        onClosePin={() => {
+          setPinModalOpen(false);
+          setPinInput('');
+          setPinError('');
+          setTargetPinLink(null);
+        }}
+      />
     </main>
   );
 }
