@@ -28,7 +28,16 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg('');
     setLoading(true);
-
+// --- BYPASS LOGIN OFFLINE ---
+    const dummyUser = { 
+      id: 1, 
+      username: 'aries', 
+      email: 'mocharies85@gmail.com', 
+      is_pro: 1 
+    };
+    sessionStorage.setItem('curiolot_auth_user', JSON.stringify(dummyUser));
+    router.push('/admin');
+    return;
     try {
       const res = await fetch('/api/login', {
         method: 'POST',

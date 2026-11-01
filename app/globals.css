@@ -68,3 +68,50 @@ body {
 .animate-zoom-in {
   animation: storyZoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Media Kit Formal Pitch Deck Print Stylesheet */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Sembunyikan elemen navigasi dan tombol web */
+  header,
+  footer,
+  button,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Ubah kartu transparan menjadi kartu putih formal */
+  section,
+  .bg-neutral-900,
+  .bg-neutral-900\/90,
+  .bg-neutral-900\/80,
+  .bg-neutral-950 {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+  }
+
+  /* Warna teks cetak formal */
+  h1, h2, h3, p, span {
+    color: #0f172a !important;
+  }
+
+  .text-neutral-400,
+  .text-neutral-500 {
+    color: #475569 !important;
+  }
+
+  .text-amber-400,
+  .text-emerald-400,
+  .text-cyan-400 {
+    color: #0284c7 !important;
+    font-weight: bold !important;
+  }
+}
