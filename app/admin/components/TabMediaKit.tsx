@@ -14,6 +14,9 @@ import {
   Lock,
   Sparkles,
   ArrowRight,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 
 export interface RateCardItem {
@@ -61,10 +64,18 @@ export default function TabMediaKit({
   const [newDesc, setNewDesc] = useState('');
   const [newSampleUrl, setNewSampleUrl] = useState('');
 
+  // State Edit Paket yang Sedang Berjalan
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPlatform, setEditPlatform] = useState('Instagram');
+  const [editDeliverable, setEditDeliverable] = useState('');
+  const [editPrice, setEditPrice] = useState<number | ''>('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editSampleUrl, setEditSampleUrl] = useState('');
+
   const targetUsername = activeUsername || 'creator';
   const packageCount = mediaKit.rate_cards?.length || 0;
 
-  // Sinkronisasi otomatis: Jika 0 paket maka wajib OFF
+  // Sinkronisasi otomatis: Jika 0 paket maka otomatis OFF
   useEffect(() => {
     if (packageCount === 0 && mediaKit.is_enabled) {
       setMediaKit((prev) => ({ ...prev, is_enabled: false }));
@@ -149,6 +160,44 @@ export default function TabMediaKit({
     setNewSampleUrl('');
   };
 
+  // Buka Form Edit untuk Paket Tertentu
+  const handleStartEdit = (item: RateCardItem) => {
+    setEditingId(item.id);
+    setEditPlatform(item.platform);
+    setEditDeliverable(item.deliverable);
+    setEditPrice(item.price);
+    setEditDesc(item.description || '');
+    setEditSampleUrl(item.sample_url || '');
+  };
+
+  // Batalkan Edit
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
+  // Simpan Pembaruan Paket
+  const handleUpdatePackage = (id: string) => {
+    if (!editDeliverable.trim() || editPrice === '') return;
+
+    setMediaKit((prev) => ({
+      ...prev,
+      rate_cards: (prev.rate_cards || []).map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              platform: editPlatform,
+              deliverable: editDeliverable.trim(),
+              price: Number(editPrice),
+              description: editDesc.trim() || undefined,
+              sample_url: editSampleUrl.trim() || undefined,
+            }
+          : item
+      ),
+    }));
+
+    setEditingId(null);
+  };
+
   // Hapus Paket (Otomatis OFF jika paket habis menjadi 0)
   const handleDeletePackage = (id: string) => {
     setMediaKit((prev) => {
@@ -159,6 +208,7 @@ export default function TabMediaKit({
         is_enabled: updatedRateCards.length === 0 ? false : prev.is_enabled,
       };
     });
+    if (editingId === id) setEditingId(null);
   };
 
   // Toggle Switch Manual
@@ -325,42 +375,149 @@ export default function TabMediaKit({
               <p className="text-[11px] text-neutral-600 mt-0.5">Add your first package below to enable the Media Kit toggle switch.</p>
             </div>
           ) : (
-            mediaKit.rate_cards.map((item) => (
-              <div
-                key={item.id}
-                className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3"
-              >
-                <div className="truncate flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold">
-                      {item.platform}
-                    </span>
-                    <p className="text-xs font-bold text-white truncate">{item.deliverable}</p>
-                  </div>
-                  {item.description && (
-                    <p className="text-[11px] text-neutral-400 truncate mt-0.5">{item.description}</p>
-                  )}
-                  {item.sample_url && (
-                    <p className="text-[10px] text-amber-400/80 truncate mt-0.5 flex items-center gap-1">
-                      <Video className="w-3 h-3 shrink-0" />
-                      <span>Sample: {item.sample_url}</span>
-                    </p>
-                  )}
-                </div>
+            mediaKit.rate_cards.map((item) => {
+              const isEditing = editingId === item.id;
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-xs font-black text-amber-400">${item.price}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePackage(item.id)}
-                    className="p-1.5 rounded-lg bg-neutral-900 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 transition"
-                    title="Delete package"
+              // Tampilan mode edit langsung pada kartu
+              if (isEditing) {
+                return (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-neutral-950 border border-amber-500/50 flex flex-col gap-3 transition shadow-lg shadow-amber-500/5"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                    <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                      <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
+                        <Pencil className="w-3 h-3" /> Edit Sponsorship Package
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="p-1 rounded-md text-neutral-400 hover:text-white transition"
+                        title="Cancel edit"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <select
+                        value={editPlatform}
+                        onChange={(e) => setEditPlatform(e.target.value)}
+                        className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white outline-none cursor-pointer focus:border-amber-500/50"
+                      >
+                        <option value="Instagram">Instagram</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="YouTube">YouTube</option>
+                        <option value="Curiolot Bio">Curiolot Bio</option>
+                        <option value="Other">Other</option>
+                      </select>
+
+                      <input
+                        type="text"
+                        placeholder="Deliverable"
+                        value={editDeliverable}
+                        onChange={(e) => setEditDeliverable(e.target.value)}
+                        className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-500/50"
+                      />
+
+                      <input
+                        type="number"
+                        placeholder="Price ($ USD)"
+                        value={editPrice}
+                        onChange={(e) => setEditPrice(e.target.value ? Number(e.target.value) : '')}
+                        className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-500/50"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Short description / details (optional)"
+                        value={editDesc}
+                        onChange={(e) => setEditDesc(e.target.value)}
+                        className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-500/50"
+                      />
+
+                      <input
+                        type="url"
+                        placeholder="Sample Video URL (optional)"
+                        value={editSampleUrl}
+                        onChange={(e) => setEditSampleUrl(e.target.value)}
+                        className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-500/50"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdatePackage(item.id)}
+                        className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition shadow-sm"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Update Package</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Tampilan normal kartu paket
+              return (
+                <div
+                  key={item.id}
+                  className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3 transition"
+                >
+                  <div className="truncate flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold">
+                        {item.platform}
+                      </span>
+                      <p className="text-xs font-bold text-white truncate">{item.deliverable}</p>
+                    </div>
+                    {item.description && (
+                      <p className="text-[11px] text-neutral-400 truncate mt-0.5">{item.description}</p>
+                    )}
+                    {item.sample_url && (
+                      <p className="text-[10px] text-amber-400/80 truncate mt-0.5 flex items-center gap-1">
+                        <Video className="w-3 h-3 shrink-0" />
+                        <span>Sample: {item.sample_url}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-black text-amber-400 mr-1">${item.price}</span>
+                    
+                    {/* Tombol Edit */}
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(item)}
+                      className="p-1.5 rounded-lg bg-neutral-900 hover:bg-amber-500/20 text-neutral-400 hover:text-amber-400 transition"
+                      title="Edit package"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Tombol Hapus */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePackage(item.id)}
+                      className="p-1.5 rounded-lg bg-neutral-900 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 transition"
+                      title="Delete package"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
