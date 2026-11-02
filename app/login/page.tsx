@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isVerifiedNotice, setIsVerifiedNotice] = useState(false);
 
-  // Deteksi jika user datang dari link verifikasi email (?verified=true)
+  // Detect if user arrived from email verification link (?verified=true)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -28,35 +28,28 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg('');
     setLoading(true);
-// --- BYPASS LOGIN OFFLINE ---
-    const dummyUser = { 
-      id: 1, 
-      username: 'aries', 
-      email: 'mocharies85@gmail.com', 
-      is_pro: 1 
-    };
-    sessionStorage.setItem('curiolot_auth_user', JSON.stringify(dummyUser));
-    router.push('/admin');
-    return;
+
     try {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identity, password }),
+        body: JSON.stringify({
+          identity: identity.trim(),
+          password,
+        }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.user) {
-        // Simpan data sesi pengguna ke browser
+        // Store authenticated user session in client storage
         sessionStorage.setItem('curiolot_auth_user', JSON.stringify(data.user));
         router.push('/admin');
       } else {
-        // Menampilkan pesan error (termasuk jika email belum diverifikasi)
         setErrorMsg(data.error || 'Invalid username/email or password.');
       }
     } catch {
-      setErrorMsg('Network connection error. Try again.');
+      setErrorMsg('Network connection error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -67,8 +60,7 @@ export default function LoginPage() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-sm p-8 rounded-3xl bg-neutral-900/90 border border-neutral-800 shadow-2xl relative z-10 flex flex-col items-center">
-        
-        {/* Logo Resmi Curiolot Link */}
+        {/* Official Brand Logo */}
         <img 
           src="/logo.png" 
           alt="Curiolot Link Logo" 
@@ -80,7 +72,7 @@ export default function LoginPage() {
           Manage your links, portfolio settings, and audience inbox.
         </p>
 
-        {/* Notifikasi jika akun baru saja sukses diverifikasi */}
+        {/* Verification Success Notice */}
         {isVerifiedNotice && (
           <div className="w-full mt-4 p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-400 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
@@ -103,13 +95,13 @@ export default function LoginPage() {
 
           <div className="relative">
             <input
-  type={showPassword ? 'text' : 'password'}
-  required
-  placeholder="Password"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
-/>
+              type={showPassword ? 'text' : 'password'}
+              required
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-emerald-500 transition"
+            />
             <Lock className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <button
               type="button"
@@ -121,7 +113,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Tautan Forgot Password */}
+          {/* Forgot Password Link */}
           <div className="flex justify-end -mt-1">
             <Link
               href="/forgot-password"
@@ -131,7 +123,7 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          {/* Pesan Error */}
+          {/* Authentication Error Alert */}
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-900/50 text-xs text-rose-400 flex items-start gap-2 text-left">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
