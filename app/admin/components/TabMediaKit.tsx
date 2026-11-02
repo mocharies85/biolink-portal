@@ -286,7 +286,46 @@ export default function TabMediaKit({
           Showcase your audience statistics, reach, and sponsorship pricing packages to close more brand partnerships.
         </p>
       </div>
+{/* Media Kit Headline & Bio Intro */}
+      <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
+        <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+          <Briefcase className="w-4 h-4 text-amber-400" />
+          <span>Headline &amp; Brand Pitch Intro</span>
+        </h3>
 
+        <div>
+          <label className="text-[11px] text-neutral-400 block mb-1">Headline / Creator Title</label>
+          <input
+            type="text"
+            value={mediaKit.headline || ''}
+            onChange={(e) => setMediaKit({ ...mediaKit, headline: e.target.value })}
+            placeholder="e.g. CONTENT CREATOR & BRAND PARTNER"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-500/50 transition font-bold"
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] text-neutral-400 block mb-1">About / Creator Pitch Bio</label>
+          <textarea
+            rows={3}
+            value={mediaKit.about || ''}
+            onChange={(e) => setMediaKit({ ...mediaKit, about: e.target.value })}
+            placeholder="Describe what content you produce and how you collaborate with brands..."
+            className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500/50 transition resize-none leading-relaxed"
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] text-neutral-400 block mb-1">Business Contact Email (For Sponsorship Inquiries)</label>
+          <input
+            type="email"
+            value={mediaKit.contact_email || ''}
+            onChange={(e) => setMediaKit({ ...mediaKit, contact_email: e.target.value })}
+            placeholder="e.g. partnership@curiolot.com"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-500/50 transition"
+          />
+        </div>
+      </div>
       {/* Audience & Reach Metrics */}
       <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
         <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
