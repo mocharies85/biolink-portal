@@ -309,13 +309,29 @@ export default function TabInbox({
                     </div>
 
                     <div className="flex items-center gap-2 self-end sm:self-auto">
+                      {/* Tombol Balas via Web Gmail & Copy Email */}
                       <a
-                        href={`mailto:${deal.contact_email}?subject=Collaboration%20Inquiry%20from%20@${activeUsername}&body=Hi%20${encodeURIComponent(deal.brand_name)},%0D%0A%0D%0AThank%20you%20for%20reaching%20out%20via%20my%20Curiolot%20Media%20Kit!`}
-                        className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-xs flex items-center gap-1.5 transition"
+                        href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(deal.contact_email)}&su=${encodeURIComponent(`Collaboration with @${activeUsername} - ${deal.brand_name}`)}&body=${encodeURIComponent(`Hi ${deal.contact_name || deal.brand_name},\n\nThank you for reaching out via my Curiolot Media Kit! I have accepted your sponsorship proposal and would love to discuss the deliverables.\n\nBest regards,\n@${activeUsername}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-emerald-500/20 hover:text-emerald-300 text-white font-semibold text-xs flex items-center gap-1.5 transition border border-neutral-700/60"
+                        title="Open in Gmail"
                       >
-                        <Mail className="w-3.5 h-3.5 text-neutral-400" />
-                        <span>Reply Email</span>
+                        <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Reply via Gmail</span>
                       </a>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(deal.contact_email);
+                          alert(`Email copied to clipboard: ${deal.contact_email}`);
+                        }}
+                        className="p-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition border border-neutral-700/60"
+                        title="Copy email address"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
 
                       {deal.status === 'pending' && (
                         <>
