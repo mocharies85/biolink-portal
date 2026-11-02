@@ -197,32 +197,29 @@ export default function MediaKitClient({ username: propUsername }: { username?: 
 
     setSending(true);
 
-    const selectedSummary = rateCards
+    // Ambil rincian paket yang dipilih brand
+    const selectedPackages = rateCards
       .filter((card) => selectedPackageIds.includes(card.id))
-      .map((c) => `${c.platform}: ${c.deliverable} ($${c.price})`)
-      .join(', ');
-
-    const composedMessage = `
-[CAMPAIGN INQUIRY - BRAND DEAL]
-Company / Brand: ${companyName.trim()}
-Business Email: ${businessEmail.trim()}
-Selected Bundle: ${selectedSummary || 'General Partnership Discussion'}
-Total Estimate: $${finalCalculatedPrice} ${discountRate > 0 ? '(10% Bundle Discount Applied)' : ''}
-Preferred Timeline / Launch Date: ${preferredDate || 'Flexible'}
-
-Campaign Brief & Scope:
-${campaignScope.trim()}
-    `.trim();
+      .map((c) => ({
+        id: c.id,
+        platform: c.platform,
+        deliverable: c.deliverable,
+        price: c.price,
+      }));
 
     try {
-      const res = await fetch('/api/messages', {
+      const res = await fetch('/api/deals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username,
-          sender: `${companyName.trim()} (Brand Deal)`,
-          content: composedMessage,
-          email: businessEmail.trim(),
+          brand_name: companyName.trim(),
+          contact_name: companyName.trim(),
+          contact_email: businessEmail.trim(),
+          selected_packages: selectedPackages,
+          total_budget: finalCalculatedPrice,
+          campaign_brief: campaignScope.trim(),
+          target_date: preferredDate || 'Flexible',
         }),
       });
 
@@ -235,7 +232,8 @@ ${campaignScope.trim()}
         setSelectedPackageIds([]);
         setTimeout(() => setIsSent(false), 6000);
       } else {
-        alert('Failed to send campaign inquiry. Please try again.');
+        const errorData = await res.json().catch(() => null);
+        alert(errorData?.error || 'Failed to send campaign inquiry. Please try again.');
       }
     } catch {
       alert('Network error while submitting inquiry.');
