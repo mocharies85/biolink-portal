@@ -116,3 +116,28 @@ export async function onRequestPatch({ request, env }) {
     });
   }
 }
+// DELETE: Menghapus tawaran kerja sama sponsor
+export async function onRequestDelete({ request, env }) {
+  const url = new URL(request.url);
+  const dealId = url.searchParams.get('id');
+
+  if (!dealId) {
+    return new Response(JSON.stringify({ error: 'Deal ID is required.' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    await env.DB.prepare('DELETE FROM brand_deals WHERE id = ?').bind(dealId).run();
+    return new Response(JSON.stringify({ success: true, message: 'Deal deleted successfully.' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}

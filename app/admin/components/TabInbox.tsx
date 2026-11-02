@@ -14,6 +14,7 @@ import {
   Building,
   RefreshCw,
   Inbox,
+  Trash2,
 } from 'lucide-react';
 
 export interface BrandDealItem {
@@ -98,6 +99,25 @@ export default function TabInbox({
     }
   };
 
+  // Handler to delete a sponsorship deal
+  const handleDeleteDeal = async (dealId: string) => {
+    if (!confirm('Are you sure you want to delete this sponsorship deal?')) return;
+
+    try {
+      const res = await fetch(`/api/deals?id=${encodeURIComponent(dealId)}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setDeals((prev) => prev.filter((d) => d.id !== dealId));
+      } else {
+        alert('Failed to delete deal from server.');
+      }
+    } catch {
+      alert('Network error while deleting deal.');
+    }
+  };
+
   const totalDealValue = deals
     .filter((d) => d.status === 'accepted')
     .reduce((acc, curr) => acc + (curr.total_budget || 0), 0);
@@ -128,7 +148,7 @@ export default function TabInbox({
         </button>
       </div>
 
-      {/* Highlights Bar */}
+      {/* Highlights Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
           <div>
@@ -226,6 +246,11 @@ export default function TabInbox({
                 year: 'numeric',
               });
 
+              // Construct clean Web Gmail compose URL without broken newlines
+              const mailSubject = `Collaboration Inquiry from @${activeUsername} - ${deal.brand_name}`;
+              const mailBody = `Hi ${deal.contact_name || deal.brand_name},\n\nThank you for reaching out via my Curiolot Media Kit! I have accepted your sponsorship proposal and would love to discuss the project schedule and deliverables.\n\nBest regards,\n@${activeUsername}`;
+              const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(deal.contact_email)}&su=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`;
+
               return (
                 <div
                   key={deal.id}
@@ -309,9 +334,9 @@ export default function TabInbox({
                     </div>
 
                     <div className="flex items-center gap-2 self-end sm:self-auto">
-                      {/* Tombol Balas via Web Gmail & Copy Email */}
+                      {/* Direct Web Gmail Reply */}
                       <a
-                        href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(deal.contact_email)}&su=${encodeURIComponent(`Collaboration with @${activeUsername} - ${deal.brand_name}`)}&body=${encodeURIComponent(`Hi ${deal.contact_name || deal.brand_name},\n\nThank you for reaching out via my Curiolot Media Kit! I have accepted your sponsorship proposal and would love to discuss the deliverables.\n\nBest regards,\n@${activeUsername}`)}`}
+                        href={gmailUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-emerald-500/20 hover:text-emerald-300 text-white font-semibold text-xs flex items-center gap-1.5 transition border border-neutral-700/60"
@@ -321,6 +346,7 @@ export default function TabInbox({
                         <span>Reply via Gmail</span>
                       </a>
 
+                      {/* Copy Email Button */}
                       <button
                         type="button"
                         onClick={() => {
@@ -331,6 +357,16 @@ export default function TabInbox({
                         title="Copy email address"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Delete Deal Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteDeal(deal.id)}
+                        className="p-1.5 rounded-xl bg-neutral-800 hover:bg-rose-500/20 text-neutral-400 hover:text-rose-400 transition border border-neutral-700/60"
+                        title="Delete sponsorship deal"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
 
                       {deal.status === 'pending' && (
