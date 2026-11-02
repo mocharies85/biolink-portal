@@ -1,7 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart } from 'lucide-react';
+import {
+  Heart,
+  ShoppingBag,
+  Download,
+  ExternalLink,
+  Lock,
+  KeyRound,
+  X,
+} from 'lucide-react';
 import StoryModal from '@/components/StoryModal';
 
 import { UserProfile, LinkItem, StoryItem, THEMES } from './types';
@@ -12,6 +20,23 @@ import BioLinksList from './components/BioLinksList';
 import BioMessaging from './components/BioMessaging';
 import BioAudioPlayer from './components/BioAudioPlayer';
 import BioModals from './components/BioModals';
+
+export interface ProductItem {
+  id: string;
+  username: string;
+  title: string;
+  description?: string;
+  price: number;
+  category: string;
+  access_type: 'direct' | 'external_link' | 'pin_lock';
+  cover_image?: string;
+  file_url: string;
+  button_text: string;
+  is_active: number;
+  is_locked?: boolean;
+  downloads_count: number;
+  created_at: number;
+}
 
 export default function UserBioClient() {
   const [username, setUsername] = useState<string>(() => {
@@ -43,6 +68,13 @@ export default function UserBioClient() {
   const [isProUser, setIsProUser] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
+  // Digital Products & Store State
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [selectedProductForPin, setSelectedProductForPin] = useState<ProductItem | null>(null);
+  const [productPinInput, setProductPinInput] = useState('');
+  const [productPinError, setProductPinError] = useState('');
+  const [isUnlockingProduct, setIsUnlockingProduct] = useState(false);
+
   // Media Kit Status State
   const [isMediaKitActive, setIsMediaKitActive] = useState(false);
 
@@ -56,7 +88,7 @@ export default function UserBioClient() {
   const [musicMutedByVideo, setMusicMutedByVideo] = useState(false);
   const [musicMutedByStory, setMusicMutedByStory] = useState(false);
 
-  // PIN Unlock State
+  // Link PIN Unlock State
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [targetPinLink, setTargetPinLink] = useState<LinkItem | null>(null);
   const [pinInput, setPinInput] = useState('');
@@ -104,6 +136,51 @@ export default function UserBioClient() {
     }
   };
 
+  // Product Action Handler
+  const handleProductAction = (product: ProductItem) => {
+    if (product.access_type === 'pin_lock') {
+      setSelectedProductForPin(product);
+      setProductPinInput('');
+      setProductPinError('');
+    } else if (product.file_url) {
+      window.open(product.file_url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  // Product PIN Verification Handler
+  const handleUnlockProductPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductForPin || !productPinInput.trim()) return;
+
+    setIsUnlockingProduct(true);
+    setProductPinError('');
+
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'unlock_pin',
+          productId: selectedProductForPin.id,
+          pin: productPinInput.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.file_url) {
+        window.open(data.file_url, '_blank', 'noopener,noreferrer');
+        setSelectedProductForPin(null);
+        setProductPinInput('');
+      } else {
+        setProductPinError(data.error || 'Incorrect PIN passcode. Please try again.');
+      }
+    } catch {
+      setProductPinError('Network error while verifying PIN.');
+    } finally {
+      setIsUnlockingProduct(false);
+    }
+  };
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
@@ -146,6 +223,15 @@ export default function UserBioClient() {
         setStories(Array.isArray(data.stories) ? data.stories : []);
       })
       .catch((err) => console.error('Failed to load stories:', err));
+
+    // Fetch Digital Store Products
+    fetch(`/api/products?username=${encodeURIComponent(username)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isCurrent) return;
+        setProducts(data.products || []);
+      })
+      .catch((err) => console.error('Failed to load store products:', err));
 
     // Fetch Media Kit Status
     fetch(`/api/mediakit?username=${encodeURIComponent(username)}`)
@@ -416,6 +502,82 @@ export default function UserBioClient() {
           isEnabled={isMediaKitActive}
         />
 
+        {/* Digital Store & Drops Showcase */}
+        {products.length > 0 && (
+          <section className="w-full flex flex-col gap-3 my-4">
+            <div className="flex items-center gap-2 px-1">
+              <ShoppingBag className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-300">
+                Digital Drops &amp; Assets
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              {products.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-3.5 rounded-2xl bg-neutral-900/80 backdrop-blur-md border border-neutral-800/80 hover:border-neutral-700 transition flex items-center justify-between gap-3 shadow-lg"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {item.cover_image ? (
+                      <img
+                        src={item.cover_image}
+                        alt={item.title}
+                        className="w-12 h-12 rounded-xl object-cover bg-neutral-950 border border-neutral-800 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-neutral-800/50 border border-neutral-700/50 flex items-center justify-center text-emerald-400 shrink-0">
+                        <ShoppingBag className="w-5 h-5" />
+                      </div>
+                    )}
+
+                    <div className="truncate">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                            Number(item.price) === 0
+                              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          }`}
+                        >
+                          {Number(item.price) === 0 ? 'FREE' : `$${item.price}`}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="text-[11px] text-neutral-400 truncate mt-0.5">{item.description}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleProductAction(item)}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 text-xs font-bold flex items-center gap-1.5 transition shrink-0 shadow-sm"
+                  >
+                    {item.access_type === 'pin_lock' ? (
+                      <>
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Unlock</span>
+                      </>
+                    ) : Number(item.price) === 0 ? (
+                      <>
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Get</span>
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Buy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <BioLinksList
           links={links}
           loadingLinks={loadingLinks}
@@ -480,6 +642,80 @@ export default function UserBioClient() {
           setTargetPinLink(null);
         }}
       />
+
+      {/* Product PIN Unlock Modal */}
+      {selectedProductForPin && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-3xl bg-neutral-900 border border-neutral-800 p-6 flex flex-col gap-4 shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedProductForPin(null);
+                setProductPinInput('');
+                setProductPinError('');
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-neutral-800 text-neutral-400 hover:text-white transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-400">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <div className="pr-6">
+                <h3 className="text-sm font-bold text-white">Unlock Digital Drop</h3>
+                <p className="text-xs text-neutral-400 truncate max-w-[200px]">
+                  {selectedProductForPin.title}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleUnlockProductPin} className="flex flex-col gap-3">
+              <div>
+                <label className="text-[11px] text-neutral-400 block mb-1">
+                  Enter Secret Access PIN
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={productPinInput}
+                  onChange={(e) => setProductPinInput(e.target.value)}
+                  placeholder="Enter passkey..."
+                  className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-sm text-center tracking-widest text-white focus:outline-none focus:border-amber-500 font-mono"
+                />
+                {productPinError && (
+                  <p className="text-[11px] text-rose-400 mt-1.5 text-center">
+                    {productPinError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedProductForPin(null);
+                    setProductPinInput('');
+                    setProductPinError('');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUnlockingProduct}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-bold transition disabled:opacity-50"
+                >
+                  {isUnlockingProduct ? 'Verifying...' : 'Unlock File'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
