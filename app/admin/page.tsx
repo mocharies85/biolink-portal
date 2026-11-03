@@ -15,6 +15,7 @@ import {
   QrCode,
   Palette,
   Briefcase,
+  ShoppingBag,
 } from 'lucide-react';
 
 import {
@@ -38,6 +39,7 @@ import TabStories from './components/TabStories';
 import TabInbox from './components/TabInbox';
 import TabAnalytics from './components/TabAnalytics';
 import TabMediaKit from './components/TabMediaKit';
+import TabStore from './components/TabStore';
 import PhoneMockup from './components/PhoneMockup';
 import AdminModals from './components/AdminModals';
 
@@ -47,7 +49,7 @@ export default function AdminDashboard() {
 
   // Active Tab State
   const [activeTab, setActiveTab] = useState<
-    'profile' | 'links' | 'themes' | 'stories' | 'inbox' | 'analytics' | 'mediakit'
+    'profile' | 'links' | 'themes' | 'stories' | 'inbox' | 'analytics' | 'mediakit' | 'store'
   >('profile');
 
   // User & Auth State
@@ -98,7 +100,7 @@ export default function AdminDashboard() {
   const [detailedData, setDetailedData] = useState<DetailedAnalyticsData | null>(null);
   const [loadingDetailed, setLoadingDetailed] = useState(false);
 
-  // Media Kit State (Default: 0 / Kosong & OFF untuk user baru)
+  // Media Kit State
   const [mediaKit, setMediaKit] = useState<MediaKitData>({
     is_enabled: false,
     headline: 'Content Creator & Brand Partner',
@@ -112,7 +114,6 @@ export default function AdminDashboard() {
     rate_cards: [],
   });
 
-  // Ref untuk melacak perubahan jumlah paket secara real-time
   const prevPackagesCountRef = useRef<number>(0);
 
   // Modals Visibility
@@ -147,17 +148,14 @@ export default function AdminDashboard() {
     liveProfileUrl
   )}`;
 
-  // Logika Otomatis ON/OFF Media Kit Berdasarkan Jumlah Paket
+  // Automatically enable/disable Media Kit based on available packages
   useEffect(() => {
     const currentCount = mediaKit.rate_cards?.length || 0;
     const prevCount = prevPackagesCountRef.current;
 
-    // Jika paket 0 -> Otomatis paksa OFF
     if (currentCount === 0 && mediaKit.is_enabled) {
       setMediaKit((prev) => ({ ...prev, is_enabled: false }));
-    }
-    // Jika awalnya 0 paket lalu bertambah ada paket -> Default otomatis ON
-    else if (prevCount === 0 && currentCount > 0 && !mediaKit.is_enabled) {
+    } else if (prevCount === 0 && currentCount > 0 && !mediaKit.is_enabled) {
       setMediaKit((prev) => ({ ...prev, is_enabled: true }));
     }
 
@@ -501,6 +499,18 @@ export default function AdminDashboard() {
             </button>
 
             <button
+              onClick={() => setActiveTab('store')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'store'
+                  ? 'bg-neutral-800 text-white shadow-sm'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-850'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4 text-emerald-400" />
+              <span>Digital Store</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('themes')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
                 activeTab === 'themes'
@@ -650,6 +660,13 @@ export default function AdminDashboard() {
             fetchLinks={fetchLinks}
             handleSaveProfile={handleSaveProfile}
             savingProfile={savingProfile}
+          />
+        )}
+
+        {activeTab === 'store' && (
+          <TabStore
+            activeUsername={activeUsername}
+            isProUser={isProUser}
           />
         )}
 
