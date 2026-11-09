@@ -95,6 +95,15 @@ export default function UserBioClient() {
   const [pinError, setPinError] = useState('');
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
 
+  // Dynamic Browser Tab Title Sync
+  useEffect(() => {
+    if (profile.name) {
+      document.title = `${profile.name} (@${username}) | Curiolot Link`;
+    } else if (username) {
+      document.title = `@${username} | Curiolot Link`;
+    }
+  }, [profile.name, username]);
+
   const handleLinkClick = (id: number) => {
     fetch(`/api/click?id=${id}`, { method: 'POST' }).catch(() => {});
   };
@@ -485,7 +494,7 @@ export default function UserBioClient() {
           stories={stories}
           isCopied={isCopied}
           onOpenStory={() => setIsStoryOpen(true)}
-          onOpenQr={() => setShowQrModal(true)}
+          onOpenQr={() => setShowQrModal(false)}
           onShare={handleShare}
         />
 
