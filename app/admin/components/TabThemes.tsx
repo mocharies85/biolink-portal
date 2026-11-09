@@ -11,9 +11,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Save,
+  Loader2,
 } from 'lucide-react';
 import { ProfileData, MusicTrack, THEME_OPTIONS } from '../types';
-import { compressImage } from '../utils/mediaUtils';
 
 interface TabThemesProps {
   profile: ProfileData;
@@ -40,24 +40,55 @@ export default function TabThemes({
 }: TabThemesProps) {
   const bgFileInputRef = useRef<HTMLInputElement>(null);
   const bgMusicFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Loading upload states
+  const [uploadingWallpaper, setUploadingWallpaper] = useState(false);
   const [uploadingBgMusic, setUploadingBgMusic] = useState(false);
 
-  // Background Wallpaper Upload Handler
+  // Background Wallpaper Upload Handler (Direct to Cloudflare R2)
   const handleBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!isProUser) {
       setShowUpgradeModal(true);
+      if (bgFileInputRef.current) bgFileInputRef.current.value = '';
       return;
     }
 
+    if (file.size > 15 * 1024 * 1024) {
+      alert('Wallpaper file size exceeds 15MB. Please choose a smaller image.');
+      if (bgFileInputRef.current) bgFileInputRef.current.value = '';
+      return;
+    }
+
+    setUploadingWallpaper(true);
     try {
-      const compressed = await compressImage(file, 1920, 1080, 0.8);
-      setProfile((prev) => ({ ...prev, bg_image: compressed }));
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('username', activeUsername || 'creator');
+      formData.append('folder', 'media');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          setProfile((prev) => ({ ...prev, bg_image: data.url }));
+        }
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Failed to upload background wallpaper to R2.');
+      }
     } catch (err) {
-      console.error('Error processing background wallpaper:', err);
-      alert('Failed to process wallpaper.');
+      console.error('Error uploading background wallpaper:', err);
+      alert('Network error while uploading wallpaper.');
+    } finally {
+      setUploadingWallpaper(false);
+      if (bgFileInputRef.current) bgFileInputRef.current.value = '';
     }
   };
 
@@ -68,13 +99,13 @@ export default function TabThemes({
 
     if (!isProUser) {
       setShowUpgradeModal(true);
-      e.target.value = '';
+      if (bgMusicFileInputRef.current) bgMusicFileInputRef.current.value = '';
       return;
     }
 
     if (file.size > 25 * 1024 * 1024) {
       alert('Audio file is too large. Please select an audio file under 25MB.');
-      e.target.value = '';
+      if (bgMusicFileInputRef.current) bgMusicFileInputRef.current.value = '';
       return;
     }
 
@@ -82,7 +113,8 @@ export default function TabThemes({
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('username', activeUsername);
+      formData.append('username', activeUsername || 'creator');
+      formData.append('folder', 'story');
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -105,7 +137,7 @@ export default function TabThemes({
       alert('Network error while uploading audio.');
     } finally {
       setUploadingBgMusic(false);
-      e.target.value = '';
+      if (bgMusicFileInputRef.current) bgMusicFileInputRef.current.value = '';
     }
   };
 
@@ -211,6 +243,7 @@ export default function TabThemes({
             <div className="flex-1">
               <button
                 type="button"
+                disabled={uploadingWallpaper}
                 onClick={() => {
                   if (!isProUser) {
                     setShowUpgradeModal(true);
@@ -218,13 +251,18 @@ export default function TabThemes({
                   }
                   bgFileInputRef.current?.click();
                 }}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition ${
+                className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50 ${
                   isProUser
                     ? 'bg-neutral-850 hover:bg-neutral-800 border-neutral-700 text-neutral-200'
                     : 'bg-neutral-900 border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
                 }`}
               >
-                {isProUser ? (
+                {uploadingWallpaper ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                    <span>Uploading to R2...</span>
+                  </>
+                ) : isProUser ? (
                   <>
                     <Upload className="w-3.5 h-3.5 text-amber-400" />
                     <span>{profile.bg_image ? 'Change Wallpaper' : 'Upload Wallpaper'}</span>
@@ -244,7 +282,7 @@ export default function TabThemes({
               <input
                 type="file"
                 ref={bgFileInputRef}
-                accept="image/*"
+                accept="image/png, image/jpeg, image/webp"
                 onChange={handleBgImageUpload}
                 className="hidden"
               />
@@ -422,7 +460,7 @@ export default function TabThemes({
               }
               handleSaveProfile();
             }}
-            disabled={savingProfile}
+            disabled={savingProfile || uploadingWallpaper || uploadingBgMusic}
             className="ml-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/20"
           >
             <Save className="w-4 h-4" />
@@ -433,4 +471,5 @@ export default function TabThemes({
     </div>
   );
 }
+
 export { TabThemes };
