@@ -15,9 +15,9 @@ import {
   Upload,
   Globe,
   Save,
+  Loader2,
 } from 'lucide-react';
 import { ProfileData, CurrentUser } from '../types';
-import { compressImage } from '../utils/mediaUtils';
 
 interface TabProfileProps {
   profile: ProfileData;
@@ -47,6 +47,10 @@ export default function TabProfile({
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ogFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Uploading states to Cloudflare R2
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingOg, setUploadingOg] = useState(false);
 
   // Username and Biolink Handle States
   const [editUsername, setEditUsername] = useState(activeUsername || '');
@@ -78,7 +82,7 @@ export default function TabProfile({
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: `@${activeUsername} - Curiolot Link`,
+          title: `@${activeUsername} | Curiolot Link`,
           text: `Check out my biolink hub:`,
           url: fullUrl,
         });
@@ -137,21 +141,44 @@ export default function TabProfile({
     }
   };
 
-  // Avatar Upload and Client Compression
+  // Direct Avatar Upload to Cloudflare R2
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const compressed = await compressImage(file, 400, 400, 0.8);
-        setProfile((prev) => ({ ...prev, avatar: compressed }));
-      } catch (err) {
-        console.error('Error compressing avatar:', err);
-        alert('Failed to process profile avatar.');
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size exceeds 10MB. Please choose a smaller image.');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('username', activeUsername || 'creator');
+    formData.append('folder', 'media');
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setProfile((prev) => ({ ...prev, avatar: data.url }));
+      } else {
+        alert(data.error || 'Failed to upload profile avatar to R2.');
       }
+    } catch (err) {
+      console.error('Error uploading avatar:', err);
+      alert('Network error while uploading avatar to R2.');
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  // OpenGraph Social Banner Upload
+  // Direct OpenGraph Banner Upload to Cloudflare R2 (PRO Only)
   const handleOgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -161,12 +188,35 @@ export default function TabProfile({
       return;
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size exceeds 10MB. Please choose a smaller image.');
+      return;
+    }
+
+    setUploadingOg(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('username', activeUsername || 'creator');
+    formData.append('folder', 'media');
+
     try {
-      const compressed = await compressImage(file, 800, 418, 0.7, true);
-      setProfile((prev) => ({ ...prev, og_image: compressed }));
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setProfile((prev) => ({ ...prev, og_image: data.url }));
+      } else {
+        alert(data.error || 'Failed to upload social banner to R2.');
+      }
     } catch (err) {
-      console.error('Error processing OG image:', err);
-      alert('Failed to process social share banner.');
+      console.error('Error uploading OG banner:', err);
+      alert('Network error while uploading social banner.');
+    } finally {
+      setUploadingOg(false);
+      if (ogFileInputRef.current) ogFileInputRef.current.value = '';
     }
   };
 
@@ -313,39 +363,54 @@ export default function TabProfile({
             <div className="flex items-center gap-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
               <div className="relative group">
                 <img
-                  src={profile.avatar}
-                  alt={profile.name}
-                  className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500/40 shadow-lg group-hover:opacity-80 transition"
+                  src={profile.avatar || '/default-avatar.svg'}
+                  alt={profile.name || 'Avatar'}
+                  className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500/40 shadow-lg group-hover:opacity-80 transition bg-neutral-900"
                 />
                 <button
                   type="button"
+                  disabled={uploadingAvatar}
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition cursor-pointer"
+                  className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition cursor-pointer disabled:cursor-not-allowed"
                   title="Upload new avatar"
                 >
-                  <Camera className="w-5 h-5" />
+                  {uploadingAvatar ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+                  ) : (
+                    <Camera className="w-5 h-5" />
+                  )}
                 </button>
               </div>
 
               <div className="flex flex-col gap-1.5 flex-1">
                 <p className="text-xs font-bold text-white">Upload New Image</p>
                 <p className="text-[11px] text-neutral-400 leading-relaxed">
-                  Photos are automatically optimized and compressed.
+                  Direct upload to Cloudflare R2 storage. Supports JPG, PNG, and WebP.
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <button
                     type="button"
+                    disabled={uploadingAvatar}
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition"
+                    className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
                   >
-                    <Upload className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Choose File</span>
+                    {uploadingAvatar ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
+                        <span>Uploading to R2...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Choose File</span>
+                      </>
+                    )}
                   </button>
                 </div>
                 <input
                   type="file"
                   ref={fileInputRef}
-                  accept="image/*"
+                  accept="image/png, image/jpeg, image/webp"
                   onChange={handlePhotoUpload}
                   className="hidden"
                 />
@@ -590,11 +655,12 @@ export default function TabProfile({
                     <img
                       src={profile.og_image}
                       alt="OG Preview"
-                      className="w-20 h-11 object-cover rounded-lg border border-neutral-700"
+                      className="w-20 h-11 object-cover rounded-lg border border-neutral-700 bg-neutral-950"
                     />
                   )}
                   <button
                     type="button"
+                    disabled={uploadingOg}
                     onClick={() => {
                       if (!isProUser) {
                         setShowUpgradeModal(true);
@@ -602,15 +668,24 @@ export default function TabProfile({
                       }
                       ogFileInputRef.current?.click();
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition"
+                    className="px-3 py-1.5 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
                   >
-                    <Upload className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{profile.og_image ? 'Change Banner' : 'Upload Banner'}</span>
+                    {uploadingOg ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                        <span>Uploading to R2...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5 text-amber-400" />
+                        <span>{profile.og_image ? 'Change Banner' : 'Upload Banner'}</span>
+                      </>
+                    )}
                   </button>
                   <input
                     type="file"
                     ref={ogFileInputRef}
-                    accept="image/*"
+                    accept="image/png, image/jpeg, image/webp"
                     onChange={handleOgImageUpload}
                     className="hidden"
                   />
@@ -629,7 +704,7 @@ export default function TabProfile({
           )}
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || uploadingAvatar || uploadingOg}
             className="ml-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/20"
           >
             <Save className="w-4 h-4" />
