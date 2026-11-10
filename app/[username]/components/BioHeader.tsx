@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, QrCode, Share2, Check } from 'lucide-react';
+import { Sparkles, QrCode, Share2, Check, ShoppingBag } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { UserProfile, StoryItem, ThemeStyle, SocialLinks } from '../types';
 
@@ -86,6 +86,17 @@ export default function BioHeader({
               <Share2 className="w-3.5 h-3.5" />
             )}
           </button>
+
+          {/* Tombol Menuju Curiolot Store */}
+          <a
+            href={`https://store.curiolot.com/${username}`}
+            target="_self"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md transition shadow-sm shrink-0"
+            title="Kunjungi Toko Digital Creator"
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>Store</span>
+          </a>
         </div>
       </div>
 
@@ -100,7 +111,7 @@ export default function BioHeader({
               stories.length > 0
                 ? 'bg-gradient-to-tr from-emerald-400 via-teal-300 to-emerald-500 ring-4 ring-emerald-500/30 cursor-pointer hover:scale-105 animate-pulse'
                 : 'bg-gradient-to-tr from-emerald-400 via-teal-500 to-indigo-500'
-            } shadow-xl shadow-emerald-500/10`}
+            }`}
           >
             <img
               src={profile.avatar || '/default-avatar.svg'}
