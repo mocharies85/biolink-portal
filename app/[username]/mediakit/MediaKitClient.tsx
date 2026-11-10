@@ -15,15 +15,21 @@ import {
   X,
   CheckCircle2,
   Globe,
+  Palette,
+  ExternalLink,
 } from 'lucide-react';
 
 export type MediaKitTheme = 'onyx' | 'sand' | 'studio' | 'violet';
 
 interface RateCardItem {
-  id: string;
-  name: string;
-  deliverables: string[];
-  price: number;
+  id?: string;
+  name?: string;
+  title?: string;
+  platform?: string;
+  description?: string;
+  deliverables?: string[];
+  price?: number | string;
+  sample_url?: string;
   highlighted?: boolean;
 }
 
@@ -35,21 +41,25 @@ interface CollabClient {
 }
 
 interface MediaKitData {
-  bio: string;
-  niche: string;
-  total_reach: string;
-  avg_engagement: string;
-  monthly_impressions: string;
-  audience_gender: { male: number; female: number };
-  top_countries: { country: string; percent: number }[];
-  showcase_videos: { title: string; views: string; thumbnail: string; video_url?: string }[];
-  platforms: { name: string; handle: string; count: string; icon: string }[];
-  rate_cards: RateCardItem[];
-  clients: CollabClient[];
+  headline?: string;
+  bio?: string;
+  pitch_bio?: string;
+  niche?: string;
+  primary_niche?: string;
+  total_reach?: string;
+  total_audience_reach?: string;
+  avg_engagement?: string;
+  avg_engagement_rate?: string;
+  monthly_impressions?: string;
+  top_country?: string;
+  business_email?: string;
+  rate_cards?: RateCardItem[];
+  clients?: CollabClient[];
   theme?: MediaKitTheme;
 }
 
 const THEME_STYLES: Record<MediaKitTheme, {
+  name: string;
   pageBg: string;
   cardBg: string;
   cardBorder: string;
@@ -61,6 +71,7 @@ const THEME_STYLES: Record<MediaKitTheme, {
   statHighlight: string;
 }> = {
   onyx: {
+    name: 'Onyx',
     pageBg: 'bg-[#0a0a0c]',
     cardBg: 'bg-[#121216]/90 backdrop-blur-md',
     cardBorder: 'border-white/10',
@@ -72,31 +83,34 @@ const THEME_STYLES: Record<MediaKitTheme, {
     statHighlight: 'text-white font-black',
   },
   sand: {
-    pageBg: 'bg-[#f7f4ef]',
+    name: 'Sand',
+    pageBg: 'bg-[#f5f1eb]',
     cardBg: 'bg-[#ffffff]/90 backdrop-blur-md',
-    cardBorder: 'border-[#e4ded4]',
-    textPrimary: 'text-[#2b2520]',
-    textSecondary: 'text-[#7a7168]',
-    accent: 'text-[#9e6740]',
-    accentBadge: 'bg-[#9e6740]/10 border-[#9e6740]/25 text-[#9e6740]',
-    accentBtn: 'bg-[#9e6740] hover:bg-[#855330] text-white',
-    statHighlight: 'text-[#2b2520] font-serif font-bold',
+    cardBorder: 'border-[#e3dcd1]',
+    textPrimary: 'text-[#26211c]',
+    textSecondary: 'text-[#756a5e]',
+    accent: 'text-[#99623b]',
+    accentBadge: 'bg-[#99623b]/10 border-[#99623b]/25 text-[#99623b]',
+    accentBtn: 'bg-[#99623b] hover:bg-[#804e2b] text-white',
+    statHighlight: 'text-[#26211c] font-serif font-bold',
   },
   studio: {
+    name: 'Studio',
     pageBg: 'bg-[#fafafa]',
     cardBg: 'bg-white',
     cardBorder: 'border-neutral-200',
     textPrimary: 'text-neutral-900',
     textSecondary: 'text-neutral-500',
-    accent: 'text-neutral-900',
+    accent: 'text-neutral-950',
     accentBadge: 'bg-neutral-100 border-neutral-300 text-neutral-800',
     accentBtn: 'bg-neutral-950 hover:bg-neutral-800 text-white',
     statHighlight: 'text-neutral-950 font-black',
   },
   violet: {
-    pageBg: 'bg-[#0d0714]',
-    cardBg: 'bg-[#170e24]/90 backdrop-blur-md',
-    cardBorder: 'border-purple-500/20',
+    name: 'Violet',
+    pageBg: 'bg-[#0d0716]',
+    cardBg: 'bg-[#170e28]/90 backdrop-blur-md',
+    cardBorder: 'border-purple-500/25',
     textPrimary: 'text-white',
     textSecondary: 'text-purple-300/70',
     accent: 'text-fuchsia-400',
@@ -111,7 +125,7 @@ interface MediaKitClientProps {
 }
 
 export default function MediaKitClient({ username: propUsername }: MediaKitClientProps = {}) {
-  // Mendeteksi username otomatis jika tidak dioper melalui props
+  // Otomatis mendeteksi username dari props atau URL
   const [username, setUsername] = useState<string>(() => {
     if (propUsername) return propUsername.toLowerCase();
     if (typeof window !== 'undefined') {
@@ -126,10 +140,9 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
   const [themeKey, setThemeKey] = useState<MediaKitTheme>('onyx');
   const [profile, setProfile] = useState<any>(null);
   const [mediaKit, setMediaKit] = useState<MediaKitData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  // Inquire Modal States
+  // Modal Inquire State
   const [inquiryModal, setInquiryModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<RateCardItem | null>(null);
   const [brandEmail, setBrandEmail] = useState('');
@@ -153,8 +166,8 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
 
     let active = true;
     Promise.all([
-      fetch(`/api/profile?username=${encodeURIComponent(username)}`).then((r) => r.json()),
-      fetch(`/api/mediakit?username=${encodeURIComponent(username)}`).then((r) => r.json()),
+      fetch(`/api/profile?username=${encodeURIComponent(username)}`).then((r) => r.json()).catch(() => null),
+      fetch(`/api/mediakit?username=${encodeURIComponent(username)}`).then((r) => r.json()).catch(() => null),
     ])
       .then(([profData, kitData]) => {
         if (!active) return;
@@ -168,10 +181,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           }
         }
       })
-      .catch((e) => console.error('Error fetching mediakit:', e))
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      .catch((e) => console.error('Error fetching mediakit:', e));
 
     return () => {
       active = false;
@@ -190,7 +200,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
 
   const handleOpenInquiry = (pkg?: RateCardItem) => {
     setSelectedPackage(pkg || null);
-    setBrandBudget(pkg ? `$${pkg.price}` : '');
+    setBrandBudget(pkg?.price ? `$${pkg.price}` : '');
     setInquiryModal(true);
     setInquirySuccess(false);
   };
@@ -199,14 +209,15 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
     e.preventDefault();
     setSendingInquiry(true);
     try {
+      const pkgTitle = selectedPackage?.title || selectedPackage?.name || 'General Partnership';
       const res = await fetch('/api/messaging', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipient: username,
-          name: `${brandName} (Brand Inquiry)`,
+          name: `${brandName} (Brand Proposal)`,
           email: brandEmail,
-          message: `Package: ${selectedPackage?.name || 'General Inquiry'}\nBudget: ${brandBudget}\n\nBrief:\n${brandMessage}`,
+          message: `Package: ${pkgTitle}\nBudget: ${brandBudget}\n\nBrief:\n${brandMessage}`,
         }),
       });
 
@@ -228,45 +239,66 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
     }
   };
 
-  const displayBio = mediaKit?.bio || profile?.bio || 'Full-time content creator crafting authentic reviews, engaging video reels, and high-impact digital activations for global brands.';
-  const displayNiche = mediaKit?.niche || 'LIFESTYLE • TECH • TRAVEL';
-  const totalReach = mediaKit?.total_reach || '2.4M+';
-  const avgEng = mediaKit?.avg_engagement || '4.8%';
-  const monthlyImpr = mediaKit?.monthly_impressions || '8.2M';
+  // Pengambilan metrik adaptif dari D1 database / admin
+  const headline = mediaKit?.headline || 'Content Creator & Brand Partner';
+  const displayBio = mediaKit?.pitch_bio || mediaKit?.bio || profile?.bio || 'Full-time content creator crafting authentic reviews, engaging video reels, and high-impact digital activations for global brands.';
+  const displayNiche = mediaKit?.primary_niche || mediaKit?.niche || 'TECH & LIFESTYLE';
+  
+  const totalReach = mediaKit?.total_audience_reach 
+    ? (Number(mediaKit.total_audience_reach) >= 1000 ? `${(Number(mediaKit.total_audience_reach) / 1000).toLocaleString()}K+` : mediaKit.total_audience_reach)
+    : (mediaKit?.total_reach || '50K+');
 
-  const platforms = mediaKit?.platforms?.length ? mediaKit.platforms : [
+  const avgEng = mediaKit?.avg_engagement_rate 
+    ? `${mediaKit.avg_engagement_rate}%` 
+    : (mediaKit?.avg_engagement || '4.8%');
+
+  const monthlyImpr = mediaKit?.monthly_impressions 
+    ? (Number(mediaKit.monthly_impressions) >= 1000 ? `${(Number(mediaKit.monthly_impressions) / 1000).toLocaleString()}K` : mediaKit.monthly_impressions)
+    : '250K';
+
+  const topCountry = mediaKit?.top_country || 'United States';
+
+  // 4 Platform kartu audiens terverifikasi
+  const platforms = [
     { name: 'Instagram', handle: `@${username}`, count: '410K', icon: 'ig' },
     { name: 'TikTok', handle: `@${username}`, count: '1.2M', icon: 'tiktok' },
     { name: 'YouTube', handle: `${profile?.name || username}`, count: '280K', icon: 'yt' },
     { name: 'X / Twitter', handle: `@${username}`, count: '95K', icon: 'x' },
   ];
 
-  const packages: RateCardItem[] = mediaKit?.rate_cards?.length ? mediaKit.rate_cards : [
-    {
-      id: 'pkg-1',
-      name: 'Dedicated Short-Form Video',
-      price: 850,
-      deliverables: ['1x TikTok + 1x Instagram Reel', '30-Day Digital Ad Usage Rights', 'Link in Bio for 7 Days', 'Raw 4K Footage Delivery'],
-      highlighted: true,
-    },
-    {
-      id: 'pkg-2',
-      name: 'Story Feature & Product Tag',
-      price: 350,
-      deliverables: ['3x Story Frames with Swipe-Up Link', 'Brand Mention & Custom Promo Code', '24h High Engagement Timing'],
-      highlighted: false,
-    },
-    {
-      id: 'pkg-3',
-      name: 'Omni-Channel Brand Package',
-      price: 1600,
-      deliverables: ['1x YouTube Dedicated Integration (60s)', '1x TikTok Dedicated Video', 'Instagram Carousel Review Post', '60-Day Commercial Whitelisting'],
-      highlighted: false,
-    },
-  ];
+  // Daftar Rate Cards aman tanpa risiko undefined error
+  const rawPackages = mediaKit?.rate_cards;
+  const packagesList: RateCardItem[] = (Array.isArray(rawPackages) && rawPackages.length > 0)
+    ? rawPackages
+    : [
+        {
+          id: 'pkg-1',
+          title: 'Dedicated Short-Form Video',
+          platform: 'Instagram',
+          price: 150,
+          deliverables: ['1x TikTok + 1x Instagram Reel', '30-Day Digital Ad Usage Rights', 'Link in Bio for 7 Days', 'Raw 4K Footage Delivery'],
+          highlighted: true,
+        },
+        {
+          id: 'pkg-2',
+          title: 'Story Feature & Product Tag',
+          platform: 'TikTok',
+          price: 350,
+          deliverables: ['3x Story Frames with Swipe-Up Link', 'Brand Mention & Custom Promo Code', '24h High Engagement Timing'],
+          highlighted: false,
+        },
+        {
+          id: 'pkg-3',
+          title: 'Omni-Channel Brand Package',
+          platform: 'YouTube',
+          price: 1600,
+          deliverables: ['1x YouTube Dedicated Integration (60s)', '1x TikTok Dedicated Video', 'Instagram Carousel Review Post', '60-Day Commercial Whitelisting'],
+          highlighted: false,
+        },
+      ];
 
   const renderSocialIcon = (type: string) => {
-    switch (type.toLowerCase()) {
+    switch ((type || '').toLowerCase()) {
       case 'ig':
       case 'instagram':
         return (
@@ -300,28 +332,33 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
   };
 
   return (
-    <div className={`min-h-screen py-10 px-4 sm:px-6 transition-colors duration-300 font-sans ${th.pageBg}`}>
-      <div className="max-w-2xl mx-auto flex flex-col gap-8">
-        
-        {/* Navigation & Theme Switcher */}
-        <div className="flex items-center justify-between border-b pb-4 border-white/10">
+    <div className={`min-h-screen py-8 px-4 sm:px-6 transition-colors duration-300 font-sans ${th.pageBg}`}>
+      <div className="max-w-2xl mx-auto flex flex-col gap-6">
+
+        {/* 1. Bar Navigasi & Live Theme Switcher */}
+        <div className={`p-3 rounded-2xl border ${th.cardBg} ${th.cardBorder} flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md`}>
           <a
             href={`/${username}`}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${th.cardBorder} ${th.textSecondary} hover:${th.textPrimary} transition`}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-xl border ${th.cardBorder} ${th.textSecondary} hover:${th.textPrimary} transition`}
           >
             ← Back to Bio Hub
           </a>
 
-          <div className="flex items-center gap-1.5 p-1 rounded-full border border-white/10 bg-black/20">
+          {/* Opsi Tema Media Kit */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/30 border border-white/10">
+            <span className="text-[10px] text-neutral-400 font-bold px-2 flex items-center gap-1">
+              <Palette className="w-3.5 h-3.5 text-amber-400" />
+              <span>Theme:</span>
+            </span>
+
             {(['onyx', 'sand', 'studio', 'violet'] as MediaKitTheme[]).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setThemeKey(t)}
-                title={`Theme: ${t}`}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition ${
+                className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition ${
                   themeKey === t
-                    ? 'bg-white text-neutral-950 shadow-xs'
+                    ? 'bg-white text-neutral-950 shadow-sm'
                     : `${th.textSecondary} hover:${th.textPrimary}`
                 }`}
               >
@@ -333,54 +370,54 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           <button
             type="button"
             onClick={handleCopyLink}
-            className={`p-2 rounded-full border transition ${th.cardBorder} ${th.textSecondary} hover:${th.textPrimary}`}
+            className={`p-2 rounded-xl border transition ${th.cardBorder} ${th.textSecondary} hover:${th.textPrimary}`}
             title="Share Media Kit"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Hero Section */}
-        <header className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pt-2">
+        {/* 2. Hero Profile Header */}
+        <header className={`p-6 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col sm:flex-row items-center sm:items-start gap-5 shadow-xl`}>
           <div className="relative shrink-0">
             <img
               src={profile?.avatar || '/default-avatar.svg'}
               alt={profile?.name || username}
-              className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl object-cover shadow-2xl border-2 border-white/15"
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover shadow-lg border-2 border-white/15"
             />
-            <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-full bg-emerald-500 text-neutral-950 font-black text-[9px] uppercase tracking-wider shadow-lg flex items-center gap-1">
+            <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-full bg-emerald-500 text-neutral-950 font-black text-[9px] uppercase tracking-wider shadow-md flex items-center gap-1">
               <ShieldCheck className="w-3 h-3" /> Verified
             </span>
           </div>
 
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-2 flex-1">
-            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border ${th.accentBadge}`}>
+          <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-1.5 flex-1">
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase border ${th.accentBadge}`}>
               {displayNiche}
             </span>
 
-            <h1 className={`text-3xl sm:text-4xl font-extrabold tracking-tight ${th.textPrimary}`}>
+            <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${th.textPrimary}`}>
               {profile?.name || username}
             </h1>
 
-            <p className={`text-xs font-semibold uppercase tracking-wider ${th.accent}`}>
-              @{username} • Media Kit &amp; Partnership Portfolio
+            <p className={`text-xs font-semibold ${th.accent}`}>
+              @{username} • {headline}
             </p>
 
-            <p className={`text-xs sm:text-sm mt-1 leading-relaxed ${th.textSecondary} max-w-lg`}>
+            <p className={`text-xs mt-1 leading-relaxed ${th.textSecondary} max-w-lg`}>
               {displayBio}
             </p>
 
-            <div className="flex items-center gap-3 mt-2">
+            <div className="flex items-center gap-3 mt-3">
               <button
                 type="button"
                 onClick={() => handleOpenInquiry()}
-                className={`px-5 py-2.5 rounded-2xl font-bold text-xs flex items-center gap-2 transition shadow-lg ${th.accentBtn}`}
+                className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition shadow-md ${th.accentBtn}`}
               >
                 <Mail className="w-4 h-4" />
                 <span>Inquire Collaboration</span>
               </button>
               
-              <span className={`text-[11px] font-semibold flex items-center gap-1 ${th.textSecondary}`}>
+              <span className={`text-[11px] font-medium flex items-center gap-1 ${th.textSecondary}`}>
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 0% Agency Surcharge
               </span>
@@ -388,30 +425,30 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           </div>
         </header>
 
-        {/* High-Impact Stat Highlights */}
-        <section className={`grid grid-cols-3 gap-3 p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} shadow-xl`}>
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+        {/* 3. High-Impact Reach Metrics */}
+        <section className={`grid grid-cols-3 gap-3 p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} shadow-lg text-center`}>
+          <div>
             <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Total Reach</span>
-            <span className={`text-xl sm:text-3xl mt-0.5 ${th.statHighlight}`}>{totalReach}</span>
-            <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-0.5 mt-0.5">
-              <TrendingUp className="w-3 h-3" /> Across Platforms
+            <span className={`text-xl sm:text-2xl mt-1 block ${th.statHighlight}`}>{totalReach}</span>
+            <span className="text-[10px] text-emerald-400 font-medium flex items-center justify-center gap-0.5 mt-0.5">
+              <TrendingUp className="w-3 h-3" /> All Platforms
             </span>
           </div>
 
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left border-x px-3 border-white/10">
+          <div className="border-x px-2 border-white/10">
             <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Avg Engagement</span>
-            <span className={`text-xl sm:text-3xl mt-0.5 ${th.statHighlight}`}>{avgEng}</span>
+            <span className={`text-xl sm:text-2xl mt-1 block ${th.statHighlight}`}>{avgEng}</span>
             <span className={`text-[10px] ${th.textSecondary} font-medium mt-0.5`}>Industry Top 5%</span>
           </div>
 
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
-            <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Monthly Views</span>
-            <span className={`text-xl sm:text-3xl mt-0.5 ${th.statHighlight}`}>{monthlyImpr}</span>
-            <span className={`text-[10px] ${th.textSecondary} font-medium mt-0.5`}>Impressions / 30d</span>
+          <div>
+            <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Monthly Impressions</span>
+            <span className={`text-xl sm:text-2xl mt-1 block ${th.statHighlight}`}>{monthlyImpr}</span>
+            <span className={`text-[10px] ${th.textSecondary} font-medium mt-0.5`}>Views / 30d</span>
           </div>
         </section>
 
-        {/* Platform Breakdown Cards */}
+        {/* 4. Verified Audience by Platform */}
         <section className="flex flex-col gap-3">
           <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary} px-1`}>
             Verified Audience by Platform
@@ -438,7 +475,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           </div>
         </section>
 
-        {/* Showcase Content Reels */}
+        {/* 5. Showcase Content Reels */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between px-1">
             <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary}`}>
@@ -477,26 +514,23 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           </div>
         </section>
 
-        {/* Audience Demographics */}
-        <section className={`p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col gap-4`}>
+        {/* 6. Audience Demographics */}
+        <section className={`p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col gap-3 shadow-md`}>
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textPrimary}`}>
-                Audience Demographics &amp; Insights
-              </h3>
-              <p className={`text-[11px] mt-0.5 ${th.textSecondary}`}>Verified follower composition and core consumer base</p>
-            </div>
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textPrimary}`}>
+              Audience Demographics &amp; Insights
+            </h3>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${th.accentBadge}`}>
-              Age 18 - 34: 78%
+              Top Country: {topCountry}
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 pt-1">
             <div className="flex justify-between text-xs font-semibold">
               <span className={th.textPrimary}>Female (58%)</span>
               <span className={th.textSecondary}>Male (42%)</span>
             </div>
-            <div className="w-full h-3 rounded-full bg-neutral-800/40 overflow-hidden flex">
+            <div className="w-full h-2.5 rounded-full bg-neutral-800/40 overflow-hidden flex">
               <div className="h-full bg-rose-400 rounded-l-full" style={{ width: '58%' }} />
               <div className="h-full bg-sky-400 rounded-r-full" style={{ width: '42%' }} />
             </div>
@@ -504,7 +538,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
 
           <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5 text-center">
             <div>
-              <span className={`text-[10px] block ${th.textSecondary}`}>1. United States</span>
+              <span className={`text-[10px] block ${th.textSecondary}`}>1. {topCountry}</span>
               <strong className={`text-xs ${th.textPrimary}`}>46%</strong>
             </div>
             <div>
@@ -518,67 +552,96 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           </div>
         </section>
 
-        {/* Rate Cards & Packages */}
-        <section className="flex flex-col gap-4">
+        {/* 7. Rate Cards & Deliverables */}
+        <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between px-1">
-            <div>
-              <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary}`}>
-                Standard Collaboration Rates &amp; Packages
-              </h3>
-              <p className={`text-[11px] ${th.textSecondary} mt-0.5`}>Transparent flat-rate pricing. Bespoke contracts available upon request.</p>
-            </div>
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary}`}>
+              Standard Collaboration Rates &amp; Packages
+            </h3>
+            <span className={`text-[10px] ${th.accent} font-semibold`}>Instant Booking Available</span>
           </div>
 
           <div className="flex flex-col gap-3">
-            {packages.map((pkg) => (
-              <div
-                key={pkg.id}
-                className={`p-5 rounded-3xl border transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${th.cardBg} ${
-                  pkg.highlighted ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : th.cardBorder
-                }`}
-              >
-                <div className="flex flex-col gap-2 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className={`text-sm font-bold ${th.textPrimary}`}>{pkg.name}</h4>
-                    {pkg.highlighted && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase">
-                        Most Popular
-                      </span>
+            {packagesList.map((pkg, idx) => {
+              const pkgTitle = pkg.title || pkg.name || 'Collaboration Package';
+              const pkgPrice = pkg.price !== undefined ? pkg.price : 150;
+              
+              // Menghindari crash jika deliverables tidak berformat array
+              const deliverablesList = Array.isArray(pkg.deliverables) && pkg.deliverables.length > 0
+                ? pkg.deliverables
+                : pkg.description
+                  ? [pkg.description]
+                  : ['Dedicated partnership content with full commercial rights.'];
+
+              return (
+                <div
+                  key={pkg.id || idx}
+                  className={`p-5 rounded-3xl border transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${th.cardBg} ${
+                    pkg.highlighted ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : th.cardBorder
+                  }`}
+                >
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {pkg.platform && (
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 bg-black/30 border border-white/10 ${th.textPrimary}`}>
+                          {renderSocialIcon(pkg.platform)}
+                          <span>{pkg.platform}</span>
+                        </span>
+                      )}
+                      <h4 className={`text-sm font-bold ${th.textPrimary}`}>{pkgTitle}</h4>
+                      {pkg.highlighted && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase">
+                          Most Popular
+                        </span>
+                      )}
+                    </div>
+
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                      {deliverablesList.map((d, i) => (
+                        <li key={i} className={`flex items-center gap-1.5 ${th.textSecondary}`}>
+                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>{d}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {pkg.sample_url && (
+                      <a
+                        href={pkg.sample_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-[11px] font-semibold flex items-center gap-1 ${th.accent} hover:underline mt-0.5`}
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                        <span>Watch Sample Campaign Video</span>
+                        <ExternalLink className="w-3 h-3 ml-0.5" />
+                      </a>
                     )}
                   </div>
 
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
-                    {pkg.deliverables.map((d, i) => (
-                      <li key={i} className={`flex items-center gap-1.5 ${th.textSecondary}`}>
-                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>{d}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-white/5 gap-3">
+                    <div className="text-left sm:text-right">
+                      <span className={`text-[10px] uppercase font-bold block ${th.textSecondary}`}>Starting At</span>
+                      <span className={`text-2xl font-black ${th.statHighlight}`}>${pkgPrice}</span>
+                    </div>
 
-                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-white/5 gap-3">
-                  <div className="text-left sm:text-right">
-                    <span className={`text-[10px] uppercase font-bold block ${th.textSecondary}`}>Starting At</span>
-                    <span className={`text-2xl font-black ${th.statHighlight}`}>${pkg.price}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenInquiry(pkg)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 shadow-md ${th.accentBtn}`}
+                    >
+                      <span>Request Booking</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleOpenInquiry(pkg)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 ${th.accentBtn}`}
-                  >
-                    <span>Request Booking</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className={`p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col gap-3`}>
+        {/* 8. Recent Brand Partnerships & Testimonials */}
+        <section className={`p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col gap-3 shadow-md`}>
           <div className="flex items-center justify-between">
             <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textPrimary}`}>
               Recent Brand Partnerships &amp; Testimonials
@@ -613,7 +676,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           </div>
         </section>
 
-        {/* Footer */}
+        {/* 9. Footer Guarantee */}
         <footer className="text-center flex flex-col items-center gap-2 pt-4 pb-12 border-t border-white/10">
           <p className={`text-xs font-semibold ${th.textPrimary}`}>
             Ready to collaborate with @{username}?
@@ -632,7 +695,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
         </footer>
       </div>
 
-      {/* Brand Partnership Proposal Modal */}
+      {/* 10. Brand Partnership Proposal Modal */}
       {inquiryModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-3xl bg-neutral-900 border border-neutral-800 p-6 flex flex-col gap-4 shadow-2xl relative">
@@ -694,7 +757,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
                     <input
                       type="text"
                       disabled
-                      value={selectedPackage?.name || 'Custom Package'}
+                      value={selectedPackage?.title || selectedPackage?.name || 'Custom Package'}
                       className="w-full px-3.5 py-2 rounded-xl bg-neutral-950/60 border border-neutral-800 text-neutral-400 truncate cursor-not-allowed"
                     />
                   </div>
@@ -702,7 +765,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
                     <label className="text-[11px] text-neutral-400 block mb-1">Budget / Offer</label>
                     <input
                       type="text"
-                      placeholder="$850"
+                      placeholder="$150"
                       value={brandBudget}
                       onChange={(e) => setBrandBudget(e.target.value)}
                       className="w-full px-3.5 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-white focus:outline-none focus:border-emerald-500 transition"
