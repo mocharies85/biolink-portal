@@ -184,7 +184,7 @@ export default function HomePage() {
 
                 <div>
                   <h3 className="text-sm font-black text-white flex items-center justify-center gap-1">
-                    Moch Aries <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                    Alex Rivera <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
                   </h3>
                   <p className="text-[11px] text-neutral-400 mt-0.5">
                     Tech Creator &amp; Digital Architect
