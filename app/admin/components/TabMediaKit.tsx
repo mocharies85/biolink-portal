@@ -17,7 +17,10 @@ import {
   Pencil,
   Check,
   X,
+  Palette,
 } from 'lucide-react';
+
+export type MediaKitTheme = 'onyx' | 'sand' | 'studio' | 'violet';
 
 export interface RateCardItem {
   id: string;
@@ -39,6 +42,7 @@ export interface MediaKitData {
   primary_niche: string;
   audience_country: string;
   rate_cards: RateCardItem[];
+  theme?: MediaKitTheme;
 }
 
 interface TabMediaKitProps {
@@ -47,6 +51,48 @@ interface TabMediaKitProps {
   setMediaKit: React.Dispatch<React.SetStateAction<MediaKitData>>;
   isPro?: boolean;
 }
+
+const THEME_SELECTION_OPTIONS: {
+  id: MediaKitTheme;
+  name: string;
+  description: string;
+  bgPreview: string;
+  borderPreview: string;
+  textPreview: string;
+}[] = [
+  {
+    id: 'onyx',
+    name: 'Onyx Noir',
+    description: 'Dark tech & luxury contrast',
+    bgPreview: 'bg-[#0a0a0c]',
+    borderPreview: 'border-emerald-500/40',
+    textPreview: 'text-emerald-400',
+  },
+  {
+    id: 'sand',
+    name: 'Warm Sand',
+    description: 'Editorial beige & warm aesthetic',
+    bgPreview: 'bg-[#f5f1eb]',
+    borderPreview: 'border-[#99623b]/40',
+    textPreview: 'text-[#99623b]',
+  },
+  {
+    id: 'studio',
+    name: 'Clean Studio',
+    description: 'Minimalist high-contrast light',
+    bgPreview: 'bg-white',
+    borderPreview: 'border-neutral-300',
+    textPreview: 'text-neutral-900',
+  },
+  {
+    id: 'violet',
+    name: 'Cyber Violet',
+    description: 'Neon pulse & entertainment vibe',
+    bgPreview: 'bg-[#0d0716]',
+    borderPreview: 'border-purple-500/40',
+    textPreview: 'text-fuchsia-400',
+  },
+];
 
 export default function TabMediaKit({
   activeUsername,
@@ -57,14 +103,14 @@ export default function TabMediaKit({
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Form State Tambah Paket Baru
+  // Form State: Add New Package
   const [newPlatform, setNewPlatform] = useState('Instagram');
   const [newDeliverable, setNewDeliverable] = useState('');
   const [newPrice, setNewPrice] = useState<number | ''>('');
   const [newDesc, setNewDesc] = useState('');
   const [newSampleUrl, setNewSampleUrl] = useState('');
 
-  // State Edit Paket yang Sedang Berjalan
+  // Form State: Active Package Being Edited
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPlatform, setEditPlatform] = useState('Instagram');
   const [editDeliverable, setEditDeliverable] = useState('');
@@ -75,14 +121,14 @@ export default function TabMediaKit({
   const targetUsername = activeUsername || 'creator';
   const packageCount = mediaKit.rate_cards?.length || 0;
 
-  // Sinkronisasi otomatis: Jika 0 paket maka otomatis OFF
+  // Auto-synchronization: turn OFF if package count drops to 0
   useEffect(() => {
     if (packageCount === 0 && mediaKit.is_enabled) {
       setMediaKit((prev) => ({ ...prev, is_enabled: false }));
     }
   }, [packageCount, mediaKit.is_enabled, setMediaKit]);
 
-  // Layar Terkunci untuk Free User (Paywall)
+  // Lock Screen Paywall for Free Tier Users
   if (!isPro) {
     return (
       <div className="max-w-2xl p-8 rounded-3xl bg-neutral-900/90 border border-neutral-800 text-center flex flex-col items-center gap-5 shadow-2xl relative overflow-hidden">
@@ -105,15 +151,15 @@ export default function TabMediaKit({
         <div className="w-full max-w-sm p-4 rounded-2xl bg-neutral-950 border border-neutral-800/80 text-left flex flex-col gap-2 text-xs text-neutral-300">
           <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>Custom Visual Themes (Onyx, Sand, Studio, Violet)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span>Interactive Rate Cards &amp; Deliverables</span>
           </div>
           <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span>Smart Bundle Calculator (10% discounts)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span>1-Click Pitch Deck PDF Exporter</span>
+            <span>Verified Reach &amp; Engagement Demographics</span>
           </div>
           <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -132,7 +178,7 @@ export default function TabMediaKit({
     );
   }
 
-  // Tambah Paket Baru (Otomatis ON jika dari 0 paket)
+  // Add New Package (automatically turn ON if adding first package)
   const handleAddPackage = () => {
     if (!newDeliverable.trim() || newPrice === '') return;
 
@@ -160,7 +206,7 @@ export default function TabMediaKit({
     setNewSampleUrl('');
   };
 
-  // Buka Form Edit untuk Paket Tertentu
+  // Open Edit Form for Specific Package
   const handleStartEdit = (item: RateCardItem) => {
     setEditingId(item.id);
     setEditPlatform(item.platform);
@@ -170,12 +216,12 @@ export default function TabMediaKit({
     setEditSampleUrl(item.sample_url || '');
   };
 
-  // Batalkan Edit
+  // Cancel Edit
   const handleCancelEdit = () => {
     setEditingId(null);
   };
 
-  // Simpan Pembaruan Paket
+  // Update Package
   const handleUpdatePackage = (id: string) => {
     if (!editDeliverable.trim() || editPrice === '') return;
 
@@ -198,7 +244,7 @@ export default function TabMediaKit({
     setEditingId(null);
   };
 
-  // Hapus Paket (Otomatis OFF jika paket habis menjadi 0)
+  // Delete Package (automatically turn OFF if all packages deleted)
   const handleDeletePackage = (id: string) => {
     setMediaKit((prev) => {
       const updatedRateCards = (prev.rate_cards || []).filter((item) => item.id !== id);
@@ -211,7 +257,7 @@ export default function TabMediaKit({
     if (editingId === id) setEditingId(null);
   };
 
-  // Toggle Switch Manual
+  // Manual Toggle Switch
   const handleToggleActive = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (packageCount === 0) return;
     setMediaKit((prev) => ({
@@ -226,6 +272,7 @@ export default function TabMediaKit({
 
     const payload = {
       ...mediaKit,
+      theme: mediaKit.theme || 'onyx',
       is_enabled: isCurrentlyEnabled,
     };
 
@@ -286,7 +333,50 @@ export default function TabMediaKit({
           Showcase your audience statistics, reach, and sponsorship pricing packages to close more brand partnerships.
         </p>
       </div>
-{/* Media Kit Headline & Bio Intro */}
+
+      {/* 1. Visual Theme Selection */}
+      <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3">
+        <div>
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <Palette className="w-4 h-4 text-amber-400" />
+            <span>Visual Theme Styling</span>
+          </h3>
+          <p className="text-[11px] text-neutral-400 mt-0.5">
+            Choose the visual presentation style displayed to brands when visiting your public Media Kit.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-1">
+          {THEME_SELECTION_OPTIONS.map((thm) => {
+            const isSelected = (mediaKit.theme || 'onyx') === thm.id;
+            return (
+              <button
+                key={thm.id}
+                type="button"
+                onClick={() => setMediaKit((prev) => ({ ...prev, theme: thm.id }))}
+                className={`p-3 rounded-xl border text-left transition flex flex-col gap-2 relative ${
+                  isSelected
+                    ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-neutral-850'
+                    : 'border-neutral-800 bg-neutral-950 hover:border-neutral-700'
+                }`}
+              >
+                <div className={`w-full h-8 rounded-lg border ${thm.borderPreview} ${thm.bgPreview} flex items-center justify-center shadow-inner`}>
+                  <span className={`text-[10px] font-black ${thm.textPreview}`}>Aa</span>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white block">{thm.name}</span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                  </div>
+                  <span className="text-[10px] text-neutral-400 block mt-0.5 leading-snug">{thm.description}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. Media Kit Headline & Pitch Intro */}
       <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
         <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
           <Briefcase className="w-4 h-4 text-amber-400" />
@@ -299,7 +389,7 @@ export default function TabMediaKit({
             type="text"
             value={mediaKit.headline || ''}
             onChange={(e) => setMediaKit({ ...mediaKit, headline: e.target.value })}
-            placeholder="e.g. CONTENT CREATOR & BRAND PARTNER"
+            placeholder="e.g. Content Creator &amp; Brand Partner"
             className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-500/50 transition font-bold"
           />
         </div>
@@ -326,7 +416,8 @@ export default function TabMediaKit({
           />
         </div>
       </div>
-      {/* Audience & Reach Metrics */}
+
+      {/* 3. Audience & Reach Metrics */}
       <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
         <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
           <Users className="w-4 h-4 text-emerald-400" />
@@ -376,7 +467,7 @@ export default function TabMediaKit({
               type="text"
               value={mediaKit.primary_niche || ''}
               onChange={(e) => setMediaKit({ ...mediaKit, primary_niche: e.target.value })}
-              placeholder="e.g. Tech, Gadgets, Digital Art"
+              placeholder="e.g. Tech &amp; Lifestyle"
               className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
             />
           </div>
@@ -387,14 +478,14 @@ export default function TabMediaKit({
               type="text"
               value={mediaKit.audience_country || ''}
               onChange={(e) => setMediaKit({ ...mediaKit, audience_country: e.target.value })}
-              placeholder="e.g. United States, Indonesia"
+              placeholder="e.g. United States"
               className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
             />
           </div>
         </div>
       </div>
 
-      {/* Rate Card & Deliverables */}
+      {/* 4. Rate Card & Deliverables */}
       <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -411,13 +502,13 @@ export default function TabMediaKit({
           {packageCount === 0 ? (
             <div className="py-6 px-4 rounded-xl bg-neutral-950/40 border border-neutral-800/60 text-center">
               <p className="text-xs text-neutral-500">No sponsorship packages created yet.</p>
-              <p className="text-[11px] text-neutral-600 mt-0.5">Add your first package below to enable the Media Kit toggle switch.</p>
+              <p className="text-[11px] text-neutral-600 mt-0.5">Add your first package below to activate your Media Kit.</p>
             </div>
           ) : (
             mediaKit.rate_cards.map((item) => {
               const isEditing = editingId === item.id;
 
-              // Tampilan mode edit langsung pada kartu
+              // Card in Edit Mode
               if (isEditing) {
                 return (
                   <div
@@ -507,7 +598,7 @@ export default function TabMediaKit({
                 );
               }
 
-              // Tampilan normal kartu paket
+              // Normal Card View
               return (
                 <div
                   key={item.id}
@@ -534,7 +625,7 @@ export default function TabMediaKit({
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs font-black text-amber-400 mr-1">${item.price}</span>
                     
-                    {/* Tombol Edit */}
+                    {/* Edit Button */}
                     <button
                       type="button"
                       onClick={() => handleStartEdit(item)}
@@ -544,7 +635,7 @@ export default function TabMediaKit({
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
 
-                    {/* Tombol Hapus */}
+                    {/* Delete Button */}
                     <button
                       type="button"
                       onClick={() => handleDeletePackage(item.id)}
@@ -623,7 +714,7 @@ export default function TabMediaKit({
         </div>
       </div>
 
-      {/* Footer: ON/OFF Toggle Switch & Save Button */}
+      {/* Footer: Toggle Switch & Save Button */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900 border border-neutral-800 shadow-md">
         {/* Toggle Switch */}
         <label className={`flex items-center gap-3 select-none ${packageCount === 0 ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>

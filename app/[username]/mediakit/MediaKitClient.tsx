@@ -15,7 +15,6 @@ import {
   X,
   CheckCircle2,
   Globe,
-  Palette,
   ExternalLink,
 } from 'lucide-react';
 
@@ -71,7 +70,7 @@ const THEME_STYLES: Record<MediaKitTheme, {
   statHighlight: string;
 }> = {
   onyx: {
-    name: 'Onyx',
+    name: 'Onyx Noir',
     pageBg: 'bg-[#0a0a0c]',
     cardBg: 'bg-[#121216]/90 backdrop-blur-md',
     cardBorder: 'border-white/10',
@@ -83,7 +82,7 @@ const THEME_STYLES: Record<MediaKitTheme, {
     statHighlight: 'text-white font-black',
   },
   sand: {
-    name: 'Sand',
+    name: 'Warm Sand',
     pageBg: 'bg-[#f5f1eb]',
     cardBg: 'bg-[#ffffff]/90 backdrop-blur-md',
     cardBorder: 'border-[#e3dcd1]',
@@ -95,7 +94,7 @@ const THEME_STYLES: Record<MediaKitTheme, {
     statHighlight: 'text-[#26211c] font-serif font-bold',
   },
   studio: {
-    name: 'Studio',
+    name: 'Clean Studio',
     pageBg: 'bg-[#fafafa]',
     cardBg: 'bg-white',
     cardBorder: 'border-neutral-200',
@@ -107,7 +106,7 @@ const THEME_STYLES: Record<MediaKitTheme, {
     statHighlight: 'text-neutral-950 font-black',
   },
   violet: {
-    name: 'Violet',
+    name: 'Cyber Violet',
     pageBg: 'bg-[#0d0716]',
     cardBg: 'bg-[#170e28]/90 backdrop-blur-md',
     cardBorder: 'border-purple-500/25',
@@ -125,7 +124,7 @@ interface MediaKitClientProps {
 }
 
 export default function MediaKitClient({ username: propUsername }: MediaKitClientProps = {}) {
-  // Otomatis mendeteksi username dari props atau URL
+  // Automatically detects username from props or browser URL
   const [username, setUsername] = useState<string>(() => {
     if (propUsername) return propUsername.toLowerCase();
     if (typeof window !== 'undefined') {
@@ -142,7 +141,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
   const [mediaKit, setMediaKit] = useState<MediaKitData | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Modal Inquire State
+  // Proposal Modal State
   const [inquiryModal, setInquiryModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<RateCardItem | null>(null);
   const [brandEmail, setBrandEmail] = useState('');
@@ -176,6 +175,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
         const kit = kitData?.mediakit || kitData?.mediaKit;
         if (kit) {
           setMediaKit(kit);
+          // Apply theme chosen by the creator in Admin
           if (kit.theme && THEME_STYLES[kit.theme as MediaKitTheme]) {
             setThemeKey(kit.theme as MediaKitTheme);
           }
@@ -239,7 +239,6 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
     }
   };
 
-  // Pengambilan metrik adaptif dari D1 database / admin
   const headline = mediaKit?.headline || 'Content Creator & Brand Partner';
   const displayBio = mediaKit?.pitch_bio || mediaKit?.bio || profile?.bio || 'Full-time content creator crafting authentic reviews, engaging video reels, and high-impact digital activations for global brands.';
   const displayNiche = mediaKit?.primary_niche || mediaKit?.niche || 'TECH & LIFESTYLE';
@@ -258,7 +257,6 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
 
   const topCountry = mediaKit?.top_country || 'United States';
 
-  // 4 Platform kartu audiens terverifikasi
   const platforms = [
     { name: 'Instagram', handle: `@${username}`, count: '410K', icon: 'ig' },
     { name: 'TikTok', handle: `@${username}`, count: '1.2M', icon: 'tiktok' },
@@ -266,7 +264,6 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
     { name: 'X / Twitter', handle: `@${username}`, count: '95K', icon: 'x' },
   ];
 
-  // Daftar Rate Cards aman tanpa risiko undefined error
   const rawPackages = mediaKit?.rate_cards;
   const packagesList: RateCardItem[] = (Array.isArray(rawPackages) && rawPackages.length > 0)
     ? rawPackages
@@ -278,22 +275,6 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           price: 150,
           deliverables: ['1x TikTok + 1x Instagram Reel', '30-Day Digital Ad Usage Rights', 'Link in Bio for 7 Days', 'Raw 4K Footage Delivery'],
           highlighted: true,
-        },
-        {
-          id: 'pkg-2',
-          title: 'Story Feature & Product Tag',
-          platform: 'TikTok',
-          price: 350,
-          deliverables: ['3x Story Frames with Swipe-Up Link', 'Brand Mention & Custom Promo Code', '24h High Engagement Timing'],
-          highlighted: false,
-        },
-        {
-          id: 'pkg-3',
-          title: 'Omni-Channel Brand Package',
-          platform: 'YouTube',
-          price: 1600,
-          deliverables: ['1x YouTube Dedicated Integration (60s)', '1x TikTok Dedicated Video', 'Instagram Carousel Review Post', '60-Day Commercial Whitelisting'],
-          highlighted: false,
         },
       ];
 
@@ -335,37 +316,14 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
     <div className={`min-h-screen py-8 px-4 sm:px-6 transition-colors duration-300 font-sans ${th.pageBg}`}>
       <div className="max-w-2xl mx-auto flex flex-col gap-6">
 
-        {/* 1. Bar Navigasi & Live Theme Switcher */}
-        <div className={`p-3 rounded-2xl border ${th.cardBg} ${th.cardBorder} flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md`}>
+        {/* 1. Public Navigation Bar (Clean - Theme Switcher Managed in Admin) */}
+        <div className={`p-3 rounded-2xl border ${th.cardBg} ${th.cardBorder} flex items-center justify-between shadow-md`}>
           <a
             href={`/${username}`}
             className={`text-xs font-semibold px-3 py-1.5 rounded-xl border ${th.cardBorder} ${th.textSecondary} hover:${th.textPrimary} transition`}
           >
             ← Back to Bio Hub
           </a>
-
-          {/* Opsi Tema Media Kit */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/30 border border-white/10">
-            <span className="text-[10px] text-neutral-400 font-bold px-2 flex items-center gap-1">
-              <Palette className="w-3.5 h-3.5 text-amber-400" />
-              <span>Theme:</span>
-            </span>
-
-            {(['onyx', 'sand', 'studio', 'violet'] as MediaKitTheme[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setThemeKey(t)}
-                className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition ${
-                  themeKey === t
-                    ? 'bg-white text-neutral-950 shadow-sm'
-                    : `${th.textSecondary} hover:${th.textPrimary}`
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
 
           <button
             type="button"
@@ -566,7 +524,6 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
               const pkgTitle = pkg.title || pkg.name || 'Collaboration Package';
               const pkgPrice = pkg.price !== undefined ? pkg.price : 150;
               
-              // Menghindari crash jika deliverables tidak berformat array
               const deliverablesList = Array.isArray(pkg.deliverables) && pkg.deliverables.length > 0
                 ? pkg.deliverables
                 : pkg.description
