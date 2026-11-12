@@ -39,7 +39,6 @@ import TabStories from './components/TabStories';
 import TabInbox from './components/TabInbox';
 import TabAnalytics from './components/TabAnalytics';
 import TabMediaKit from './components/TabMediaKit';
-import TabStore from './components/TabStore';
 import PhoneMockup from './components/PhoneMockup';
 import AdminModals from './components/AdminModals';
 
@@ -49,7 +48,7 @@ export default function AdminDashboard() {
 
   // Active Tab State
   const [activeTab, setActiveTab] = useState<
-    'profile' | 'links' | 'themes' | 'stories' | 'inbox' | 'analytics' | 'mediakit' | 'store'
+    'profile' | 'links' | 'themes' | 'stories' | 'inbox' | 'analytics' | 'mediakit'
   >('profile');
 
   // User & Auth State
@@ -498,17 +497,17 @@ export default function AdminDashboard() {
               </span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('store')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
-                activeTab === 'store'
-                  ? 'bg-neutral-800 text-white shadow-sm'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-850'
-              }`}
+            {/* Direct Link to Curiolot Commerce Dashboard */}
+            <a
+              href="https://store.curiolot.com/dashboard"
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-neutral-400 hover:text-white hover:bg-neutral-850 transition group"
             >
-              <ShoppingBag className="w-4 h-4 text-emerald-400" />
-              <span>Digital Store</span>
-            </button>
+              <div className="flex items-center gap-3">
+                <ShoppingBag className="w-4 h-4 text-emerald-400" />
+                <span>Digital Store</span>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-neutral-600 group-hover:text-emerald-400 transition" />
+            </a>
 
             <button
               onClick={() => setActiveTab('themes')}
@@ -660,13 +659,6 @@ export default function AdminDashboard() {
             fetchLinks={fetchLinks}
             handleSaveProfile={handleSaveProfile}
             savingProfile={savingProfile}
-          />
-        )}
-
-        {activeTab === 'store' && (
-          <TabStore
-            activeUsername={activeUsername}
-            isProUser={isProUser}
           />
         )}
 
