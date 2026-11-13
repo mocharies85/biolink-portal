@@ -106,6 +106,33 @@ export interface RateCardItem {
   sample_url?: string;
 }
 
+export interface MediaKitPlatformItem {
+  id: string;
+  platform: string;
+  handle: string;
+  followers: string;
+}
+
+export interface MediaKitShowcaseItem {
+  id: string;
+  title: string;
+  views: string;
+  video_url: string;
+  thumbnail?: string;
+}
+
+export interface MediaKitCountryItem {
+  country: string;
+  percent: number;
+}
+
+export interface MediaKitTestimonialItem {
+  id: string;
+  brand: string;
+  metric: string;
+  quote: string;
+}
+
 export interface MediaKitData {
   is_enabled: boolean;
   headline: string;
@@ -117,6 +144,12 @@ export interface MediaKitData {
   primary_niche: string;
   audience_country: string;
   rate_cards: RateCardItem[];
+  theme?: 'onyx' | 'sand' | 'studio' | 'violet';
+  platforms?: MediaKitPlatformItem[];
+  showcase_videos?: MediaKitShowcaseItem[];
+  gender_female?: number;
+  top_countries?: MediaKitCountryItem[];
+  testimonials?: MediaKitTestimonialItem[];
 }
 
 // 4 Free Themes + 5 PRO Themes

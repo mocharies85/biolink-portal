@@ -1,3 +1,13 @@
+function safeJsonParse(str, fallback) {
+  if (!str) return fallback;
+  if (typeof str === 'object') return str;
+  try {
+    return JSON.parse(str);
+  } catch {
+    return fallback;
+  }
+}
+
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const username = url.searchParams.get('username');
@@ -20,6 +30,8 @@ export async function onRequestGet({ request, env }) {
       });
     }
 
+    const ext = safeJsonParse(row.extended_data, {});
+
     const mediakit = {
       is_enabled: row.is_enabled === 1 || row.is_enabled === true,
       headline: row.headline || '',
@@ -30,8 +42,13 @@ export async function onRequestGet({ request, env }) {
       engagement_rate: row.engagement_rate || 0,
       primary_niche: row.primary_niche || '',
       audience_country: row.audience_country || '',
-      rate_cards: typeof row.packages === 'string' ? JSON.parse(row.packages) : (row.rate_cards || []),
+      rate_cards: safeJsonParse(row.packages, []),
       theme: row.theme || 'onyx',
+      platforms: Array.isArray(ext.platforms) ? ext.platforms : [],
+      showcase_videos: Array.isArray(ext.showcase_videos) ? ext.showcase_videos : [],
+      gender_female: ext.gender_female !== undefined && ext.gender_female !== '' ? Number(ext.gender_female) : undefined,
+      top_countries: Array.isArray(ext.top_countries) ? ext.top_countries : [],
+      testimonials: Array.isArray(ext.testimonials) ? ext.testimonials : [],
     };
 
     return new Response(JSON.stringify({ mediakit }), {
@@ -62,12 +79,20 @@ export async function onRequestPost({ request, env }) {
     const rateCards = JSON.stringify(kit.rate_cards || []);
     const theme = kit.theme || 'onyx';
 
+    const extendedData = JSON.stringify({
+      platforms: Array.isArray(kit.platforms) ? kit.platforms : [],
+      showcase_videos: Array.isArray(kit.showcase_videos) ? kit.showcase_videos : [],
+      gender_female: kit.gender_female !== undefined && kit.gender_female !== '' ? Number(kit.gender_female) : undefined,
+      top_countries: Array.isArray(kit.top_countries) ? kit.top_countries : [],
+      testimonials: Array.isArray(kit.testimonials) ? kit.testimonials : [],
+    });
+
     await env.DB.prepare(`
       INSERT INTO media_kits (
         username, is_enabled, headline, about, contact_email, 
         total_followers, monthly_impressions, engagement_rate, 
-        primary_niche, audience_country, packages, theme, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        primary_niche, audience_country, packages, theme, extended_data, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(username) DO UPDATE SET
         is_enabled = excluded.is_enabled,
         headline = excluded.headline,
@@ -80,6 +105,7 @@ export async function onRequestPost({ request, env }) {
         audience_country = excluded.audience_country,
         packages = excluded.packages,
         theme = excluded.theme,
+        extended_data = excluded.extended_data,
         updated_at = excluded.updated_at
     `).bind(
       username,
@@ -94,6 +120,7 @@ export async function onRequestPost({ request, env }) {
       kit.audience_country || '',
       rateCards,
       theme,
+      extendedData,
       Date.now()
     ).run();
 

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Sparkles,
   Share2,
   Check,
   Star,
@@ -24,6 +23,7 @@ interface RateCardItem {
   id?: string;
   name?: string;
   title?: string;
+  deliverable?: string;
   platform?: string;
   description?: string;
   deliverables?: string[];
@@ -32,29 +32,57 @@ interface RateCardItem {
   highlighted?: boolean;
 }
 
-interface CollabClient {
-  name: string;
-  rating: number;
-  reach: string;
-  testimonial?: string;
+interface PlatformItem {
+  id?: string;
+  platform: string;
+  handle: string;
+  followers: string;
+}
+
+interface ShowcaseVideoItem {
+  id?: string;
+  title: string;
+  views: string;
+  video_url: string;
+  thumbnail?: string;
+}
+
+interface CountryItem {
+  country: string;
+  percent: number;
+}
+
+interface TestimonialItem {
+  id?: string;
+  brand: string;
+  metric: string;
+  quote: string;
 }
 
 interface MediaKitData {
   headline?: string;
   bio?: string;
+  about?: string;
   pitch_bio?: string;
   niche?: string;
   primary_niche?: string;
+  total_followers?: number | string;
   total_reach?: string;
   total_audience_reach?: string;
+  engagement_rate?: number | string;
   avg_engagement?: string;
   avg_engagement_rate?: string;
-  monthly_impressions?: string;
+  monthly_impressions?: number | string;
+  audience_country?: string;
   top_country?: string;
-  business_email?: string;
+  contact_email?: string;
   rate_cards?: RateCardItem[];
-  clients?: CollabClient[];
   theme?: MediaKitTheme;
+  platforms?: PlatformItem[];
+  showcase_videos?: ShowcaseVideoItem[];
+  gender_female?: number;
+  top_countries?: CountryItem[];
+  testimonials?: TestimonialItem[];
 }
 
 const THEME_STYLES: Record<MediaKitTheme, {
@@ -119,12 +147,17 @@ const THEME_STYLES: Record<MediaKitTheme, {
   },
 };
 
+function getYoutubeThumbnail(url: string): string | null {
+  if (!url) return null;
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : null;
+}
+
 interface MediaKitClientProps {
   username?: string;
 }
 
 export default function MediaKitClient({ username: propUsername }: MediaKitClientProps = {}) {
-  // Automatically detects username from props or browser URL
   const [username, setUsername] = useState<string>(() => {
     if (propUsername) return propUsername.toLowerCase();
     if (typeof window !== 'undefined') {
@@ -175,7 +208,6 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
         const kit = kitData?.mediakit || kitData?.mediaKit;
         if (kit) {
           setMediaKit(kit);
-          // Apply theme chosen by the creator in Admin
           if (kit.theme && THEME_STYLES[kit.theme as MediaKitTheme]) {
             setThemeKey(kit.theme as MediaKitTheme);
           }
@@ -209,7 +241,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
     e.preventDefault();
     setSendingInquiry(true);
     try {
-      const pkgTitle = selectedPackage?.title || selectedPackage?.name || 'General Partnership';
+      const pkgTitle = selectedPackage?.deliverable || selectedPackage?.title || selectedPackage?.name || 'General Partnership';
       const res = await fetch('/api/messaging', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -239,44 +271,37 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
     }
   };
 
+  // Real Creator Data (Zero hardcoded dummy metrics)
   const headline = mediaKit?.headline || 'Content Creator & Brand Partner';
-  const displayBio = mediaKit?.pitch_bio || mediaKit?.bio || profile?.bio || 'Full-time content creator crafting authentic reviews, engaging video reels, and high-impact digital activations for global brands.';
-  const displayNiche = mediaKit?.primary_niche || mediaKit?.niche || 'TECH & LIFESTYLE';
-  
-  const totalReach = mediaKit?.total_audience_reach 
-    ? (Number(mediaKit.total_audience_reach) >= 1000 ? `${(Number(mediaKit.total_audience_reach) / 1000).toLocaleString()}K+` : mediaKit.total_audience_reach)
-    : (mediaKit?.total_reach || '50K+');
+  const displayBio = mediaKit?.about || mediaKit?.pitch_bio || mediaKit?.bio || profile?.bio || '';
+  const displayNiche = mediaKit?.primary_niche || mediaKit?.niche || '';
 
-  const avgEng = mediaKit?.avg_engagement_rate 
-    ? `${mediaKit.avg_engagement_rate}%` 
-    : (mediaKit?.avg_engagement || '4.8%');
+  const formatCompact = (val: number | string | undefined): string => {
+    if (val === undefined || val === null || val === '') return '';
+    const num = Number(val);
+    if (isNaN(num)) return String(val);
+    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1).replace(/\.0$/, '')}M+`;
+    if (num >= 1_000) return `${(num / 1_000).toFixed(1).replace(/\.0$/, '')}K+`;
+    return num > 0 ? num.toLocaleString() : '';
+  };
 
-  const monthlyImpr = mediaKit?.monthly_impressions 
-    ? (Number(mediaKit.monthly_impressions) >= 1000 ? `${(Number(mediaKit.monthly_impressions) / 1000).toLocaleString()}K` : mediaKit.monthly_impressions)
-    : '250K';
+  const totalReach = formatCompact(mediaKit?.total_followers || mediaKit?.total_audience_reach || mediaKit?.total_reach);
+  const monthlyImpr = formatCompact(mediaKit?.monthly_impressions);
+  const rawEng = mediaKit?.engagement_rate ?? mediaKit?.avg_engagement_rate ?? mediaKit?.avg_engagement;
+  const avgEng = rawEng !== undefined && Number(rawEng) > 0 ? `${rawEng}%` : '';
+  const hasTopMetrics = Boolean(totalReach || monthlyImpr || avgEng);
 
-  const topCountry = mediaKit?.top_country || 'United States';
+  const topCountry = mediaKit?.audience_country || mediaKit?.top_country || '';
+  const platforms = Array.isArray(mediaKit?.platforms) ? mediaKit!.platforms : [];
+  const showcaseVideos = Array.isArray(mediaKit?.showcase_videos) ? mediaKit!.showcase_videos : [];
+  const topCountries = Array.isArray(mediaKit?.top_countries) ? mediaKit!.top_countries : [];
+  const testimonials = Array.isArray(mediaKit?.testimonials) ? mediaKit!.testimonials : [];
+  const packagesList = Array.isArray(mediaKit?.rate_cards) ? mediaKit!.rate_cards : [];
 
-  const platforms = [
-    { name: 'Instagram', handle: `@${username}`, count: '410K', icon: 'ig' },
-    { name: 'TikTok', handle: `@${username}`, count: '1.2M', icon: 'tiktok' },
-    { name: 'YouTube', handle: `${profile?.name || username}`, count: '280K', icon: 'yt' },
-    { name: 'X / Twitter', handle: `@${username}`, count: '95K', icon: 'x' },
-  ];
-
-  const rawPackages = mediaKit?.rate_cards;
-  const packagesList: RateCardItem[] = (Array.isArray(rawPackages) && rawPackages.length > 0)
-    ? rawPackages
-    : [
-        {
-          id: 'pkg-1',
-          title: 'Dedicated Short-Form Video',
-          platform: 'Instagram',
-          price: 150,
-          deliverables: ['1x TikTok + 1x Instagram Reel', '30-Day Digital Ad Usage Rights', 'Link in Bio for 7 Days', 'Raw 4K Footage Delivery'],
-          highlighted: true,
-        },
-      ];
+  const femalePct = mediaKit?.gender_female;
+  const hasGenderSplit = femalePct !== undefined && !isNaN(femalePct);
+  const malePct = hasGenderSplit ? Math.max(0, 100 - femalePct!) : 0;
+  const hasDemographics = hasGenderSplit || topCountries.length > 0 || Boolean(topCountry);
 
   const renderSocialIcon = (type: string) => {
     switch ((type || '').toLowerCase()) {
@@ -302,6 +327,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
         );
       case 'x':
       case 'twitter':
+      case 'x / twitter':
         return (
           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -316,7 +342,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
     <div className={`min-h-screen py-8 px-4 sm:px-6 transition-colors duration-300 font-sans ${th.pageBg}`}>
       <div className="max-w-2xl mx-auto flex flex-col gap-6">
 
-        {/* 1. Public Navigation Bar (Clean - Theme Switcher Managed in Admin) */}
+        {/* 1. Public Navigation Bar */}
         <div className={`p-3 rounded-2xl border ${th.cardBg} ${th.cardBorder} flex items-center justify-between shadow-md`}>
           <a
             href={`/${username}`}
@@ -349,9 +375,11 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           </div>
 
           <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-1.5 flex-1">
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase border ${th.accentBadge}`}>
-              {displayNiche}
-            </span>
+            {displayNiche && (
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase border ${th.accentBadge}`}>
+                {displayNiche}
+              </span>
+            )}
 
             <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${th.textPrimary}`}>
               {profile?.name || username}
@@ -361,9 +389,11 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
               @{username} • {headline}
             </p>
 
-            <p className={`text-xs mt-1 leading-relaxed ${th.textSecondary} max-w-lg`}>
-              {displayBio}
-            </p>
+            {displayBio && (
+              <p className={`text-xs mt-1 leading-relaxed ${th.textSecondary} max-w-lg`}>
+                {displayBio}
+              </p>
+            )}
 
             <div className="flex items-center gap-3 mt-3">
               <button
@@ -383,255 +413,269 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
           </div>
         </header>
 
-        {/* 3. High-Impact Reach Metrics */}
-        <section className={`grid grid-cols-3 gap-3 p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} shadow-lg text-center`}>
-          <div>
-            <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Total Reach</span>
-            <span className={`text-xl sm:text-2xl mt-1 block ${th.statHighlight}`}>{totalReach}</span>
-            <span className="text-[10px] text-emerald-400 font-medium flex items-center justify-center gap-0.5 mt-0.5">
-              <TrendingUp className="w-3 h-3" /> All Platforms
-            </span>
-          </div>
-
-          <div className="border-x px-2 border-white/10">
-            <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Avg Engagement</span>
-            <span className={`text-xl sm:text-2xl mt-1 block ${th.statHighlight}`}>{avgEng}</span>
-            <span className={`text-[10px] ${th.textSecondary} font-medium mt-0.5`}>Industry Top 5%</span>
-          </div>
-
-          <div>
-            <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Monthly Impressions</span>
-            <span className={`text-xl sm:text-2xl mt-1 block ${th.statHighlight}`}>{monthlyImpr}</span>
-            <span className={`text-[10px] ${th.textSecondary} font-medium mt-0.5`}>Views / 30d</span>
-          </div>
-        </section>
-
-        {/* 4. Verified Audience by Platform */}
-        <section className="flex flex-col gap-3">
-          <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary} px-1`}>
-            Verified Audience by Platform
-          </h3>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {platforms.map((p, idx) => (
-              <div
-                key={idx}
-                className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 ${th.cardBg} ${th.cardBorder} transition hover:scale-[1.02]`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`p-2 rounded-xl bg-black/20 ${th.textPrimary}`}>
-                    {renderSocialIcon(p.icon)}
-                  </span>
-                  <span className={`text-base font-extrabold ${th.statHighlight}`}>{p.count}</span>
-                </div>
-                <div>
-                  <h4 className={`text-xs font-bold ${th.textPrimary}`}>{p.name}</h4>
-                  <p className={`text-[10px] truncate ${th.textSecondary}`}>{p.handle}</p>
-                </div>
+        {/* 3. High-Impact Reach Metrics (Shown only if creator configured metrics) */}
+        {hasTopMetrics && (
+          <section className={`grid grid-cols-1 sm:grid-cols-3 gap-3 p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} shadow-lg text-center`}>
+            {totalReach && (
+              <div>
+                <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Total Reach</span>
+                <span className={`text-xl sm:text-2xl mt-1 block ${th.statHighlight}`}>{totalReach}</span>
+                <span className="text-[10px] text-emerald-400 font-medium flex items-center justify-center gap-0.5 mt-0.5">
+                  <TrendingUp className="w-3 h-3" /> Combined Audience
+                </span>
               </div>
-            ))}
-          </div>
-        </section>
+            )}
 
-        {/* 5. Showcase Content Reels */}
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between px-1">
-            <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary}`}>
-              Recent Showcase Content &amp; UGC Reel
-            </h3>
-            <span className={`text-[10px] font-semibold ${th.accent}`}>High Organic Performance</span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { title: 'Sponsored Unboxing & Styling', views: '420K views', bg: 'bg-emerald-950/40' },
-              { title: 'Tech Desk Setup Walkthrough', views: '890K views', bg: 'bg-indigo-950/40' },
-              { title: '30-Day Lifestyle Routine', views: '310K views', bg: 'bg-amber-950/40' },
-            ].map((v, i) => (
-              <div
-                key={i}
-                className={`aspect-[9/14] rounded-2xl border ${th.cardBorder} relative overflow-hidden group p-3 flex flex-col justify-between ${v.bg}`}
-              >
-                <div className="flex justify-between items-center z-10">
-                  <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[9px] font-bold">
-                    {v.views}
-                  </span>
-                  <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
-                    <Play className="w-2.5 h-2.5 fill-white ml-0.5" />
-                  </div>
-                </div>
-
-                <div className="z-10">
-                  <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug drop-shadow-md">
-                    {v.title}
-                  </p>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+            {avgEng && (
+              <div className="sm:border-x px-2 border-white/10">
+                <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Avg Engagement</span>
+                <span className={`text-xl sm:text-2xl mt-1 block ${th.statHighlight}`}>{avgEng}</span>
+                <span className={`text-[10px] ${th.textSecondary} font-medium mt-0.5`}>Verified Rate</span>
               </div>
-            ))}
-          </div>
-        </section>
+            )}
 
-        {/* 6. Audience Demographics */}
-        <section className={`p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col gap-3 shadow-md`}>
-          <div className="flex items-center justify-between">
-            <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textPrimary}`}>
-              Audience Demographics &amp; Insights
+            {monthlyImpr && (
+              <div>
+                <span className={`text-[10px] uppercase font-bold tracking-wider ${th.textSecondary}`}>Monthly Impressions</span>
+                <span className={`text-xl sm:text-2xl mt-1 block ${th.statHighlight}`}>{monthlyImpr}</span>
+                <span className={`text-[10px] ${th.textSecondary} font-medium mt-0.5`}>Views / 30d</span>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 4. Verified Audience by Platform (Shown only if creator added platforms) */}
+        {platforms.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary} px-1`}>
+              Verified Audience by Platform
             </h3>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${th.accentBadge}`}>
-              Top Country: {topCountry}
-            </span>
-          </div>
 
-          <div className="flex flex-col gap-1.5 pt-1">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className={th.textPrimary}>Female (58%)</span>
-              <span className={th.textSecondary}>Male (42%)</span>
-            </div>
-            <div className="w-full h-2.5 rounded-full bg-neutral-800/40 overflow-hidden flex">
-              <div className="h-full bg-rose-400 rounded-l-full" style={{ width: '58%' }} />
-              <div className="h-full bg-sky-400 rounded-r-full" style={{ width: '42%' }} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5 text-center">
-            <div>
-              <span className={`text-[10px] block ${th.textSecondary}`}>1. {topCountry}</span>
-              <strong className={`text-xs ${th.textPrimary}`}>46%</strong>
-            </div>
-            <div>
-              <span className={`text-[10px] block ${th.textSecondary}`}>2. United Kingdom</span>
-              <strong className={`text-xs ${th.textPrimary}`}>22%</strong>
-            </div>
-            <div>
-              <span className={`text-[10px] block ${th.textSecondary}`}>3. Canada &amp; EU</span>
-              <strong className={`text-xs ${th.textPrimary}`}>18%</strong>
-            </div>
-          </div>
-        </section>
-
-        {/* 7. Rate Cards & Deliverables */}
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between px-1">
-            <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary}`}>
-              Standard Collaboration Rates &amp; Packages
-            </h3>
-            <span className={`text-[10px] ${th.accent} font-semibold`}>Instant Booking Available</span>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {packagesList.map((pkg, idx) => {
-              const pkgTitle = pkg.title || pkg.name || 'Collaboration Package';
-              const pkgPrice = pkg.price !== undefined ? pkg.price : 150;
-              
-              const deliverablesList = Array.isArray(pkg.deliverables) && pkg.deliverables.length > 0
-                ? pkg.deliverables
-                : pkg.description
-                  ? [pkg.description]
-                  : ['Dedicated partnership content with full commercial rights.'];
-
-              return (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {platforms.map((p, idx) => (
                 <div
-                  key={pkg.id || idx}
-                  className={`p-5 rounded-3xl border transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${th.cardBg} ${
-                    pkg.highlighted ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : th.cardBorder
-                  }`}
+                  key={p.id || idx}
+                  className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 ${th.cardBg} ${th.cardBorder} transition hover:scale-[1.02]`}
                 >
-                  <div className="flex flex-col gap-2 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {pkg.platform && (
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 bg-black/30 border border-white/10 ${th.textPrimary}`}>
-                          {renderSocialIcon(pkg.platform)}
-                          <span>{pkg.platform}</span>
-                        </span>
-                      )}
-                      <h4 className={`text-sm font-bold ${th.textPrimary}`}>{pkgTitle}</h4>
-                      {pkg.highlighted && (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase">
-                          Most Popular
-                        </span>
-                      )}
-                    </div>
-
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
-                      {deliverablesList.map((d, i) => (
-                        <li key={i} className={`flex items-center gap-1.5 ${th.textSecondary}`}>
-                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          <span>{d}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {pkg.sample_url && (
-                      <a
-                        href={pkg.sample_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`text-[11px] font-semibold flex items-center gap-1 ${th.accent} hover:underline mt-0.5`}
-                      >
-                        <Play className="w-3 h-3 fill-current" />
-                        <span>Watch Sample Campaign Video</span>
-                        <ExternalLink className="w-3 h-3 ml-0.5" />
-                      </a>
-                    )}
+                  <div className="flex items-center justify-between">
+                    <span className={`p-2 rounded-xl bg-black/20 ${th.textPrimary}`}>
+                      {renderSocialIcon(p.platform)}
+                    </span>
+                    <span className={`text-base font-extrabold ${th.statHighlight}`}>{p.followers}</span>
                   </div>
-
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-white/5 gap-3">
-                    <div className="text-left sm:text-right">
-                      <span className={`text-[10px] uppercase font-bold block ${th.textSecondary}`}>Starting At</span>
-                      <span className={`text-2xl font-black ${th.statHighlight}`}>${pkgPrice}</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleOpenInquiry(pkg)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 shadow-md ${th.accentBtn}`}
-                    >
-                      <span>Request Booking</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                  <div>
+                    <h4 className={`text-xs font-bold ${th.textPrimary}`}>{p.platform}</h4>
+                    <p className={`text-[10px] truncate ${th.textSecondary}`}>{p.handle}</p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 8. Recent Brand Partnerships & Testimonials */}
-        <section className={`p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col gap-3 shadow-md`}>
-          <div className="flex items-center justify-between">
-            <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textPrimary}`}>
-              Recent Brand Partnerships &amp; Testimonials
-            </h3>
-            <div className="flex items-center gap-0.5 text-amber-400">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3 h-3 fill-amber-400" />
               ))}
             </div>
-          </div>
+          </section>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
-            <div className="p-3.5 rounded-2xl bg-black/20 border border-white/5 flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <span className={`font-bold ${th.textPrimary}`}>Nordic Clean Beauty</span>
-                <span className="text-[10px] text-emerald-400 font-bold">14.2% ROAS</span>
-              </div>
-              <p className={`text-[11px] leading-relaxed italic ${th.textSecondary}`}>
-                &ldquo;Content delivery was exceptional and generated our highest converting TikTok traffic of Q3.&rdquo;
-              </p>
+        {/* 5. Showcase Content Reels (Shown only if creator added real videos) */}
+        {showcaseVideos.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-1">
+              <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary}`}>
+                Recent Showcase Content &amp; UGC Reel
+              </h3>
+              <span className={`text-[10px] font-semibold ${th.accent}`}>Featured Campaigns</span>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-black/20 border border-white/5 flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <span className={`font-bold ${th.textPrimary}`}>Apex Tech Gear</span>
-                <span className="text-[10px] text-emerald-400 font-bold">380K Reach</span>
-              </div>
-              <p className={`text-[11px] leading-relaxed italic ${th.textSecondary}`}>
-                &ldquo;Professional communication and top-tier camera work. Look forward to our next quarterly campaign.&rdquo;
-              </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {showcaseVideos.map((v, i) => {
+                const thumbImg = v.thumbnail || getYoutubeThumbnail(v.video_url);
+                return (
+                  <a
+                    key={v.id || i}
+                    href={v.video_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`aspect-[9/14] rounded-2xl border ${th.cardBorder} relative overflow-hidden group p-3 flex flex-col justify-between bg-neutral-900 transition hover:scale-[1.02]`}
+                  >
+                    {thumbImg && (
+                      <img
+                        src={thumbImg}
+                        alt={v.title}
+                        className="absolute inset-0 w-full h-full object-cover opacity-75 group-hover:scale-105 transition duration-500"
+                      />
+                    )}
+                    <div className="flex justify-between items-center z-10">
+                      <span className="px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-white text-[9px] font-bold">
+                        {v.views}
+                      </span>
+                      <div className="w-7 h-7 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center text-white group-hover:bg-emerald-500 group-hover:text-neutral-950 transition">
+                        <Play className="w-3 h-3 fill-current ml-0.5" />
+                      </div>
+                    </div>
+
+                    <div className="z-10">
+                      <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug drop-shadow-md">
+                        {v.title}
+                      </p>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
+                  </a>
+                );
+              })}
             </div>
-          </div>
-        </section>
+          </section>
+        )}
+
+        {/* 6. Audience Demographics (Shown only if creator filled demographics) */}
+        {hasDemographics && (
+          <section className={`p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col gap-3 shadow-md`}>
+            <div className="flex items-center justify-between">
+              <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textPrimary}`}>
+                Audience Demographics &amp; Insights
+              </h3>
+              {topCountry && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${th.accentBadge}`}>
+                  Top Country: {topCountry}
+                </span>
+              )}
+            </div>
+
+            {hasGenderSplit && (
+              <div className="flex flex-col gap-1.5 pt-1">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className={th.textPrimary}>Female ({femalePct}%)</span>
+                  <span className={th.textSecondary}>Male ({malePct}%)</span>
+                </div>
+                <div className="w-full h-2.5 rounded-full bg-neutral-800/40 overflow-hidden flex">
+                  <div className="h-full bg-rose-400 rounded-l-full" style={{ width: `${femalePct}%` }} />
+                  <div className="h-full bg-sky-400 rounded-r-full" style={{ width: `${malePct}%` }} />
+                </div>
+              </div>
+            )}
+
+            {topCountries.length > 0 && (
+              <div className={`grid grid-cols-${topCountries.length} gap-2 pt-2 border-t border-white/5 text-center`}>
+                {topCountries.map((c, idx) => (
+                  <div key={idx}>
+                    <span className={`text-[10px] block ${th.textSecondary}`}>{idx + 1}. {c.country}</span>
+                    <strong className={`text-xs ${th.textPrimary}`}>{c.percent}%</strong>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 7. Rate Cards & Deliverables */}
+        {packagesList.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-1">
+              <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textSecondary}`}>
+                Standard Collaboration Rates &amp; Packages
+              </h3>
+              <span className={`text-[10px] ${th.accent} font-semibold`}>Instant Booking Available</span>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {packagesList.map((pkg, idx) => {
+                const pkgTitle = pkg.deliverable || pkg.title || pkg.name || 'Collaboration Package';
+                const pkgPrice = pkg.price !== undefined ? pkg.price : 150;
+                
+                const deliverablesList = Array.isArray(pkg.deliverables) && pkg.deliverables.length > 0
+                  ? pkg.deliverables
+                  : pkg.description
+                    ? [pkg.description]
+                    : ['Dedicated partnership content with full commercial rights.'];
+
+                return (
+                  <div
+                    key={pkg.id || idx}
+                    className={`p-5 rounded-3xl border transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${th.cardBg} ${
+                      pkg.highlighted ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : th.cardBorder
+                    }`}
+                  >
+                    <div className="flex flex-col gap-2 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {pkg.platform && (
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 bg-black/30 border border-white/10 ${th.textPrimary}`}>
+                            {renderSocialIcon(pkg.platform)}
+                            <span>{pkg.platform}</span>
+                          </span>
+                        )}
+                        <h4 className={`text-sm font-bold ${th.textPrimary}`}>{pkgTitle}</h4>
+                      </div>
+
+                      <ul className="grid grid-cols-1 gap-1.5 text-[11px]">
+                        {deliverablesList.map((d, i) => (
+                          <li key={i} className={`flex items-center gap-1.5 ${th.textSecondary}`}>
+                            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      {pkg.sample_url && (
+                        <a
+                          href={pkg.sample_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`text-[11px] font-semibold flex items-center gap-1 ${th.accent} hover:underline mt-0.5`}
+                        >
+                          <Play className="w-3 h-3 fill-current" />
+                          <span>Watch Sample Campaign Video</span>
+                          <ExternalLink className="w-3 h-3 ml-0.5" />
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-white/5 gap-3">
+                      <div className="text-left sm:text-right">
+                        <span className={`text-[10px] uppercase font-bold block ${th.textSecondary}`}>Starting At</span>
+                        <span className={`text-2xl font-black ${th.statHighlight}`}>${pkgPrice}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenInquiry(pkg)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 shadow-md ${th.accentBtn}`}
+                      >
+                        <span>Request Booking</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* 8. Recent Brand Partnerships & Testimonials (Shown only if creator added reviews) */}
+        {testimonials.length > 0 && (
+          <section className={`p-5 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col gap-3 shadow-md`}>
+            <div className="flex items-center justify-between">
+              <h3 className={`text-xs font-bold uppercase tracking-wider ${th.textPrimary}`}>
+                Recent Brand Partnerships &amp; Testimonials
+              </h3>
+              <div className="flex items-center gap-0.5 text-amber-400">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-3 h-3 fill-amber-400" />
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+              {testimonials.map((t, idx) => (
+                <div key={t.id || idx} className="p-3.5 rounded-2xl bg-black/20 border border-white/5 flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className={`font-bold ${th.textPrimary}`}>{t.brand}</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">{t.metric}</span>
+                  </div>
+                  <p className={`text-[11px] leading-relaxed italic ${th.textSecondary}`}>
+                    &ldquo;{t.quote}&rdquo;
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 9. Footer Guarantee */}
         <footer className="text-center flex flex-col items-center gap-2 pt-4 pb-12 border-t border-white/10">
@@ -714,7 +758,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
                     <input
                       type="text"
                       disabled
-                      value={selectedPackage?.title || selectedPackage?.name || 'Custom Package'}
+                      value={selectedPackage?.deliverable || selectedPackage?.title || selectedPackage?.name || 'Custom Package'}
                       className="w-full px-3.5 py-2 rounded-xl bg-neutral-950/60 border border-neutral-800 text-neutral-400 truncate cursor-not-allowed"
                     />
                   </div>
