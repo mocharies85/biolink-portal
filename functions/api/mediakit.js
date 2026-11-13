@@ -31,6 +31,7 @@ export async function onRequestGet({ request, env }) {
       primary_niche: row.primary_niche || '',
       audience_country: row.audience_country || '',
       rate_cards: typeof row.packages === 'string' ? JSON.parse(row.packages) : (row.rate_cards || []),
+      theme: row.theme || 'onyx',
     };
 
     return new Response(JSON.stringify({ mediakit }), {
@@ -59,13 +60,14 @@ export async function onRequestPost({ request, env }) {
 
     const isEnabled = kit.is_enabled ? 1 : 0;
     const rateCards = JSON.stringify(kit.rate_cards || []);
+    const theme = kit.theme || 'onyx';
 
     await env.DB.prepare(`
       INSERT INTO media_kits (
         username, is_enabled, headline, about, contact_email, 
         total_followers, monthly_impressions, engagement_rate, 
-        primary_niche, audience_country, packages, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        primary_niche, audience_country, packages, theme, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(username) DO UPDATE SET
         is_enabled = excluded.is_enabled,
         headline = excluded.headline,
@@ -77,6 +79,7 @@ export async function onRequestPost({ request, env }) {
         primary_niche = excluded.primary_niche,
         audience_country = excluded.audience_country,
         packages = excluded.packages,
+        theme = excluded.theme,
         updated_at = excluded.updated_at
     `).bind(
       username,
@@ -90,6 +93,7 @@ export async function onRequestPost({ request, env }) {
       kit.primary_niche || '',
       kit.audience_country || '',
       rateCards,
+      theme,
       Date.now()
     ).run();
 
