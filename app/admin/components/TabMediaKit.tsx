@@ -177,7 +177,7 @@ export default function TabMediaKit({
 
         <Link
           href="/pricing"
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-black text-xs flex items-center gap-2 transition shadow-lg shadow-amber-500/20"
+          className="px-6 py-3 rounded-xl bg-linear-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-black text-xs flex items-center gap-2 transition shadow-lg shadow-amber-500/20"
         >
           <span>Upgrade to PRO ($5/mo)</span>
           <ArrowRight className="w-4 h-4" />

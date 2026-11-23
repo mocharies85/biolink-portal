@@ -34,7 +34,7 @@ export default function PricingPage() {
         <div className="grid md:grid-cols-2 gap-8 items-stretch">
           
           {/* FREE TIER */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 flex flex-col justify-between space-y-6">
+          <div className="rounded-2xl border border-white/10 bg-white/2 p-8 flex flex-col justify-between space-y-6">
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-white">Starter Free</h2>
@@ -74,7 +74,7 @@ export default function PricingPage() {
           </div>
 
           {/* PRO TIER */}
-          <div className="rounded-2xl border-2 border-emerald-500/70 bg-gradient-to-b from-emerald-950/20 to-transparent p-8 flex flex-col justify-between space-y-6 relative shadow-lg shadow-emerald-950/40">
+          <div className="rounded-2xl border-2 border-emerald-500/70 bg-linear-to-b from-emerald-950/20 to-transparent p-8 flex flex-col justify-between space-y-6 relative shadow-lg shadow-emerald-950/40">
             <div className="absolute -top-3.5 right-6 px-3 py-1 bg-emerald-500 text-black text-xs font-bold rounded-full uppercase tracking-wider">
               Most Popular
             </div>
@@ -90,7 +90,7 @@ export default function PricingPage() {
               </div>
 
               {/* Glowing 2-in-1 Bonus Callout Box: Curiolot Commerce PRO Included */}
-              <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-amber-500/15 to-emerald-500/15 border border-emerald-400/60 shadow-[0_0_25px_rgba(16,185,129,0.25)] relative overflow-hidden">
+              <div className="mb-6 p-4 rounded-2xl bg-linear-to-r from-emerald-500/15 via-amber-500/15 to-emerald-500/15 border border-emerald-400/60 shadow-[0_0_25px_rgba(16,185,129,0.25)] relative overflow-hidden">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider">
                     <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />

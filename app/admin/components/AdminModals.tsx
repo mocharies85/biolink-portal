@@ -11,7 +11,7 @@ import {
   Smartphone,
   Globe,
   MessageCircle,
-  Calendar,
+  ShoppingBag,
 } from 'lucide-react';
 import { DetailedAnalyticsData, LinkItem } from '../types';
 
@@ -72,7 +72,7 @@ export default function AdminModals({
   sendingSupport,
   supportSentSuccess,
 }: AdminModalsProps) {
-  // Helper Download QR Code
+  // Helper: Download QR Code
   const handleDownloadQr = async () => {
     try {
       const response = await fetch(qrImageUrl);
@@ -90,7 +90,7 @@ export default function AdminModals({
     }
   };
 
-  // Helper Badge Jadwal Link
+  // Helper: Link Schedule Status Badge
   const getScheduleBadge = (link: LinkItem) => {
     if (!link.schedule_start && !link.schedule_end) return null;
     const now = new Date().getTime();
@@ -143,12 +143,13 @@ export default function AdminModals({
             </div>
 
             <h3 className="text-base font-bold text-white">Profile QR Code</h3>
-            <p className="text-xs text-neutral-400 mt-1 max-w-[240px]">
-              Scan to open <strong>@{activeUsername}</strong>'s biolink hub instantly.
+            <p className="text-xs text-neutral-400 mt-1 max-w-60">
+              Scan to open <strong>@{activeUsername}</strong>&apos;s biolink hub instantly.
             </p>
 
             <div className="my-5 p-4 bg-white rounded-2xl shadow-xl flex items-center justify-center">
-              <img src={qrImageUrl} alt="Biolink QR Code" className="w-48 h-48 object-contain" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+<img src={qrImageUrl} alt="Biolink QR Code" className="w-48 h-48 object-contain" />
             </div>
 
             <button
@@ -168,7 +169,7 @@ export default function AdminModals({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
             <div className="text-center">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 flex items-center justify-center text-neutral-950 font-bold text-xl mx-auto shadow-lg shadow-amber-500/25">
+              <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-amber-500 via-amber-400 to-yellow-300 flex items-center justify-center text-neutral-950 font-bold text-xl mx-auto shadow-lg shadow-amber-500/25">
                 ⭐
               </div>
               <h3 className="text-lg font-bold text-white mt-3">Upgrade to Curiolot Link PRO</h3>
@@ -186,7 +187,30 @@ export default function AdminModals({
               </p>
             </div>
 
-            <div className="my-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-3 text-xs text-neutral-300">
+            {/* Glowing 2-in-1 Bonus Callout Box: Curiolot Commerce PRO Included */}
+            <div className="my-4 p-4 rounded-2xl bg-linear-to-r from-emerald-500/15 via-amber-500/15 to-emerald-500/15 border border-emerald-400/50 shadow-[0_0_25px_rgba(16,185,129,0.22)] relative overflow-hidden">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider">
+                  <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
+                  <span>2-in-1 Ecosystem Pass</span>
+                </span>
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-wide">
+                  Included Free
+                </span>
+              </div>
+
+              <p className="text-xs font-extrabold text-white flex items-center gap-1.5">
+                <ShoppingBag className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Get PRO Access on Curiolot Commerce</span>
+              </p>
+              <p className="text-[11px] text-neutral-300 leading-relaxed mt-1">
+                Activating PRO on <strong className="text-amber-400">Curiolot Link</strong> automatically unlocks{' '}
+                <strong className="text-emerald-400">PRO Creator</strong> access on{' '}
+                <span className="underline decoration-emerald-500/60">store.curiolot.com</span> — sell unlimited digital products with 0% platform fees.
+              </p>
+            </div>
+
+            <div className="mb-4 p-4 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col gap-3 text-xs text-neutral-300">
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
@@ -226,7 +250,7 @@ export default function AdminModals({
               <div className="flex items-start gap-2.5">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <div>
-                  <strong className="text-white">Spotlight Glow &amp; 'HOT' Badge:</strong> Animated neon border and badges to maximize link clicks.
+                  <strong className="text-white">Spotlight Glow &amp; &apos;HOT&apos; Badge:</strong> Animated neon border and badges to maximize link clicks.
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
@@ -238,7 +262,7 @@ export default function AdminModals({
             </div>
 
             <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-neutral-300 leading-relaxed mb-4">
-              ⚡ <strong>Instant Activation:</strong> Secure checkout powered by Paddle. Pay via Card or PayPal, and your <strong>@{activeUsername}</strong> account updates immediately.
+              ⚡ <strong>Instant Activation:</strong> Secure checkout powered by Paddle. Pay via Card or PayPal, and your <strong>@{activeUsername}</strong> account updates immediately across both platforms.
             </div>
 
             <div className="flex items-center gap-3">
@@ -253,7 +277,7 @@ export default function AdminModals({
                 type="button"
                 disabled={checkoutLoading}
                 onClick={handlePaddleCheckout}
-                className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                className="w-2/3 py-2.5 rounded-xl bg-linear-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20 disabled:opacity-50"
               >
                 {checkoutLoading ? (
                   <>

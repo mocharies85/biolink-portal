@@ -368,8 +368,9 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
         {/* 2. Hero Profile Header */}
         <header className={`p-6 rounded-3xl border ${th.cardBg} ${th.cardBorder} flex flex-col sm:flex-row items-center sm:items-start gap-5 shadow-xl`}>
           <div className="relative shrink-0">
-            <img
-              src={profile?.avatar || '/default-avatar.svg'}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+<img
+  src={profile?.avatar || '/default-avatar.svg'}
               alt={profile?.name || username}
               className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover shadow-lg border-2 border-white/15"
             />
@@ -496,15 +497,16 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
                     href={v.video_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`aspect-[9/14] rounded-2xl border ${th.cardBorder} relative overflow-hidden group p-3 flex flex-col justify-between bg-neutral-900 transition hover:scale-[1.02]`}
+                    className={`aspect-9/14 rounded-2xl border ${th.cardBorder} relative overflow-hidden group p-3 flex flex-col justify-between bg-neutral-900 transition hover:scale-[1.02]`}
                   >
                     {thumbImg && (
-                      <img
-                        src={thumbImg}
-                        alt={v.title}
-                        className="absolute inset-0 w-full h-full object-cover opacity-75 group-hover:scale-105 transition duration-500"
-                      />
-                    )}
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={thumbImg}
+    alt={v.title}
+    className="absolute inset-0 w-full h-full object-cover opacity-75 group-hover:scale-105 transition duration-500"
+  />
+)}
                     <div className="flex justify-between items-center z-10">
                       <span className="px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-white text-[9px] font-bold">
                         {v.views}
@@ -519,7 +521,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
                         {v.title}
                       </p>
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
                   </a>
                 );
               })}
