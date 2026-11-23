@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   Briefcase,
   Users,
@@ -18,32 +19,22 @@ import {
   Check,
   X,
   Palette,
+  Globe,
+  PieChart,
+  Star,
+  Share2,
 } from 'lucide-react';
 
+import {
+  MediaKitData,
+  RateCardItem,
+  MediaKitPlatformItem,
+  MediaKitShowcaseItem,
+  MediaKitCountryItem,
+  MediaKitTestimonialItem,
+} from '../types';
+
 export type MediaKitTheme = 'onyx' | 'sand' | 'studio' | 'violet';
-
-export interface RateCardItem {
-  id: string;
-  platform: string;
-  deliverable: string;
-  price: number;
-  description?: string;
-  sample_url?: string;
-}
-
-export interface MediaKitData {
-  is_enabled: boolean;
-  headline: string;
-  about: string;
-  contact_email: string;
-  total_followers: number;
-  monthly_impressions: number;
-  engagement_rate: number;
-  primary_niche: string;
-  audience_country: string;
-  rate_cards: RateCardItem[];
-  theme?: MediaKitTheme;
-}
 
 interface TabMediaKitProps {
   activeUsername: string;
@@ -103,7 +94,27 @@ export default function TabMediaKit({
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Form State: Add New Package
+  // Platform Breakdown Form State
+  const [platName, setPlatName] = useState('Instagram');
+  const [platHandle, setPlatHandle] = useState('');
+  const [platFollowers, setPlatFollowers] = useState('');
+
+  // Top Country Form State
+  const [countryName, setCountryName] = useState('');
+  const [countryPercent, setCountryPercent] = useState<number | ''>('');
+
+  // Showcase Video Form State
+  const [vidTitle, setVidTitle] = useState('');
+  const [vidViews, setVidViews] = useState('');
+  const [vidUrl, setVidUrl] = useState('');
+  const [vidThumb, setVidThumb] = useState('');
+
+  // Testimonial Form State
+  const [testiBrand, setTestiBrand] = useState('');
+  const [testiMetric, setTestiMetric] = useState('');
+  const [testiQuote, setTestiQuote] = useState('');
+
+  // Form State: Add New Rate Card Package
   const [newPlatform, setNewPlatform] = useState('Instagram');
   const [newDeliverable, setNewDeliverable] = useState('');
   const [newPrice, setNewPrice] = useState<number | ''>('');
@@ -120,13 +131,10 @@ export default function TabMediaKit({
 
   const targetUsername = activeUsername || 'creator';
   const packageCount = mediaKit.rate_cards?.length || 0;
-
-  // Auto-synchronization: turn OFF if package count drops to 0
-  useEffect(() => {
-    if (packageCount === 0 && mediaKit.is_enabled) {
-      setMediaKit((prev) => ({ ...prev, is_enabled: false }));
-    }
-  }, [packageCount, mediaKit.is_enabled, setMediaKit]);
+  const platformsList = mediaKit.platforms || [];
+  const countriesList = mediaKit.top_countries || [];
+  const videosList = mediaKit.showcase_videos || [];
+  const testimonialsList = mediaKit.testimonials || [];
 
   // Lock Screen Paywall for Free Tier Users
   if (!isPro) {
@@ -167,18 +175,120 @@ export default function TabMediaKit({
           </div>
         </div>
 
-        <a
+        <Link
           href="/pricing"
           className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-black text-xs flex items-center gap-2 transition shadow-lg shadow-amber-500/20"
         >
           <span>Upgrade to PRO ($5/mo)</span>
           <ArrowRight className="w-4 h-4" />
-        </a>
+        </Link>
       </div>
     );
   }
 
-  // Add New Package (automatically turn ON if adding first package)
+  // --- Handlers: Platforms ---
+  const handleAddPlatform = () => {
+    if (!platFollowers.trim()) return;
+    const item: MediaKitPlatformItem = {
+      id: Date.now().toString(),
+      platform: platName,
+      handle: platHandle.trim() || `@${targetUsername}`,
+      followers: platFollowers.trim(),
+    };
+    setMediaKit((prev) => ({
+      ...prev,
+      platforms: [...(prev.platforms || []), item],
+    }));
+    setPlatHandle('');
+    setPlatFollowers('');
+  };
+
+  const handleDeletePlatform = (id: string) => {
+    setMediaKit((prev) => ({
+      ...prev,
+      platforms: (prev.platforms || []).filter((p) => p.id !== id),
+    }));
+  };
+
+  // --- Handlers: Top Countries ---
+  const handleAddCountry = () => {
+    if (!countryName.trim() || countryPercent === '') return;
+    if (countriesList.length >= 3) {
+      alert('Maximum 3 top countries allowed.');
+      return;
+    }
+    const item: MediaKitCountryItem = {
+      country: countryName.trim(),
+      percent: Number(countryPercent),
+    };
+    setMediaKit((prev) => ({
+      ...prev,
+      top_countries: [...(prev.top_countries || []), item],
+    }));
+    setCountryName('');
+    setCountryPercent('');
+  };
+
+  const handleDeleteCountry = (idx: number) => {
+    setMediaKit((prev) => ({
+      ...prev,
+      top_countries: (prev.top_countries || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  // --- Handlers: Showcase Videos ---
+  const handleAddVideo = () => {
+    if (!vidTitle.trim() || !vidUrl.trim()) return;
+    const item: MediaKitShowcaseItem = {
+      id: Date.now().toString(),
+      title: vidTitle.trim(),
+      views: vidViews.trim() || 'Featured',
+      video_url: vidUrl.trim(),
+      thumbnail: vidThumb.trim() || undefined,
+    };
+    setMediaKit((prev) => ({
+      ...prev,
+      showcase_videos: [...(prev.showcase_videos || []), item],
+    }));
+    setVidTitle('');
+    setVidViews('');
+    setVidUrl('');
+    setVidThumb('');
+  };
+
+  const handleDeleteVideo = (id: string) => {
+    setMediaKit((prev) => ({
+      ...prev,
+      showcase_videos: (prev.showcase_videos || []).filter((v) => v.id !== id),
+    }));
+  };
+
+  // --- Handlers: Testimonials ---
+  const handleAddTestimonial = () => {
+    if (!testiBrand.trim() || !testiQuote.trim()) return;
+    const item: MediaKitTestimonialItem = {
+      id: Date.now().toString(),
+      brand: testiBrand.trim(),
+      metric: testiMetric.trim() || 'Verified Partner',
+      quote: testiQuote.trim(),
+    };
+    setMediaKit((prev) => ({
+      ...prev,
+      testimonials: [...(prev.testimonials || []), item],
+    }));
+    setTestiBrand('');
+    setTestiMetric('');
+    setTestiQuote('');
+  };
+
+  const handleDeleteTestimonial = (id: string) => {
+    setMediaKit((prev) => ({
+      ...prev,
+      testimonials: (prev.testimonials || []).filter((t) => t.id !== id),
+    }));
+  };
+
+  // --- Handlers: Rate Cards ---
   const handleAddPackage = () => {
     if (!newDeliverable.trim() || newPrice === '') return;
 
@@ -206,7 +316,6 @@ export default function TabMediaKit({
     setNewSampleUrl('');
   };
 
-  // Open Edit Form for Specific Package
   const handleStartEdit = (item: RateCardItem) => {
     setEditingId(item.id);
     setEditPlatform(item.platform);
@@ -216,12 +325,10 @@ export default function TabMediaKit({
     setEditSampleUrl(item.sample_url || '');
   };
 
-  // Cancel Edit
   const handleCancelEdit = () => {
     setEditingId(null);
   };
 
-  // Update Package
   const handleUpdatePackage = (id: string) => {
     if (!editDeliverable.trim() || editPrice === '') return;
 
@@ -244,7 +351,6 @@ export default function TabMediaKit({
     setEditingId(null);
   };
 
-  // Delete Package (automatically turn OFF if all packages deleted)
   const handleDeletePackage = (id: string) => {
     setMediaKit((prev) => {
       const updatedRateCards = (prev.rate_cards || []).filter((item) => item.id !== id);
@@ -257,7 +363,6 @@ export default function TabMediaKit({
     if (editingId === id) setEditingId(null);
   };
 
-  // Manual Toggle Switch
   const handleToggleActive = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (packageCount === 0) return;
     setMediaKit((prev) => ({
@@ -295,17 +400,20 @@ export default function TabMediaKit({
       } else {
         alert(data?.error || `Error (${res.status}): Failed to save media kit.`);
       }
-    } catch (err: any) {
-      alert(`Network error: ${err?.message || 'Check server connection'}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Check server connection';
+      alert(`Network error: ${msg}`);
     } finally {
       setSaving(false);
     }
   };
 
   const isSwitchOn = Boolean(mediaKit.is_enabled && packageCount > 0);
+  const femaleVal = mediaKit.gender_female;
+  const maleVal = femaleVal !== undefined && !isNaN(femaleVal) ? Math.max(0, 100 - femaleVal) : undefined;
 
   return (
-    <div className="max-w-2xl flex flex-col gap-6">
+    <div className="max-w-2xl flex flex-col gap-6 pb-10">
       {/* Header */}
       <div>
         <div className="flex items-center justify-between">
@@ -330,7 +438,7 @@ export default function TabMediaKit({
           )}
         </div>
         <p className="text-xs text-neutral-400 mt-1">
-          Showcase your audience statistics, reach, and sponsorship pricing packages to close more brand partnerships.
+          Configure your real audience stats, showcase reels, and sponsorship rates. Empty sections automatically stay hidden on your live page.
         </p>
       </div>
 
@@ -342,7 +450,7 @@ export default function TabMediaKit({
             <span>Visual Theme Styling</span>
           </h3>
           <p className="text-[11px] text-neutral-400 mt-0.5">
-            Choose the visual presentation style displayed to brands when visiting your public Media Kit.
+            Choose the visual presentation style displayed to brands visiting your public Media Kit.
           </p>
         </div>
 
@@ -389,7 +497,7 @@ export default function TabMediaKit({
             type="text"
             value={mediaKit.headline || ''}
             onChange={(e) => setMediaKit({ ...mediaKit, headline: e.target.value })}
-            placeholder="e.g. Content Creator &amp; Brand Partner"
+            placeholder="e.g. Content Creator & Brand Partner"
             className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-amber-500/50 transition font-bold"
           />
         </div>
@@ -417,11 +525,11 @@ export default function TabMediaKit({
         </div>
       </div>
 
-      {/* 3. Audience & Reach Metrics */}
+      {/* 3. Overall Reach & Engagement Summary */}
       <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
         <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
           <Users className="w-4 h-4 text-emerald-400" />
-          <span>Audience &amp; Reach Metrics</span>
+          <span>Overall Reach &amp; Engagement Summary</span>
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -460,20 +568,20 @@ export default function TabMediaKit({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <div>
             <label className="text-[11px] text-neutral-400 block mb-1">Primary Content Niche</label>
             <input
               type="text"
               value={mediaKit.primary_niche || ''}
               onChange={(e) => setMediaKit({ ...mediaKit, primary_niche: e.target.value })}
-              placeholder="e.g. Tech &amp; Lifestyle"
+              placeholder="e.g. Tech & Lifestyle"
               className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
             />
           </div>
 
           <div>
-            <label className="text-[11px] text-neutral-400 block mb-1">Top Audience Country</label>
+            <label className="text-[11px] text-neutral-400 block mb-1">Primary Audience Country</label>
             <input
               type="text"
               value={mediaKit.audience_country || ''}
@@ -485,7 +593,331 @@ export default function TabMediaKit({
         </div>
       </div>
 
-      {/* 4. Rate Card & Deliverables */}
+      {/* 4. Platform Audience Breakdown */}
+      <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-sky-400" />
+              <span>Platform Audience Breakdown</span>
+            </h3>
+            <p className="text-[11px] text-neutral-400 mt-0.5">
+              Add your real follower/subscriber counts per platform. Hidden if empty.
+            </p>
+          </div>
+          <span className="text-[11px] text-neutral-400">{platformsList.length} Platforms</span>
+        </div>
+
+        {platformsList.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {platformsList.map((p) => (
+              <div key={p.id} className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-white block">{p.platform} ({p.followers})</span>
+                  <span className="text-[10px] text-neutral-400">{p.handle}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeletePlatform(p.id)}
+                  className="p-1.5 rounded-lg hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
+          <select
+            value={platName}
+            onChange={(e) => setPlatName(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white outline-none"
+          >
+            <option value="Instagram">Instagram</option>
+            <option value="TikTok">TikTok</option>
+            <option value="YouTube">YouTube</option>
+            <option value="X / Twitter">X / Twitter</option>
+            <option value="Twitch">Twitch</option>
+            <option value="LinkedIn">LinkedIn</option>
+          </select>
+
+          <input
+            type="text"
+            placeholder="Handle (e.g. @aries)"
+            value={platHandle}
+            onChange={(e) => setPlatHandle(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-sky-500/50"
+          />
+
+          <input
+            type="text"
+            placeholder="Followers (e.g. 45K)"
+            value={platFollowers}
+            onChange={(e) => setPlatFollowers(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-sky-500/50"
+          />
+
+          <button
+            type="button"
+            onClick={handleAddPlatform}
+            className="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1 transition"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 5. Audience Demographics (Gender & Top Countries) */}
+      <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
+        <div>
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <PieChart className="w-4 h-4 text-rose-400" />
+            <span>Audience Demographics (Optional)</span>
+          </h3>
+          <p className="text-[11px] text-neutral-400 mt-0.5">
+            Enter verified analytics from your social insights. Leave blank to hide.
+          </p>
+        </div>
+
+        {/* Gender Split */}
+        <div className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-800 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] text-neutral-300 font-semibold">Female Audience Percentage (%)</label>
+            {femaleVal !== undefined && (
+              <button
+                type="button"
+                onClick={() => setMediaKit((prev) => ({ ...prev, gender_female: undefined }))}
+                className="text-[10px] text-rose-400 hover:underline"
+              >
+                Clear Gender Split
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              placeholder="e.g. 58 (leave empty to hide)"
+              value={femaleVal ?? ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                setMediaKit((prev) => ({
+                  ...prev,
+                  gender_female: val === '' ? undefined : Math.min(100, Math.max(0, Number(val))),
+                }));
+              }}
+              className="w-full px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none focus:border-rose-500/50"
+            />
+            {femaleVal !== undefined && (
+              <span className="text-[11px] text-neutral-400 shrink-0 font-semibold">
+                Female {femaleVal}% • Male {maleVal}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Top Countries Breakdown */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] text-neutral-300 font-semibold flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5 text-emerald-400" /> Top Audience Countries (Max 3)
+          </span>
+
+          {countriesList.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {countriesList.map((c, idx) => (
+                <div key={idx} className="px-3 py-1.5 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center gap-2 text-xs">
+                  <span className="text-white font-semibold">{c.country}</span>
+                  <span className="text-emerald-400 font-bold">{c.percent}%</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteCountry(idx)}
+                    className="text-neutral-500 hover:text-rose-400"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {countriesList.length < 3 && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input
+                type="text"
+                placeholder="Country (e.g. United States)"
+                value={countryName}
+                onChange={(e) => setCountryName(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+              />
+              <input
+                type="number"
+                min={1}
+                max={100}
+                placeholder="Share % (e.g. 46)"
+                value={countryPercent}
+                onChange={(e) => setCountryPercent(e.target.value ? Number(e.target.value) : '')}
+                className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleAddCountry}
+                className="px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs flex items-center justify-center gap-1 transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Country</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 6. Showcase Content & UGC Reels */}
+      <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Video className="w-4 h-4 text-purple-400" />
+              <span>Showcase Content &amp; UGC Reels</span>
+            </h3>
+            <p className="text-[11px] text-neutral-400 mt-0.5">
+              Add links to your best-performing videos or brand campaigns. Hidden if empty.
+            </p>
+          </div>
+          <span className="text-[11px] text-neutral-400">{videosList.length} Videos</span>
+        </div>
+
+        {videosList.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {videosList.map((v) => (
+              <div key={v.id} className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3">
+                <div className="truncate">
+                  <p className="text-xs font-bold text-white truncate">{v.title}</p>
+                  <p className="text-[10px] text-purple-400 truncate">{v.views} • {v.video_url}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteVideo(v.id)}
+                  className="p-1.5 rounded-lg hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input
+            type="text"
+            placeholder="Video Title (e.g. Tech Desk Setup Review)"
+            value={vidTitle}
+            onChange={(e) => setVidTitle(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+          />
+          <input
+            type="text"
+            placeholder="Views / Metric (e.g. 120K views)"
+            value={vidViews}
+            onChange={(e) => setVidViews(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+          />
+          <input
+            type="url"
+            placeholder="Video URL (YouTube, TikTok, Reels link)"
+            value={vidUrl}
+            onChange={(e) => setVidUrl(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+          />
+          <input
+            type="url"
+            placeholder="Custom Thumbnail Image URL (optional)"
+            value={vidThumb}
+            onChange={(e) => setVidThumb(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleAddVideo}
+          className="self-end px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Add Showcase Video</span>
+        </button>
+      </div>
+
+      {/* 7. Past Brand Partnerships & Testimonials */}
+      <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-400" />
+              <span>Brand Partnerships &amp; Testimonials</span>
+            </h3>
+            <p className="text-[11px] text-neutral-400 mt-0.5">
+              Showcase real client reviews or campaign results. Hidden if empty.
+            </p>
+          </div>
+          <span className="text-[11px] text-neutral-400">{testimonialsList.length} Reviews</span>
+        </div>
+
+        {testimonialsList.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {testimonialsList.map((t) => (
+              <div key={t.id} className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3">
+                <div className="truncate">
+                  <p className="text-xs font-bold text-white">{t.brand} <span className="text-emerald-400 text-[10px] ml-1">({t.metric})</span></p>
+                  <p className="text-[11px] text-neutral-400 italic truncate">&ldquo;{t.quote}&rdquo;</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTestimonial(t.id)}
+                  className="p-1.5 rounded-lg hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input
+            type="text"
+            placeholder="Brand / Client Name"
+            value={testiBrand}
+            onChange={(e) => setTestiBrand(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+          />
+          <input
+            type="text"
+            placeholder="Result / Metric (e.g. 380K Reach / 4.5x ROAS)"
+            value={testiMetric}
+            onChange={(e) => setTestiMetric(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+          />
+        </div>
+        <input
+          type="text"
+          placeholder="Client quote or campaign highlight..."
+          value={testiQuote}
+          onChange={(e) => setTestiQuote(e.target.value)}
+          className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 outline-none"
+        />
+        <button
+          type="button"
+          onClick={handleAddTestimonial}
+          className="self-end px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Add Testimonial</span>
+        </button>
+      </div>
+
+      {/* 8. Rate Card & Deliverables */}
       <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -508,7 +940,6 @@ export default function TabMediaKit({
             mediaKit.rate_cards.map((item) => {
               const isEditing = editingId === item.id;
 
-              // Card in Edit Mode
               if (isEditing) {
                 return (
                   <div
@@ -598,7 +1029,6 @@ export default function TabMediaKit({
                 );
               }
 
-              // Normal Card View
               return (
                 <div
                   key={item.id}
@@ -625,7 +1055,6 @@ export default function TabMediaKit({
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs font-black text-amber-400 mr-1">${item.price}</span>
                     
-                    {/* Edit Button */}
                     <button
                       type="button"
                       onClick={() => handleStartEdit(item)}
@@ -635,7 +1064,6 @@ export default function TabMediaKit({
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
 
-                    {/* Delete Button */}
                     <button
                       type="button"
                       onClick={() => handleDeletePackage(item.id)}

@@ -19,6 +19,12 @@ import {
 
 export type MediaKitTheme = 'onyx' | 'sand' | 'studio' | 'violet';
 
+interface ProfileSummary {
+  name?: string;
+  bio?: string;
+  avatar?: string;
+}
+
 interface RateCardItem {
   id?: string;
   name?: string;
@@ -158,7 +164,7 @@ interface MediaKitClientProps {
 }
 
 export default function MediaKitClient({ username: propUsername }: MediaKitClientProps = {}) {
-  const [username, setUsername] = useState<string>(() => {
+  const [username] = useState<string>(() => {
     if (propUsername) return propUsername.toLowerCase();
     if (typeof window !== 'undefined') {
       const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
@@ -170,7 +176,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
   });
 
   const [themeKey, setThemeKey] = useState<MediaKitTheme>('onyx');
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<ProfileSummary | null>(null);
   const [mediaKit, setMediaKit] = useState<MediaKitData | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -183,15 +189,6 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
   const [brandMessage, setBrandMessage] = useState('');
   const [sendingInquiry, setSendingInquiry] = useState(false);
   const [inquirySuccess, setInquirySuccess] = useState(false);
-
-  useEffect(() => {
-    if (!username && typeof window !== 'undefined') {
-      const pathPart = window.location.pathname.replace(/^\/+/, '').split('/')[0];
-      if (pathPart && !['admin', 'login', 'register', 'api'].includes(pathPart.toLowerCase())) {
-        setUsername(pathPart.toLowerCase());
-      }
-    }
-  }, [username]);
 
   useEffect(() => {
     if (!username) return;
@@ -292,16 +289,23 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
   const hasTopMetrics = Boolean(totalReach || monthlyImpr || avgEng);
 
   const topCountry = mediaKit?.audience_country || mediaKit?.top_country || '';
-  const platforms = Array.isArray(mediaKit?.platforms) ? mediaKit!.platforms : [];
-  const showcaseVideos = Array.isArray(mediaKit?.showcase_videos) ? mediaKit!.showcase_videos : [];
-  const topCountries = Array.isArray(mediaKit?.top_countries) ? mediaKit!.top_countries : [];
-  const testimonials = Array.isArray(mediaKit?.testimonials) ? mediaKit!.testimonials : [];
-  const packagesList = Array.isArray(mediaKit?.rate_cards) ? mediaKit!.rate_cards : [];
+  const platforms = Array.isArray(mediaKit?.platforms) ? mediaKit.platforms : [];
+  const showcaseVideos = Array.isArray(mediaKit?.showcase_videos) ? mediaKit.showcase_videos : [];
+  const topCountries = Array.isArray(mediaKit?.top_countries) ? mediaKit.top_countries : [];
+  const testimonials = Array.isArray(mediaKit?.testimonials) ? mediaKit.testimonials : [];
+  const packagesList = Array.isArray(mediaKit?.rate_cards) ? mediaKit.rate_cards : [];
 
   const femalePct = mediaKit?.gender_female;
   const hasGenderSplit = femalePct !== undefined && !isNaN(femalePct);
-  const malePct = hasGenderSplit ? Math.max(0, 100 - femalePct!) : 0;
+  const malePct = hasGenderSplit ? Math.max(0, 100 - femalePct) : 0;
   const hasDemographics = hasGenderSplit || topCountries.length > 0 || Boolean(topCountry);
+
+  const countryGridClass =
+    topCountries.length === 1
+      ? 'grid-cols-1'
+      : topCountries.length === 2
+        ? 'grid-cols-2'
+        : 'grid-cols-3';
 
   const renderSocialIcon = (type: string) => {
     switch ((type || '').toLowerCase()) {
@@ -551,7 +555,7 @@ export default function MediaKitClient({ username: propUsername }: MediaKitClien
             )}
 
             {topCountries.length > 0 && (
-              <div className={`grid grid-cols-${topCountries.length} gap-2 pt-2 border-t border-white/5 text-center`}>
+              <div className={`grid ${countryGridClass} gap-2 pt-2 border-t border-white/5 text-center`}>
                 {topCountries.map((c, idx) => (
                   <div key={idx}>
                     <span className={`text-[10px] block ${th.textSecondary}`}>{idx + 1}. {c.country}</span>

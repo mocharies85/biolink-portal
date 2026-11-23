@@ -1,8 +1,9 @@
 import Link from 'next/link';
+import { Sparkles, ShoppingBag } from 'lucide-react';
 
 export const metadata = {
   title: 'Pricing Plans - Curiolot Link',
-  description: 'Transparent pricing for creators on Curiolot Link',
+  description: 'Transparent pricing for creators on Curiolot Link & Curiolot Commerce',
 };
 
 export default function PricingPage() {
@@ -25,7 +26,7 @@ export default function PricingPage() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-gray-400 max-w-xl mx-auto text-sm sm:text-base">
-            Build your personalized creator hub with complete freedom. Start free or upgrade to PRO for full multimedia and identity controls.
+            Build your personalized creator hub with complete freedom. Start free or upgrade to PRO for full multimedia, media kit, and digital store controls.
           </p>
         </div>
 
@@ -84,8 +85,31 @@ export default function PricingPage() {
                 <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">Full Access</span>
               </div>
               <p className="text-gray-400 text-sm mb-6">Complete multimedia power, branding, and instant customization.</p>
-              <div className="text-3xl font-extrabold text-white mb-6">
+              <div className="text-3xl font-extrabold text-white mb-5">
                 $5.00 <span className="text-sm font-normal text-gray-400">/ month</span>
+              </div>
+
+              {/* Glowing 2-in-1 Bonus Callout Box: Curiolot Commerce PRO Included */}
+              <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-amber-500/15 to-emerald-500/15 border border-emerald-400/60 shadow-[0_0_25px_rgba(16,185,129,0.25)] relative overflow-hidden">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
+                    <span>2-in-1 Ecosystem Pass</span>
+                  </span>
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-wide">
+                    Included Free
+                  </span>
+                </div>
+
+                <p className="text-sm font-extrabold text-white flex items-center gap-2 mt-1">
+                  <ShoppingBag className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Get PRO Access on Curiolot Commerce</span>
+                </p>
+                <p className="text-xs text-gray-300 leading-relaxed mt-1">
+                  Activating PRO on <strong className="text-amber-400">Curiolot Link</strong> automatically unlocks{' '}
+                  <strong className="text-emerald-400">PRO Creator</strong> status on{' '}
+                  <span className="underline decoration-emerald-500/60">store.curiolot.com</span> — sell unlimited digital products with 0% platform fees.
+                </p>
               </div>
 
               <ul className="space-y-3 text-sm text-gray-200">
@@ -95,11 +119,15 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-center space-x-2">
                   <span className="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Creator Media Kit</strong> (0% sponsorship fee)</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <span className="text-emerald-400 font-bold">✓</span>
                   <span><strong>Instant username updates</strong> (no cooldown)</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Background soundtrack & audio player</span>
+                  <span>Background soundtrack &amp; audio player</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <span className="text-emerald-400 font-bold">✓</span>
@@ -115,7 +143,7 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-center space-x-2">
                   <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Priority email & developer support</span>
+                  <span>Priority email &amp; developer support</span>
                 </li>
               </ul>
             </div>
@@ -133,7 +161,7 @@ export default function PricingPage() {
         {/* Compliance FAQ Section for Paddle */}
         <div className="pt-8 border-t border-white/10 space-y-4 text-xs text-gray-400">
           <p>
-            <strong>Billing & Security:</strong> Payments are processed securely via our Merchant of Record partner, Paddle. We support major Credit Cards and PayPal.
+            <strong>Billing &amp; Security:</strong> Payments are processed securely via our Merchant of Record partner, Paddle. We support major Credit Cards and PayPal.
           </p>
           <p>
             <strong>Refund Guarantee:</strong> All initial PRO plans come with a 14-day satisfaction refund policy. View our <Link href="/refund-policy" className="text-emerald-400 underline">Refund Policy</Link> for details.
